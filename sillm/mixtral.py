@@ -1,0 +1,116 @@
+from typing import Optional, Tuple
+
+import mlx.core as mx
+import mlx.nn as nn
+
+import sillm.model as model
+import sillm.modules as modules
+
+########
+# Based on mlx-examples:
+# https://github.com/ml-explore/mlx-examples/blob/047d4650c4f63d55e5bfbaf8f589c1679cbdd971/llms/mixtral/mixtral.py#L43
+########
+class RoPE(nn.RoPE):
+    def __init__(self,
+                 dims: int,
+                 traditional: bool = False,
+                 base: float = 1000000):
+        super().__init__(dims, traditional)
+
+        self.base = base
+
+    def __call__(self, x, offset: int = 0):
+        shape = x.shape
+        x = mx.reshape(x, (-1, shape[-2], shape[-1]))
+        N = x.shape[1] + offset
+        costheta, sintheta = RoPE.create_cos_sin_theta(
+            N, self.dims, offset=offset, base=self.base, dtype=x.dtype
+        )
+
+        rope = (
+            self._compute_traditional_rope if self.traditional else self._compute_rope
+        )
+        rx = rope(costheta, sintheta, x)
+
+        return mx.reshape(rx, shape)
+
+########
+# Based on mlx-examples:
+# https://github.com/ml-explore/mlx-examples/blob/047d4650c4f63d55e5bfbaf8f589c1679cbdd971/llms/mixtral/mixtral.py#L132
+########
+class FeedForward(nn.Module):
+    def __init__(self, args: model.ModelArgs):
+        super().__init__()
+
+        self.num_experts = args.moe["num_experts"]
+        self.num_experts_per_tok = args.moe["num_experts_per_tok"]
+        self.experts = [modules.FeedForward(args) for _ in range(self.num_experts)]
+        self.gate = nn.Linear(args.dim, self.num_experts, bias=False)
+
+    def __call__(self, x) -> mx.array:
+        ne = self.num_experts_per_tok
+        orig_shape = x.shape
+        x = x.reshape(-1, x.shape[-1])
+
+        gates = self.gate(x)
+        inds = mx.argpartition(-gates, kth=ne, axis=-1)[:, :ne]
+        scores = mx.softmax(
+            mx.take_along_axis(gates, inds, axis=-1).astype(mx.float32),
+            axis=-1,
+        ).astype(gates.dtype)
+
+        y = []
+        for xt, st, it in zip(x, scores, inds.tolist()):
+            yt = mx.concatenate([self.experts[e](xt)[:, None] for e in it], axis=-1)
+            yt = (yt * st).sum(axis=-1)
+            y.append(yt[None, :])
+        y = mx.concatenate(y)
+
+        return y.reshape(orig_shape)
+    
+########
+# Based on mlx-examples:
+# https://github.com/ml-explore/mlx-examples/blob/e74889d0fa0fb49d95bfdf6a1dcad907713eb50e/llms/mixtral/mixtral.py#L163
+########
+
+    
+########
+# Based on mlx-examples:
+# https://github.com/ml-explore/mlx-examples/blob/e74889d0fa0fb49d95bfdf6a1dcad907713eb50e/llms/mixtral/mixtral.py#L187
+########
+class Model(model.Model):
+    def __init__(self, args: model.ModelArgs):
+        super().__init__(args)
+        self.args = args
+
+        self.n_layers = args.n_layers
+        self.vocab_size = args.vocab_size
+
+        self.tok_embeddings = nn.Embedding(args.vocab_size, args.dim)
+        self.layers = [modules.TransformerBlock(args=args) for _ in range(args.n_layers)]
+        self.norm = modules.RMSNorm(args.dim, eps=args.norm_eps)
+        self.output = nn.Linear(args.dim, args.vocab_size, bias=False)
+
+    def __call__(self, inputs: mx.array, cache=None):
+        h = self.tok_embeddings(inputs)
+
+        mask = None
+        T = h.shape[1]
+        if T > 1:
+            mask = nn.MultiHeadAttention.create_additive_causal_mask(T)
+            mask = mask.astype(h.dtype)
+
+        if cache is None:
+            cache = [None] * len(self.layers)
+
+        for e, layer in enumerate(self.layers):
+            h, cache[e] = layer(h, mask, cache[e])
+
+        return self.output(self.norm(h[:, T - 1 : T, :])), cache
+
+########
+# See mixtral transformers implementation:
+# https://github.com/huggingface/transformers/blob/19e83d174c1e2802a459c9b5831628817e1c286f/src/transformers/models/mixtral/modeling_mixtral.py#L77
+########
+def loss(model, inputs, targets, lengths):
+    pass

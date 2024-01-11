@@ -1,0 +1,37 @@
+import argparse
+import pathlib
+import json
+
+import mlx.core as mx
+
+import sillm
+
+if __name__ == "__main__":
+    # Parse commandline arguments
+    parser = argparse.ArgumentParser(description="")
+    parser.add_argument("model_path", type=str, help="The model directory")
+    parser.add_argument("-t", "--temp", type=float, default=0.7, help="Sampling temperature")
+    parser.add_argument("-s", "--seed", type=int, default=-1, help="Seed for randomization")
+    parser.add_argument("-n", "--num_tokens", type=int, default=512, help="Max. number of tokens to generate")
+    # parser.add_argument("-v", "--verbose", default=False, action="store_true", help="Increase output verbosity")
+    args = parser.parse_args()
+    model_path = pathlib.Path(args.model_path)
+
+    if args.seed >= 0:
+        mx.random.seed(0)
+
+    # Load and init LLM
+    tokenizer = sillm.Tokenizer(str(model_path / "tokenizer.model"))
+    model_args = sillm.ModelArgs.load(str(model_path / "config.json"))
+    model = sillm.LLM(tokenizer, model_args)
+    model.load_weights(str(model_path / "weights.npz"))
+
+    while True:
+        prompt = input("> ")
+
+        if prompt.startswith('.'):
+            break
+        
+        for s in model.generate(prompt, temp=args.temp, num_tokens=args.num_tokens):
+            print(s, end="", flush=True)
+        print()
