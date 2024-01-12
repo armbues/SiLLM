@@ -28,6 +28,10 @@ class ModelArgs:
     def load(config_path):
         """
         Load model config from JSON file.
+        Args:
+            config_path: Path to config file.
+        Returns:
+            ModelArgs instance.
         """
         assert pathlib.Path(config_path).exists(), config_path
 
@@ -39,10 +43,11 @@ class ModelArgs:
 
 class Model(nn.Module):
     """
-    Base class for all models.
+    Base class for LLM models.
     """
     def __init__(self, args: ModelArgs):
         super().__init__()
+        raise NotImplementedError(f"Class model.Model is used for inheritance only")
     
     def __call__(self, inputs: mx.array, cache=None):
         raise NotImplementedError(f"Class model.Model is used for inheritance only")

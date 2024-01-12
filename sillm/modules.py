@@ -121,6 +121,12 @@ class FeedForward(nn.Module):
         self.w3 = nn.Linear(args.dim, args.hidden_dim, bias=False)
 
     def __call__(self, x) -> mx.array:
+        """
+        Args:
+            x: Input tensor.
+        Returns:
+            Output tensor.
+        """
         return self.w2(nn.silu(self.w1(x)) * self.w3(x))
     
 ########
@@ -154,6 +160,14 @@ class TransformerBlock(nn.Module):
         mask: Optional[mx.array] = None,
         cache: Optional[Tuple[mx.array, mx.array]] = None,
     ) -> mx.array:
+        """
+        Args:
+            x: Input tensor.
+            mask: Mask tensor.
+            cache: Cache from previous forward pass.
+        Returns:
+            Output tensor and cache.
+        """
         r, cache = self.attention(self.attention_norm(x), mask, cache)
         h = x + r
         r = self.feed_forward(self.ffn_norm(h))

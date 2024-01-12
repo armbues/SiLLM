@@ -29,6 +29,13 @@ class RoPE(nn.RoPE):
         self.base = base
 
     def __call__(self, x, offset: int = 0):
+        """
+        Args:
+            x: Input tensor.
+            offset: Offset for RoPE.
+        Returns:
+            Output tensor.
+        """
         shape = x.shape
         x = mx.reshape(x, (-1, shape[-2], shape[-1]))
         N = x.shape[1] + offset
@@ -60,6 +67,12 @@ class FeedForward(nn.Module):
         self.gate = nn.Linear(args.dim, self.num_experts, bias=False)
 
     def __call__(self, x) -> mx.array:
+        """
+        Args:
+            x: Input tensor.
+        Returns:
+            Output tensor.
+        """
         ne = self.num_experts_per_tok
         orig_shape = x.shape
         x = x.reshape(-1, x.shape[-1])
@@ -109,6 +122,8 @@ class Model(model.Model):
         Args:
             inputs: Input tokens.
             cache: Cache from previous forward pass.
+        Returns:
+            Output logits and cache.
         """
         h = self.tok_embeddings(inputs)
 

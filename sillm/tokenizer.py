@@ -31,6 +31,8 @@ class Tokenizer:
         Args:
             s: String to encode.
             eos: Whether to append EOS token.
+        Returns:
+            Encoded tokens.
         """
         tokens = [self._model.bos_id(), *self._model.encode(s)]
         if eos:
@@ -43,6 +45,8 @@ class Tokenizer:
         Decode tokens.
         Args:
             t: Tokens to decode.
+        Returns:
+            Decoded string.
         """
         s = self._model.decode(t)
         if t and self._model.id_to_piece(t[0])[0] == self._sep:

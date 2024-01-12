@@ -35,6 +35,8 @@ class Model(model.Model):
         Args:
             inputs: Input tokens.
             cache: Cache from previous forward pass.
+        Returns:
+            Output logits and cache.
         """
         h = self.tok_embeddings(inputs)
 

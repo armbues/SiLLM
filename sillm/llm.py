@@ -71,7 +71,7 @@ class LLM():
 
     def generate(self, prompt, temp=0.0, num_tokens=256, flush=5):
         """
-        Generate text.
+        Iterator for generating tokens.
         Args:
             prompt: Prompt to start generation.
             temp: Sampling temperature.

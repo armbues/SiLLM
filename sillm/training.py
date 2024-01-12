@@ -18,6 +18,13 @@ class Dataset:
     Dataset wrapper.
     """
     def __init__(self, tokenizer, dataset_path, key="text", max_length=4096):
+        """
+        Args:
+            tokenizer: Tokenizer to use.
+            dataset_path: Path to dataset file.
+            key: Key to use for text.
+            max_length: Max token length per training entry.
+        """
         self._key = key
         self._data = []
 
@@ -46,6 +53,8 @@ class Dataset:
             dataset_path: Path to dataset file.
             key: Key to use for text.
             max_length: Max token length of text.
+        Returns:
+            Training, validation, and test datasets.
         """
         names = ("train", "valid", "test")
 
@@ -66,6 +75,8 @@ class LoRALinear(nn.Module):
         Args:
             linear: Linear layer to convert.
             rank: Rank to use for LoRA.
+        Returns:
+            LoRA linear layer.
         """
         output_dims, input_dims = linear.weight.shape
 
@@ -108,6 +119,8 @@ class LoRALinear(nn.Module):
     def merge(self):
         """
         Merge LoRA weights into linear weights.
+        Returns:
+            Linear layer with merged weights.
         """
         linear = self.linear
         weight = linear.weight
@@ -136,6 +149,12 @@ class LoRALinear(nn.Module):
             return linear
 
     def __call__(self, x):
+        """
+        Args:
+            x: Input tensor.
+        Returns:
+            Output tensor.
+        """
         dtype = self.linear.weight.dtype
         if isinstance(self.linear, nn.QuantizedLinear):
             dtype = self.linear.scales.dtype
@@ -157,6 +176,8 @@ def loss(model, inputs, targets, lengths):
         inputs: Input tokens.
         targets: Target tokens.
         lengths: Lengths of inputs.
+    Returns:
+        Cross-entropy loss.
     """
     # Run model on inputs
     logits, _ = model(inputs)
@@ -289,6 +310,8 @@ class TrainableLLM(llm.LLM):
             loss: Loss function to use.
             batch_size: Batch size.
             num_batches: Number of batches to evaluate.
+        Returns:
+            Average loss.
         """
         all_losses = []
         num_tokens = 0
