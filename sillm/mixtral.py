@@ -141,6 +141,16 @@ class Model(model.Model):
 
         return self.output(self.norm(h[:, T - 1 : T, :])), cache
     
+def one_hot(
+        indices: mx.array,
+        num_classes: int
+        ):
+    encoded = [[0] * num_classes for _ in range(len(indices))]
+    for i, index in enumerate(indices):
+        encoded[i][index] = 1
+
+    return encoded
+
 ########
 # See mixtral transformers implementation:
 # https://github.com/huggingface/transformers/blob/19e83d174c1e2802a459c9b5831628817e1c286f/src/transformers/models/mixtral/modeling_mixtral.py#L77
@@ -164,7 +174,7 @@ def load_balancing_loss(
     selected_experts = mx.topk(routing_weights, k=top_k, axis=-1)
 
     # Calculate expert mask
-    expert_mask = mx.one_hot(selected_experts, num_experts)
+    expert_mask = one_hot(selected_experts, num_experts)
 
     # Calculate tokens per expert
     tokens_per_expert = mx.mean(expert_mask, axis=1)
