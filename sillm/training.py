@@ -14,6 +14,9 @@ import sillm.llm as llm
 import sillm.model as model
 
 class Dataset:
+    """
+    Dataset wrapper.
+    """
     def __init__(self, tokenizer, dataset_path, key="text", max_length=4096):
         self._key = key
         self._data = []
@@ -36,6 +39,14 @@ class Dataset:
     
     @staticmethod
     def load(tokenizer, dataset_path, key="text", max_length=4096):
+        """
+        Load dataset from JSONL file.
+        Args:
+            tokenizer: Tokenizer to use.
+            dataset_path: Path to dataset file.
+            key: Key to use for text.
+            max_length: Max token length of text.
+        """
         names = ("train", "valid", "test")
 
         return (Dataset(tokenizer, pathlib.Path(dataset_path) / f"{n}.jsonl", key, max_length) for n in names)
@@ -45,8 +56,17 @@ class Dataset:
 # https://github.com/ml-explore/mlx-examples/blob/e74889d0fa0fb49d95bfdf6a1dcad907713eb50e/lora/models.py#L55
 ########
 class LoRALinear(nn.Module):
+    """
+    Linear layer with LoRA weights.
+    """
     @staticmethod
     def from_linear(linear: nn.Linear, rank: int = 8):
+        """
+        Convert linear layer to LoRA linear layer.
+        Args:
+            linear: Linear layer to convert.
+            rank: Rank to use for LoRA.
+        """
         output_dims, input_dims = linear.weight.shape
 
         if isinstance(linear, nn.QuantizedLinear):
@@ -63,6 +83,14 @@ class LoRALinear(nn.Module):
                  lora_rank: int = 8,
                  scale : float = 2.0,
                  bias: bool = False):
+        """
+        Args:
+            input_dims: Input dimensions.
+            output_dims: Output dimensions.
+            lora_rank: Rank to use for LoRA.
+            scale: Scale to use for LoRA.
+            bias: Whether to use bias.
+        """
         super().__init__()
 
         # Initialize linear layer weights
@@ -78,6 +106,9 @@ class LoRALinear(nn.Module):
         self.lora_b = mx.zeros(shape=output_shape)
 
     def merge(self):
+        """
+        Merge LoRA weights into linear weights.
+        """
         linear = self.linear
         weight = linear.weight
         dtype = linear.weight.dtype
@@ -119,6 +150,14 @@ class LoRALinear(nn.Module):
 # https://github.com/ml-explore/mlx-examples/blob/047d4650c4f63d55e5bfbaf8f589c1679cbdd971/lora/lora.py#L151
 ########
 def loss(model, inputs, targets, lengths):
+    """
+    Calculate loss for inputs.
+    Args:
+        model: Model to use.
+        inputs: Input tokens.
+        targets: Target tokens.
+        lengths: Lengths of inputs.
+    """
     # Run model on inputs
     logits, _ = model(inputs)
     logits = logits.astype(mx.float32)
@@ -134,7 +173,15 @@ def loss(model, inputs, targets, lengths):
     return ce, ntoks
 
 class TrainableLLM(llm.LLM):
+    """
+    Trainable LLM model wrapper.
+    """
     def __init__(self, tokenizer, args: model.ModelArgs):
+        """
+        Args:
+            tokenizer: Tokenizer instance.
+            args: Model arguments.
+        """
         super().__init__(tokenizer, args)
 
         self._lora = None
@@ -143,6 +190,13 @@ class TrainableLLM(llm.LLM):
                   num_layers: int = -1,
                   target_modules: list = ["attention.wq", "attention.wv"],
                   rank: int = 8):
+        """
+        Initialize LoRA for model.
+        Args:
+            num_layers: Number of layers to apply LoRA to.
+            target_modules: Modules to apply LoRA to.
+            rank: Rank to use for LoRA.
+        """
         if self._lora is None:
             if num_layers < 0:
                 num_layers = len(self.model.layers)
@@ -162,6 +216,9 @@ class TrainableLLM(llm.LLM):
                     layer[sub][mod] = LoRALinear.from_linear(layer[sub][mod], rank=rank)
 
     def merge_and_unload_lora(self):
+        """
+        Merge LoRA layers back into model.
+        """
         if self._lora is not None:
             num_layers = self._lora["num_layers"]
             target_modules = self._lora["target_modules"]
@@ -176,6 +233,11 @@ class TrainableLLM(llm.LLM):
         self._lora = None
 
     def save_adapters(self, adapter_path):
+        """
+        Save adapter weights.
+        Args:
+            adapter_path: Path to save adapter weights to.
+        """
         assert self._lora is not None
 
         state = dict(tree_flatten(self.model.trainable_parameters()))
@@ -186,6 +248,13 @@ class TrainableLLM(llm.LLM):
     # https://github.com/ml-explore/mlx-examples/blob/e74889d0fa0fb49d95bfdf6a1dcad907713eb50e/lora/lora.py#L166
     ########
     def iterate_batches(self, dataset, batch_size, train=False):
+        """
+        Iterate over batches.
+        Args:
+            dataset: Dataset to iterate over.
+            batch_size: Batch size.
+            train: Whether to train.
+        """
         # Shuffle indices
         while True:
             indices = np.arange(len(dataset))
@@ -213,6 +282,14 @@ class TrainableLLM(llm.LLM):
     # https://github.com/ml-explore/mlx-examples/blob/e74889d0fa0fb49d95bfdf6a1dcad907713eb50e/lora/lora.py#L198
     ########
     def evaluate(self, dataset, loss, batch_size, num_batches):
+        """
+        Evaluate model on dataset.
+        Args:
+            dataset: Dataset to evaluate on.
+            loss: Loss function to use.
+            batch_size: Batch size.
+            num_batches: Number of batches to evaluate.
+        """
         all_losses = []
         num_tokens = 0
         for _, batch in zip(
@@ -238,6 +315,18 @@ class TrainableLLM(llm.LLM):
               report_steps: int = 10,
               eval_steps: int = 100,
               validation_batches: int = 25):
+        """
+        Train model.
+        Args:
+            dataset_training: Training dataset.
+            dataset_validation: Validation dataset.
+            batch_size: Batch size.
+            learning_rate: Learning rate.
+            iterations: Number of iterations.
+            report_steps: Report every `report_steps` iterations.
+            eval_steps: Evaluate every `eval_steps` iterations.
+            validation_batches: Number of batches to evaluate on.
+        """
         optimizer = optim.Adam(learning_rate=learning_rate)
 
         # Create value and grad function for loss
@@ -290,6 +379,11 @@ class TrainableLLM(llm.LLM):
                 start = time.perf_counter()
 
     def load_adapter(self, adapter_path: str):
+        """
+        Load adapter weights.
+        Args:
+            adapter_path: Path to adapter weights.
+        """
         assert pathlib.Path(adapter_path).exists(), adapter_path
 
         self.model.load_weights(adapter_path)

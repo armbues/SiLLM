@@ -9,7 +9,15 @@ import sillm.llama as llama
 import sillm.llama as mixtral
 
 class LLM():
+    """
+    LLM model wrapper.
+    """
     def __init__(self, tokenizer, args: model.ModelArgs):
+        """
+        Args:
+            tokenizer: Tokenizer instance.
+            args: Model arguments.
+        """
         self.args = args
 
         if args.model_type == "llama":
@@ -26,6 +34,11 @@ class LLM():
         self._quantization = None
 
     def load_weights(self, weights_path: str):
+        """
+        Load model weights.
+        Args:
+            weights_path: Path to weights file.
+        """
         assert pathlib.Path(weights_path).exists(), weights_path
 
         weights = mx.load(weights_path)
@@ -35,9 +48,20 @@ class LLM():
         mx.eval(self.model.parameters())
 
     def save_weights(self, weights_path: str):
+        """
+        Save model weights.
+        Args:
+            weights_path: Path to weights file.
+        """
         self.model.save_weights(weights_path)
 
     def quantize(self, group_size=64, bits=4):
+        """
+        Quantize model.
+        Args:
+            group_size: Group size for quantization.
+            bits: Number of bits for quantization.
+        """
         self._quantization = {
             group_size: group_size,
             bits: bits
@@ -46,6 +70,14 @@ class LLM():
         nn.QuantizedLinear.quantize_module(self.model, group_size, bits)
 
     def generate(self, prompt, temp=0.0, num_tokens=256, flush=5):
+        """
+        Generate text.
+        Args:
+            prompt: Prompt to start generation.
+            temp: Sampling temperature.
+            num_tokens: Max number of tokens to generate.
+            flush: Flush every `flush` tokens.
+        """
         prompt = mx.array(self.tokenizer.encode(prompt))
 
         def generate_step():

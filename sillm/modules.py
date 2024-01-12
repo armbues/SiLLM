@@ -11,6 +11,9 @@ import sillm.llama as mixtral
 # https://github.com/ml-explore/mlx-examples/blob/047d4650c4f63d55e5bfbaf8f589c1679cbdd971/llms/llama/llama.py#L31
 ########
 class RMSNorm(nn.Module):
+    """
+    Root Mean Square Normalization module.
+    """
     def __init__(self, dims: int, eps: float = 1e-5):
         super().__init__()
         self.weight = mx.ones((dims,))
@@ -28,8 +31,15 @@ class RMSNorm(nn.Module):
 # https://github.com/ml-explore/mlx-examples/blob/047d4650c4f63d55e5bfbaf8f589c1679cbdd971/lora/models.py#L151
 ########
 class Attention(nn.Module):
+    """
+    Multi-head attention module.
+    """
     def __init__(self,
                  args: model.ModelArgs):
+        """
+        Args:
+            args: Model arguments.
+        """
         super().__init__()
         self.args = args
 
@@ -96,7 +106,14 @@ class Attention(nn.Module):
 # https://github.com/ml-explore/mlx-examples/blob/047d4650c4f63d55e5bfbaf8f589c1679cbdd971/llms/llama/llama.py#L104
 ########
 class FeedForward(nn.Module):
+    """
+    Feed-forward module.
+    """
     def __init__(self, args: model.ModelArgs):
+        """
+        Args:
+            args: Model arguments.
+        """
         super().__init__()
 
         self.w1 = nn.Linear(args.dim, args.hidden_dim, bias=False)
@@ -111,7 +128,14 @@ class FeedForward(nn.Module):
 # https://github.com/ml-explore/mlx-examples/blob/047d4650c4f63d55e5bfbaf8f589c1679cbdd971/llms/llama/llama.py#L116
 ########
 class TransformerBlock(nn.Module):
+    """
+    Transformer block.
+    """
     def __init__(self, args: model.ModelArgs):
+        """
+        Args:
+            args: Model arguments.
+        """
         super().__init__()
         self.n_heads = args.n_heads
         self.dim = args.dim

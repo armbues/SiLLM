@@ -7,6 +7,9 @@ import mlx.nn as nn
 
 @dataclasses.dataclass
 class ModelArgs:
+    """
+    Model arguments.
+    """
     model_type: str
     dim: int
     n_layers: int
@@ -23,6 +26,9 @@ class ModelArgs:
 
     @staticmethod
     def load(config_path):
+        """
+        Load model config from JSON file.
+        """
         assert pathlib.Path(config_path).exists(), config_path
 
         with open(config_path, "r") as f:
@@ -32,6 +38,9 @@ class ModelArgs:
         return ModelArgs(**config)
 
 class Model(nn.Module):
+    """
+    Base class for all models.
+    """
     def __init__(self, args: ModelArgs):
         super().__init__()
     

@@ -11,10 +11,19 @@ import sillm.modules as modules
 # https://github.com/ml-explore/mlx-examples/blob/047d4650c4f63d55e5bfbaf8f589c1679cbdd971/llms/mixtral/mixtral.py#L43
 ########
 class RoPE(nn.RoPE):
+    """
+    Rotary Position Embedding module for Mixtral models.
+    """
     def __init__(self,
                  dims: int,
                  traditional: bool = False,
                  base: float = 1000000):
+        """
+        Args:
+            dims: Embedding dimensions.
+            traditional: Whether to use traditional RoPE.
+            base: Base for traditional RoPE.
+        """
         super().__init__(dims, traditional)
 
         self.base = base
@@ -39,6 +48,9 @@ class RoPE(nn.RoPE):
 # https://github.com/ml-explore/mlx-examples/blob/047d4650c4f63d55e5bfbaf8f589c1679cbdd971/llms/mixtral/mixtral.py#L132
 ########
 class FeedForward(nn.Module):
+    """
+    Feed-forward module for Mixtral models.
+    """
     def __init__(self, args: model.ModelArgs):
         super().__init__()
 
@@ -70,16 +82,17 @@ class FeedForward(nn.Module):
     
 ########
 # Based on mlx-examples:
-# https://github.com/ml-explore/mlx-examples/blob/e74889d0fa0fb49d95bfdf6a1dcad907713eb50e/llms/mixtral/mixtral.py#L163
-########
-
-    
-########
-# Based on mlx-examples:
 # https://github.com/ml-explore/mlx-examples/blob/e74889d0fa0fb49d95bfdf6a1dcad907713eb50e/llms/mixtral/mixtral.py#L187
 ########
 class Model(model.Model):
+    """
+    Mixtral model.
+    """
     def __init__(self, args: model.ModelArgs):
+        """
+        Args:
+            args: Model arguments.
+        """
         super().__init__(args)
         self.args = args
 
@@ -92,6 +105,11 @@ class Model(model.Model):
         self.output = nn.Linear(args.dim, args.vocab_size, bias=False)
 
     def __call__(self, inputs: mx.array, cache=None):
+        """
+        Args:
+            inputs: Input tokens.
+            cache: Cache from previous forward pass.
+        """
         h = self.tok_embeddings(inputs)
 
         mask = None
@@ -113,4 +131,12 @@ class Model(model.Model):
 # https://github.com/huggingface/transformers/blob/19e83d174c1e2802a459c9b5831628817e1c286f/src/transformers/models/mixtral/modeling_mixtral.py#L77
 ########
 def loss(model, inputs, targets, lengths):
+    """
+    Calculate loss for inputs.
+    Args:
+        model: Model to use.
+        inputs: Input tokens.
+        targets: Target tokens.
+        lengths: Lengths of inputs.
+    """
     pass

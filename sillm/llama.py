@@ -11,7 +11,14 @@ import sillm.modules as modules
 # https://github.com/ml-explore/mlx-examples/blob/047d4650c4f63d55e5bfbaf8f589c1679cbdd971/llms/llama/llama.py#L140
 ########
 class Model(model.Model):
+    """
+    Llama model.
+    """
     def __init__(self, args: model.ModelArgs):
+        """
+        Args:
+            args: Model arguments.
+        """
         super().__init__(args)
         self.args = args
 
@@ -24,6 +31,11 @@ class Model(model.Model):
         self.output = nn.Linear(args.dim, args.vocab_size, bias=False)
 
     def __call__(self, inputs: mx.array, cache=None):
+        """
+        Args:
+            inputs: Input tokens.
+            cache: Cache from previous forward pass.
+        """
         h = self.tok_embeddings(inputs)
 
         mask = None
