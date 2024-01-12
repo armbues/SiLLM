@@ -168,7 +168,10 @@ class LoRALinear(nn.Module):
 # Based on mlx-examples:
 # https://github.com/ml-explore/mlx-examples/blob/047d4650c4f63d55e5bfbaf8f589c1679cbdd971/lora/lora.py#L151
 ########
-def loss(model, inputs, targets, lengths):
+def loss(model,
+         inputs: mx.array,
+         targets: mx.array,
+         lengths: mx.array):
     """
     Calculate loss for inputs.
     Args:

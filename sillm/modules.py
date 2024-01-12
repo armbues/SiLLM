@@ -14,7 +14,9 @@ class RMSNorm(nn.Module):
     """
     Root Mean Square Normalization module.
     """
-    def __init__(self, dims: int, eps: float = 1e-5):
+    def __init__(self,
+                 dims: int,
+                 eps: float = 1e-5):
         super().__init__()
         self.weight = mx.ones((dims,))
         self.eps = eps
@@ -34,8 +36,7 @@ class Attention(nn.Module):
     """
     Multi-head attention module.
     """
-    def __init__(self,
-                 args: model.ModelArgs):
+    def __init__(self, args: model.ModelArgs):
         """
         Args:
             args: Model arguments.
@@ -62,10 +63,10 @@ class Attention(nn.Module):
         # TODO RoPE scaling
 
     def __call__(
-        self,
-        x: mx.array,
-        mask: Optional[mx.array] = None,
-        cache: Optional[Tuple[mx.array, mx.array]] = None,
+            self,
+            x: mx.array,
+            mask: Optional[mx.array] = None,
+            cache: Optional[Tuple[mx.array, mx.array]] = None,
     ) -> mx.array:
         B, L, D = x.shape
 
@@ -155,10 +156,10 @@ class TransformerBlock(nn.Module):
         self.args = args
 
     def __call__(
-        self,
-        x: mx.array,
-        mask: Optional[mx.array] = None,
-        cache: Optional[Tuple[mx.array, mx.array]] = None,
+            self,
+            x: mx.array,
+            mask: Optional[mx.array] = None,
+            cache: Optional[Tuple[mx.array, mx.array]] = None,
     ) -> mx.array:
         """
         Args:
