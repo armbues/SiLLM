@@ -140,18 +140,39 @@ class Model(model.Model):
             h, cache[e] = layer(h, mask, cache[e])
 
         return self.output(self.norm(h[:, T - 1 : T, :])), cache
-
+    
 ########
 # See mixtral transformers implementation:
 # https://github.com/huggingface/transformers/blob/19e83d174c1e2802a459c9b5831628817e1c286f/src/transformers/models/mixtral/modeling_mixtral.py#L77
 ########
-def loss(model, inputs, targets, lengths):
+def load_balancing_loss(
+        gate_logits: mx.array,
+        num_experts: int,
+        top_k: int = 2
+        ):
     """
-    Calculate loss for inputs.
+    Calculate load balancing loss.
     Args:
-        model: Model to use.
-        inputs: Input tokens.
-        targets: Target tokens.
-        lengths: Lengths of inputs.
+        gate_logits: Gate logits.
+        num_experts: Total number of experts in model.
+        top_k: Number of experts to consider.
     """
-    pass
+    # Calculate routing weights
+    routing_weights = mx.softmax(gate_logits, axis=-1)
+
+    # Calculate selected experts and their probabilities
+    selected_experts = mx.topk(routing_weights, k=top_k, axis=-1)
+
+    # Calculate expert mask
+    expert_mask = mx.one_hot(selected_experts, num_experts)
+
+    # Calculate tokens per expert
+    tokens_per_expert = mx.mean(expert_mask, axis=1)
+
+    # Calculate router probability per expert
+    router_prob_per_expert = mx.mean(routing_weights, axis=0)
+
+    # Calculate overall loss
+    overall_loss = mx.sum(tokens_per_expert * router_prob_per_expert)
+
+    return overall_loss * num_experts
