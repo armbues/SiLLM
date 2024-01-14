@@ -1,8 +1,6 @@
 import argparse
 import pathlib
 
-import numpy as np
-
 import mlx.core as mx
 
 import sillm
@@ -31,7 +29,6 @@ if __name__ == "__main__":
     model.load_weights(str(model_path / "weights.npz"))
     
     if args.seed >= 0:
-        np.random.seed(args.seed)
         mx.random.seed(args.seed)
 
     # Initialize LoRA layers
