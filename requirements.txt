@@ -1,2 +1,2 @@
-mlx>=0.0.7
+mlx>=0.0.9
 sentencepiece
