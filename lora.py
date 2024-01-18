@@ -15,6 +15,7 @@ if __name__ == "__main__":
     parser.add_argument("-a", "--save_adapter_path", default=None, type=str, help="Path to save adapter weights as .npz file")
     parser.add_argument("-o", "--save_merge_path", default=None, type=str, help="Path to save merged model weights as .npz file")
     parser.add_argument("-t", "--training_data", default=None, type=str, help="Train the model with training dataset in the directory")
+    parser.add_argument("-q", "--quantize", default=None, type=int, help="Quantize the model to the given number of bits")
     parser.add_argument("--layers", default=-1, type=int, help="Layers to use for LoRA (-1 for all layers)")
     parser.add_argument("--rank", default=8, type=int, help="Rank to use for LoRA")
     parser.add_argument("--iterations", default=1000, type=int, help="Number of iterations")
@@ -37,6 +38,10 @@ if __name__ == "__main__":
     if args.seed >= 0:
         mx.random.seed(args.seed)
 
+    if args.quantize is not None:
+        # Quantize model
+        model.quantize(bits=args.quantize)
+
     # Initialize LoRA layers
     model.init_lora(num_layers=args.layers, rank=args.rank)
 
@@ -44,7 +49,7 @@ if __name__ == "__main__":
         assert pathlib.Path(args.load_adapter).exists(), args.adapter_input
 
         # Load adapter file
-        model.load_adapter(args.load_adapter)
+        model.load_adapters(args.load_adapter)
 
     if args.training_data:
         # Load training dataset
@@ -54,7 +59,7 @@ if __name__ == "__main__":
         model.train(dataset_training, dataset_validation, batch_size=args.batch_size, iterations=args.iterations)
 
     if args.save_adapter_path:
-        # Load adapter file
+        # Save adapter file
         model.save_adapters(args.save_adapter_path)
 
     if args.save_merge_path:

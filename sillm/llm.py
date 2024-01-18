@@ -46,19 +46,18 @@ class LLM():
         weights_files = list(model_path.glob("*.npz"))
 
         weights = {}
-        total_params = 0
         for weights_path in weights_files:
             logging.debug(f"Loading model weights from {weights_path}")
             weights.update(mx.load(str(weights_path)).items())
 
-            total_params += sum(v.size for v in weights.values())
+        total_params = sum(v.size for v in weights.values())
         
         weights = tree_unflatten(list(weights.items()))
         self.model.update(weights)
 
         mx.eval(self.model.parameters())
 
-        logging.info(f"Loaded {len(weights_files)} model weights files with {total_params/10**9:.2f}B parameters")
+        logging.info(f"Loaded model weights with {total_params/10**9:.2f}B total parameters")
 
     def save_weights(self, weights_path: str):
         """

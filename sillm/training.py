@@ -424,7 +424,7 @@ class TrainableLLM(llm.LLM):
 
                 logging.info(f"Iter {i + 1}: Val loss {val_loss:.3f} Val took {(start - stop):.3f}s")
 
-    def load_adapter(self, adapter_path: str):
+    def load_adapters(self, adapter_path: str):
         """
         Load adapter weights.
         Args:
@@ -433,3 +433,5 @@ class TrainableLLM(llm.LLM):
         assert pathlib.Path(adapter_path).exists(), adapter_path
 
         self.model.load_weights(adapter_path)
+
+        logging.info(f"Loaded adapter weights from {adapter_path}")
