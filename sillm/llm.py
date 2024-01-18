@@ -1,4 +1,5 @@
 import pathlib
+import logging
 
 import mlx.core as mx
 import mlx.nn as nn
@@ -45,13 +46,19 @@ class LLM():
         weights_files = list(model_path.glob("*.npz"))
 
         weights = {}
+        total_params = 0
         for weights_path in weights_files:
+            logging.debug(f"Loading model weights from {weights_path}")
             weights.update(mx.load(str(weights_path)).items())
+
+            total_params += sum(v.size for v in weights.values())
         
         weights = tree_unflatten(list(weights.items()))
         self.model.update(weights)
 
         mx.eval(self.model.parameters())
+
+        logging.info(f"Loaded {len(weights_files)} model weights files with {total_params/10**9:.2f}B parameters")
 
     def save_weights(self, weights_path: str):
         """
@@ -61,6 +68,8 @@ class LLM():
         """
         self.model.save_weights(weights_path)
 
+        logging.info(f"Saved model weights to {weights_path}")
+
     def quantize(self, group_size=64, bits=4):
         """
         Quantize model.
@@ -68,12 +77,15 @@ class LLM():
             group_size: Group size for quantization.
             bits: Number of bits for quantization.
         """
-        self._quantization = {
-            group_size: group_size,
-            bits: bits
-        }
+        if self._quantization is None:
+            self._quantization = {
+                group_size: group_size,
+                bits: bits
+            }
 
-        nn.QuantizedLinear.quantize_module(self.model, group_size, bits)
+            nn.QuantizedLinear.quantize_module(self.model, group_size, bits)
+
+            logging.info(f"Quantized model with group size {group_size} and {bits} bits")
 
     def generate(self, prompt, temp=0.0, num_tokens=256, flush=5):
         """
@@ -84,6 +96,8 @@ class LLM():
             num_tokens: Max number of tokens to generate.
             flush: Flush every `flush` tokens.
         """
+        logging.debug(f"Generating {num_tokens} tokens with temperature {temp} and flushing every {flush} tokens")
+
         prompt = mx.array(self.tokenizer.encode(prompt))
 
         def generate_step():

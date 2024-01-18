@@ -1,4 +1,5 @@
 import pathlib
+import logging
 
 from typing import List
 
@@ -24,6 +25,8 @@ class Tokenizer:
         self._sep = "▁"
 
         assert self._model.vocab_size() == self._model.get_piece_size()
+
+        logging.info(f"Loaded tokenizer from {tokenizer_path}")
 
     def encode(self, s: str, eos: bool = False) -> List[int]:
         """

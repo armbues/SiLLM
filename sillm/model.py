@@ -1,6 +1,7 @@
 import pathlib
 import json
 import dataclasses
+import logging
 
 import mlx.core as mx
 import mlx.nn as nn
@@ -24,6 +25,9 @@ class ModelArgs:
     rope_scaling: dict = None
     moe: dict = None
 
+    def __repr__(self):
+        return json.dumps(dataclasses.asdict(self), indent=4)
+
     @staticmethod
     def load(config_path):
         """
@@ -38,8 +42,13 @@ class ModelArgs:
         with open(config_path, "r") as f:
             config = json.loads(f.read())
         config = {k:v for k, v in config.items() if k in ModelArgs.__annotations__}
+        args = ModelArgs(**config)
 
-        return ModelArgs(**config)
+        logging.info(f"Loaded model config from {config_path}")
+        for k, v in dataclasses.asdict(args).items():
+            logging.debug(f"Config {k}: {v}")
+
+        return args
 
 class Model(nn.Module):
     """

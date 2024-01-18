@@ -1,5 +1,7 @@
+import sys
 import argparse
 import pathlib
+import logging
 
 import mlx.core as mx
 
@@ -18,15 +20,19 @@ if __name__ == "__main__":
     parser.add_argument("--iterations", default=1000, type=int, help="Number of iterations")
     parser.add_argument("--batch_size", default=4, type=int, help="Size of training batches")
     parser.add_argument("--seed", default=0, type=int, help="Seed for randomization")
-    # parser.add_argument("-v", "--verbose", default=False, action="store_true", help="Increase output verbosity")
+    parser.add_argument("-v", "--verbose", default=1, action="count", help="Increase output verbosity")
     args = parser.parse_args()
     model_path = pathlib.Path(args.model)
+
+    # Initialize logging
+    log_level = 30 - (10 * args.verbose) if args.verbose > 0 else 0
+    logging.basicConfig(level=log_level, stream=sys.stdout, format="%(asctime)s %(levelname)s %(message)s")
 
     # Load and init tokenizer/configuration/model and load the weights
     tokenizer = sillm.Tokenizer(str(model_path / "tokenizer.model"))
     model_args = sillm.ModelArgs.load(str(model_path / "config.json"))
     model = sillm.TrainableLLM(tokenizer, model_args)
-    model.load_weights(str(model_path / "weights.npz"))
+    model.load_weights(model_path)
     
     if args.seed >= 0:
         mx.random.seed(args.seed)

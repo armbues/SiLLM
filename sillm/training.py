@@ -1,6 +1,7 @@
 import pathlib
 import json
 import time
+import logging
 
 import math
 import numpy as np
@@ -45,20 +46,26 @@ class Dataset:
         return len(self._data)
     
     @staticmethod
-    def load(tokenizer, dataset_path, key="text", max_length=4096):
+    def load(tokenizer, dataset_dir, key="text", max_length=4096):
         """
         Load dataset from JSONL file.
         Args:
             tokenizer: Tokenizer to use.
-            dataset_path: Path to dataset file.
+            dataset_dir: Directory with dataset files.
             key: Key to use for text.
             max_length: Max token length of text.
         Returns:
             Training, validation, and test datasets.
         """
-        names = ("train", "valid", "test")
+        datasets = []
+        for name in ("train", "valid", "test"):
+            dataset_path = pathlib.Path(dataset_dir) / f"{name}.jsonl"
+            dataset = Dataset(tokenizer, dataset_path, key, max_length)
+            datasets.append(dataset)
 
-        return (Dataset(tokenizer, pathlib.Path(dataset_path) / f"{n}.jsonl", key, max_length) for n in names)
+            logging.info(f"Loaded {name} dataset with {len(dataset)} entries from {dataset_path}")
+
+        return datasets
 
 ########
 # Based on mlx-examples:
@@ -116,6 +123,14 @@ class LoRALinear(nn.Module):
         self.lora_a = mx.random.uniform(low=-bound, high=bound, shape=input_shape)
         self.lora_b = mx.zeros(shape=output_shape)
 
+    @property
+    def lora_size(self):
+        """
+        Returns:
+            Number of LoRA parameters.
+        """
+        return self.lora_a.size + self.lora_b.size
+    
     def merge(self):
         """
         Merge LoRA weights into linear weights.
@@ -234,10 +249,16 @@ class TrainableLLM(llm.LLM):
             # Freeze all existing parameters
             self.model.freeze()
 
+            trainable_params = 0
             for layer in self.model.layers[-num_layers:]:
                 for target in target_modules:
                     sub, mod = target.split(".")
                     layer[sub][mod] = LoRALinear.from_linear(layer[sub][mod], rank=rank)
+                    trainable_params += layer[sub][mod].lora_size
+
+            logging.info(f"Initialized LoRA with rank {rank} for {num_layers} layers")
+            logging.debug(f"LoRA target modules: {', '.join(target_modules)}")
+            logging.debug(f"LoRA trainable parameters: {trainable_params/ 10**6:.2f}M")
 
     def merge_and_unload_lora(self):
         """
@@ -254,6 +275,8 @@ class TrainableLLM(llm.LLM):
                     if isinstance(layer[sub][mod], LoRALinear):
                         layer[sub][mod] = layer[sub][mod].merge()
 
+            logging.info(f"Merged LoRA layers back into model")
+
         self._lora = None
 
     def save_adapters(self, adapter_path):
@@ -266,6 +289,8 @@ class TrainableLLM(llm.LLM):
 
         state = dict(tree_flatten(self.model.trainable_parameters()))
         mx.savez(adapter_path, **state)
+
+        logging.info(f"Saved adapter weights to {adapter_path}")
 
     ########
     # Based on mlx-examples:
@@ -353,6 +378,8 @@ class TrainableLLM(llm.LLM):
             eval_steps: Evaluate every `eval_steps` iterations.
             validation_batches: Number of batches to evaluate on.
         """
+        logging.info(f"Training the model for {iterations} iterations with batch size {batch_size} and learning rate {learning_rate}")
+        
         optimizer = optim.Adam(learning_rate=learning_rate)
 
         # Create value and grad function for loss
@@ -381,13 +408,10 @@ class TrainableLLM(llm.LLM):
             # Report training loss if needed
             if (i + 1) % report_steps == 0:
                 train_loss = np.mean(losses)
-
                 stop = time.perf_counter()
-                print(
-                    f"Iter {i + 1}: Train loss {train_loss:.3f}, "
-                    f"It/sec {report_steps / (stop - start):.3f}, "
-                    f"Tokens/sec {float(num_tokens) / (stop - start):.3f}"
-                )
+
+                logging.info(f"Iter {i + 1}: Train loss {train_loss:.3f} It/sec {report_steps / (stop - start):.3f} Tokens/sec {float(num_tokens) / (stop - start):.3f}")
+                
                 losses = []
                 num_tokens = 0
                 start = time.perf_counter()
@@ -396,13 +420,9 @@ class TrainableLLM(llm.LLM):
             if i == 0 or (i + 1) % eval_steps == 0:
                 stop = time.perf_counter()
                 val_loss = self.evaluate(dataset_validation, loss, batch_size, validation_batches)
-                print(
-                    f"Iter {i + 1}: "
-                    f"Val loss {val_loss:.3f}, "
-                    f"Val took {(time.perf_counter() - stop):.3f}s"
-                )
-
                 start = time.perf_counter()
+
+                logging.info(f"Iter {i + 1}: Val loss {val_loss:.3f} Val took {(start - stop):.3f}s")
 
     def load_adapter(self, adapter_path: str):
         """

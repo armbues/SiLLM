@@ -1,5 +1,7 @@
+import sys
 import argparse
 import pathlib
+import logging
 
 import mlx.core as mx
 
@@ -12,9 +14,13 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--temp", type=float, default=0.7, help="Sampling temperature")
     parser.add_argument("-s", "--seed", type=int, default=-1, help="Seed for randomization")
     parser.add_argument("-n", "--num_tokens", type=int, default=512, help="Max. number of tokens to generate")
-    # parser.add_argument("-v", "--verbose", default=False, action="store_true", help="Increase output verbosity")
+    parser.add_argument("-v", "--verbose", default=1, action="count", help="Increase output verbosity")
     args = parser.parse_args()
     model_path = pathlib.Path(args.model_path)
+
+    # Initialize logging
+    log_level = 40 - (10 * args.verbose) if args.verbose > 0 else 0
+    logging.basicConfig(level=log_level, stream=sys.stdout, format="%(asctime)s %(levelname)s %(message)s")
 
     if args.seed >= 0:
         mx.random.seed(0)
