@@ -33,15 +33,21 @@ class LLM():
         self.eos_id = tokenizer.eos_id
         self._quantization = None
 
-    def load_weights(self, weights_path: str):
+    def load_weights(self, model_path: str):
         """
         Load model weights.
         Args:
-            weights_path: Path to weights file.
+            model_path: Path to model files.
         """
-        assert pathlib.Path(weights_path).exists(), weights_path
+        model_path = pathlib.Path(model_path)
+        assert pathlib.Path(model_path).exists(), model_path
 
-        weights = mx.load(weights_path)
+        weights_files = list(model_path.glob("*.npz"))
+
+        weights = {}
+        for weights_path in weights_files:
+            weights.update(mx.load(str(weights_path)).items())
+        
         weights = tree_unflatten(list(weights.items()))
         self.model.update(weights)
 

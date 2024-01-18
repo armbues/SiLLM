@@ -1,6 +1,5 @@
 import argparse
 import pathlib
-import json
 
 import mlx.core as mx
 
@@ -24,7 +23,7 @@ if __name__ == "__main__":
     tokenizer = sillm.Tokenizer(str(model_path / "tokenizer.model"))
     model_args = sillm.ModelArgs.load(str(model_path / "config.json"))
     model = sillm.LLM(tokenizer, model_args)
-    model.load_weights(str(model_path / "weights.npz"))
+    model.load_weights(model_path)
 
     while True:
         prompt = input("> ")

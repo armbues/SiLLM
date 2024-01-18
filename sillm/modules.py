@@ -4,7 +4,7 @@ import mlx.core as mx
 import mlx.nn as nn
 
 import sillm.model as model
-import sillm.llama as mixtral
+import sillm.mixtral as mixtral
 
 ########
 # Based on mlx-examples:

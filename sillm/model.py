@@ -47,7 +47,6 @@ class Model(nn.Module):
     """
     def __init__(self, args: ModelArgs):
         super().__init__()
-        raise NotImplementedError(f"Class model.Model is used for inheritance only")
     
     def __call__(self, inputs: mx.array, cache=None):
         raise NotImplementedError(f"Class model.Model is used for inheritance only")
