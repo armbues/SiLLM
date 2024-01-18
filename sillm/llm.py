@@ -49,7 +49,6 @@ class LLM():
         for weights_path in weights_files:
             logging.debug(f"Loading model weights from {weights_path}")
             weights.update(mx.load(str(weights_path)).items())
-
         total_params = sum(v.size for v in weights.values())
         
         weights = tree_unflatten(list(weights.items()))

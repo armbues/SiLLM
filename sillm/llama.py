@@ -4,7 +4,6 @@ import mlx.core as mx
 import mlx.nn as nn
 
 import sillm.model as model
-import sillm.modules as modules
 
 ########
 # Based on mlx-examples:
@@ -56,10 +55,7 @@ class Attention(nn.Module):
         self.wv = nn.Linear(args.dim, args.n_kv_heads * args.head_dim, bias=False)
         self.wo = nn.Linear(args.n_heads * args.head_dim, args.dim, bias=False)
 
-        if args.model_type == "mixtral":
-            self.rope = mixtral.RoPE(args.head_dim, traditional=True, base=args.rope_theta)
-        else:
-            self.rope = nn.RoPE(args.head_dim, traditional=True, base=args.rope_theta)
+        self.rope = nn.RoPE(args.head_dim, traditional=True, base=args.rope_theta)
         # TODO RoPE scaling
 
     def __call__(
@@ -193,8 +189,8 @@ class Model(model.Model):
         self.vocab_size = args.vocab_size
         
         self.tok_embeddings = nn.Embedding(args.vocab_size, args.dim)
-        self.layers = [modules.TransformerBlock(args=args) for _ in range(args.n_layers)]
-        self.norm = modules.RMSNorm(args.dim, eps=args.norm_eps)
+        self.layers = [TransformerBlock(args=args) for _ in range(args.n_layers)]
+        self.norm = RMSNorm(args.dim, eps=args.norm_eps)
         self.output = nn.Linear(args.dim, args.vocab_size, bias=False)
 
     def __call__(self, inputs: mx.array, cache=None):

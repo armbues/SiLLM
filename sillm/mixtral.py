@@ -52,6 +52,76 @@ class RoPE(nn.RoPE):
 
 ########
 # Based on mlx-examples:
+# https://github.com/ml-explore/mlx-examples/blob/d8680a89f986492dbc27c36af3294034db26458f/llms/mixtral/mixtral.py#L63
+########
+class Attention(nn.Module):
+    """
+    Multi-head attention module.
+    """
+    def __init__(self, args: model.ModelArgs):
+        """
+        Args:
+            args: Model arguments.
+        """
+        super().__init__()
+        self.args = args
+
+        self.n_heads: int = args.n_heads
+        self.n_kv_heads: int = args.n_kv_heads
+
+        self.repeats = self.n_heads // self.n_kv_heads
+
+        self.scale = self.args.head_dim ** -0.5
+
+        self.wq = nn.Linear(args.dim, args.n_heads * args.head_dim, bias=False)
+        self.wk = nn.Linear(args.dim, args.n_kv_heads * args.head_dim, bias=False)
+        self.wv = nn.Linear(args.dim, args.n_kv_heads * args.head_dim, bias=False)
+        self.wo = nn.Linear(args.n_heads * args.head_dim, args.dim, bias=False)
+        self.rope = RoPE(args.head_dim, traditional=True, base=args.rope_theta)
+        # TODO RoPE scaling
+
+    def __call__(
+            self,
+            x: mx.array,
+            mask: Optional[mx.array] = None,
+            cache: Optional[Tuple[mx.array, mx.array]] = None,
+    ) -> mx.array:
+        B, L, D = x.shape
+
+        queries, keys, values = self.wq(x), self.wk(x), self.wv(x)
+
+        # Prepare the queries, keys and values for the attention computation
+        queries = queries.reshape(B, L, self.n_heads, -1).transpose(0, 2, 1, 3)
+        keys = keys.reshape(B, L, self.n_kv_heads, -1).transpose(0, 2, 1, 3)
+        values = values.reshape(B, L, self.n_kv_heads, -1).transpose(0, 2, 1, 3)
+
+        def repeat(a):
+            a = mx.concatenate([mx.expand_dims(a, 2)] * self.repeats, axis=2)
+
+            return a.reshape([B, self.n_heads, L, -1])
+
+        keys, values = map(repeat, (keys, values))
+
+        if cache is not None:
+            key_cache, value_cache = cache
+            queries = self.rope(queries, offset=key_cache.shape[2])
+            keys = self.rope(keys, offset=key_cache.shape[2])
+            keys = mx.concatenate([key_cache, keys], axis=2)
+            values = mx.concatenate([value_cache, values], axis=2)
+        else:
+            queries = self.rope(queries)
+            keys = self.rope(keys)
+
+        scores = (queries * self.scale) @ keys.transpose(0, 1, 3, 2)
+        if mask is not None:
+            scores += mask
+        scores = mx.softmax(scores.astype(mx.float32), axis=-1).astype(scores.dtype)
+        output = (scores @ values).transpose(0, 2, 1, 3).reshape(B, L, -1)
+
+        return self.wo(output), (keys, values)
+
+########
+# Based on mlx-examples:
 # https://github.com/ml-explore/mlx-examples/blob/047d4650c4f63d55e5bfbaf8f589c1679cbdd971/llms/mixtral/mixtral.py#L132
 ########
 class FeedForward(nn.Module):
@@ -78,6 +148,8 @@ class FeedForward(nn.Module):
         x = x.reshape(-1, x.shape[-1])
 
         gates = self.gate(x)
+        print(gates)
+
         inds = mx.argpartition(-gates, kth=ne, axis=-1)[:, :ne]
         scores = mx.softmax(
             mx.take_along_axis(gates, inds, axis=-1).astype(mx.float32),
@@ -102,7 +174,7 @@ class TransformerBlock(nn.Module):
         super().__init__()
         self.n_heads = args.n_heads
         self.dim = args.dim
-        self.attention = llama.Attention(args)
+        self.attention = Attention(args)
         self.feed_forward = FeedForward(args=args)
         self.attention_norm = llama.RMSNorm(args.dim, eps=args.norm_eps)
         self.ffn_norm = llama.RMSNorm(args.dim, eps=args.norm_eps)
