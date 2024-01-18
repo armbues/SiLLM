@@ -4,7 +4,7 @@ import mlx.core as mx
 import mlx.nn as nn
 
 import sillm.model as model
-import sillm.modules as modules
+import sillm.llama as llama
 
 ########
 # Based on mlx-examples:
@@ -63,7 +63,7 @@ class FeedForward(nn.Module):
 
         self.num_experts = args.moe["num_experts"]
         self.num_experts_per_tok = args.moe["num_experts_per_tok"]
-        self.experts = [modules.FeedForward(args) for _ in range(self.num_experts)]
+        self.experts = [llama.FeedForward(args) for _ in range(self.num_experts)]
         self.gate = nn.Linear(args.dim, self.num_experts, bias=False)
 
     def __call__(self, x) -> mx.array:
@@ -95,6 +95,33 @@ class FeedForward(nn.Module):
     
 ########
 # Based on mlx-examples:
+# https://github.com/ml-explore/mlx-examples/blob/d8680a89f986492dbc27c36af3294034db26458f/llms/mixtral/mixtral.py#L163
+########
+class TransformerBlock(nn.Module):
+    def __init__(self, args: model.ModelArgs):
+        super().__init__()
+        self.n_heads = args.n_heads
+        self.dim = args.dim
+        self.attention = llama.Attention(args)
+        self.feed_forward = FeedForward(args=args)
+        self.attention_norm = llama.RMSNorm(args.dim, eps=args.norm_eps)
+        self.ffn_norm = llama.RMSNorm(args.dim, eps=args.norm_eps)
+        self.args = args
+
+    def __call__(
+        self,
+        x: mx.array,
+        mask: Optional[mx.array] = None,
+        cache: Optional[Tuple[mx.array, mx.array]] = None,
+    ) -> mx.array:
+        r, cache = self.attention(self.attention_norm(x), mask, cache)
+        h = x + r
+        r = self.feed_forward(self.ffn_norm(h))
+        out = h + r
+        return out, cache
+    
+########
+# Based on mlx-examples:
 # https://github.com/ml-explore/mlx-examples/blob/e74889d0fa0fb49d95bfdf6a1dcad907713eb50e/llms/mixtral/mixtral.py#L187
 ########
 class Model(model.Model):
@@ -113,8 +140,8 @@ class Model(model.Model):
         self.vocab_size = args.vocab_size
 
         self.tok_embeddings = nn.Embedding(args.vocab_size, args.dim)
-        self.layers = [modules.TransformerBlock(args=args) for _ in range(args.n_layers)]
-        self.norm = modules.RMSNorm(args.dim, eps=args.norm_eps)
+        self.layers = [llama.TransformerBlock(args=args) for _ in range(args.n_layers)]
+        self.norm = llama.RMSNorm(args.dim, eps=args.norm_eps)
         self.output = nn.Linear(args.dim, args.vocab_size, bias=False)
 
     def __call__(self, inputs: mx.array, cache=None):
