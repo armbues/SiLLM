@@ -17,10 +17,10 @@ class ModelArgs:
     n_kv_heads: int
     norm_eps: float
     vocab_size: int
-    rope_theta: float = 10000.0
+    rope_theta: float
     rope_traditional: bool = True
-    rope_scaling: dict = None
     moe: dict = None
+    rope_scaling: dict = None
 
     def __repr__(self):
         return json.dumps(dataclasses.asdict(self), indent=4)
@@ -38,21 +38,38 @@ class ModelArgs:
 
         with open(config_path, "r") as f:
             config = json.loads(f.read())
-        config = {k:v for k, v in config.items() if k in ModelArgs.__annotations__}
+
+        ArgsClass = ModelArgs
+        if "model_type" in config:
+            if config["model_type"] in ("llama", "mistral"):
+                ArgsClass = LlamaArgs
+            elif config["model_type"] == "mixtral":
+                ArgsClass = MixtralArgs
+
+        fields = ModelArgs.__annotations__
+        if ArgsClass is not ModelArgs:
+            fields.update(ArgsClass.__annotations__)
+
+        config = {k:v for k, v in config.items() if k in fields}
+        args = ArgsClass(**config)
 
         logging.info(f"Loaded model config from {config_path}")
         for k, v in dataclasses.asdict(args).items():
             logging.debug(f"Config {k}: {v}")
 
-        if "model_type" in config:
-            if config["model_type"] == "mistral":
-                args = MixtralArgs(**config)
-        
-        return ModelArgs(**config)
-    
+        return args
+
+@dataclasses.dataclass
+class LlamaArgs(ModelArgs):
+    """
+    Llama model arguments.
+    """
+    rope_theta: float = 10000.0
+
+@dataclasses.dataclass
 class MixtralArgs(ModelArgs):
     """
     Mixtral model arguments.
     """
-    router_aux_loss_coef: float = 0.001
     rope_theta: float = 1000000.0
+    router_aux_loss_coef: float = 0.001

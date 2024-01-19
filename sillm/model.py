@@ -3,7 +3,7 @@ import mlx.nn as nn
 
 import sillm.args as args
 
-class Model(nn.Module):
+class BaseModel(nn.Module):
     """
     Base class for LLM models.
     """

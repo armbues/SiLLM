@@ -5,7 +5,7 @@ import mlx.core as mx
 import mlx.nn as nn
 from mlx.utils import tree_unflatten
 
-import sillm.model as model
+import sillm.args
 import sillm.llama as llama
 import sillm.mixtral as mixtral
 
@@ -13,7 +13,7 @@ class LLM():
     """
     LLM model wrapper.
     """
-    def __init__(self, tokenizer, args: model.ModelArgs):
+    def __init__(self, tokenizer, args: sillm.args.ModelArgs):
         """
         Args:
             tokenizer: Tokenizer instance.

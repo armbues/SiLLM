@@ -3,7 +3,8 @@ from typing import Optional, Tuple
 import mlx.core as mx
 import mlx.nn as nn
 
-import sillm.model as model
+from sillm.model import BaseModel
+from sillm.args import ModelArgs
 
 ########
 # Based on mlx-examples:
@@ -35,7 +36,7 @@ class Attention(nn.Module):
     """
     Multi-head attention module.
     """
-    def __init__(self, args: model.ModelArgs):
+    def __init__(self, args: ModelArgs):
         """
         Args:
             args: Model arguments.
@@ -106,7 +107,7 @@ class FeedForward(nn.Module):
     """
     Feed-forward module.
     """
-    def __init__(self, args: model.ModelArgs):
+    def __init__(self, args: ModelArgs):
         """
         Args:
             args: Model arguments.
@@ -134,7 +135,7 @@ class TransformerBlock(nn.Module):
     """
     Transformer block.
     """
-    def __init__(self, args: model.ModelArgs):
+    def __init__(self, args: ModelArgs):
         """
         Args:
             args: Model arguments.
@@ -173,11 +174,11 @@ class TransformerBlock(nn.Module):
 # Based on mlx-examples:
 # https://github.com/ml-explore/mlx-examples/blob/047d4650c4f63d55e5bfbaf8f589c1679cbdd971/llms/llama/llama.py#L140
 ########
-class Model(model.Model):
+class Model(BaseModel):
     """
     Llama model.
     """
-    def __init__(self, args: model.ModelArgs):
+    def __init__(self, args: ModelArgs):
         """
         Args:
             args: Model arguments.
