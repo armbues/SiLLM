@@ -1,9 +1,13 @@
 from typing import Optional, Tuple
+import logging
+
+import numpy as np
 
 import mlx.core as mx
 import mlx.nn as nn
 
-import sillm.model as model
+from sillm.model import BaseModel
+from sillm.args import ModelArgs
 import sillm.llama as llama
 
 ########
@@ -28,7 +32,10 @@ class RoPE(nn.RoPE):
 
         self.base = base
 
-    def __call__(self, x, offset: int = 0):
+    def __call__(self,
+                 x,
+                 offset: int = 0
+                 ):
         """
         Args:
             x: Input tensor.
@@ -58,7 +65,7 @@ class Attention(nn.Module):
     """
     Multi-head attention module.
     """
-    def __init__(self, args: model.ModelArgs):
+    def __init__(self, args: ModelArgs):
         """
         Args:
             args: Model arguments.
@@ -80,12 +87,11 @@ class Attention(nn.Module):
         self.rope = RoPE(args.head_dim, traditional=True, base=args.rope_theta)
         # TODO RoPE scaling
 
-    def __call__(
-            self,
-            x: mx.array,
-            mask: Optional[mx.array] = None,
-            cache: Optional[Tuple[mx.array, mx.array]] = None,
-    ) -> mx.array:
+    def __call__(self,
+                 x: mx.array,
+                 mask: Optional[mx.array] = None,
+                 cache: Optional[Tuple[mx.array, mx.array]] = None,
+                 ) -> mx.array:
         B, L, D = x.shape
 
         queries, keys, values = self.wq(x), self.wk(x), self.wv(x)
@@ -126,51 +132,82 @@ class Attention(nn.Module):
 ########
 class FeedForward(nn.Module):
     """
-    Feed-forward module for Mixtral models.
+    MoE Feed-forward module for Mixtral models.
     """
-    def __init__(self, args: model.ModelArgs):
+    def __init__(self, args: ModelArgs):
         super().__init__()
 
         self.num_experts = args.moe["num_experts"]
         self.num_experts_per_tok = args.moe["num_experts_per_tok"]
+
         self.experts = [llama.FeedForward(args) for _ in range(self.num_experts)]
         self.gate = nn.Linear(args.dim, self.num_experts, bias=False)
 
-    def __call__(self, x) -> mx.array:
+    def __call__(self,
+                 x: mx.array,
+                 training: bool = False
+                 ) -> mx.array:
         """
         Args:
             x: Input tensor.
         Returns:
             Output tensor.
         """
-        ne = self.num_experts_per_tok
+        top_k = self.num_experts_per_tok
         orig_shape = x.shape
         x = x.reshape(-1, x.shape[-1])
 
-        gates = self.gate(x)
-        print(gates)
+        gate_logits = self.gate(x)
+        
+        expert_indices = mx.argpartition(-gate_logits, kth=top_k, axis=-1)[:, :top_k]
+        expert_scores = mx.softmax(mx.take_along_axis(gate_logits, expert_indices, axis=-1), axis=-1)
 
-        inds = mx.argpartition(-gates, kth=ne, axis=-1)[:, :ne]
-        scores = mx.softmax(
-            mx.take_along_axis(gates, inds, axis=-1).astype(mx.float32),
-            axis=-1,
-        ).astype(gates.dtype)
+        if x.shape[0] > 1:
+            mx.eval(expert_indices)
+            expert_indices = np.array(expert_indices)
+            y = mx.zeros((x.shape[0], self.num_experts_per_tok, x.shape[-1]))
+            for e, expert in enumerate(self.experts):
+                idx1, idx2 = map(mx.array, np.where(expert_indices == e))
+                if idx1.size == 0:
+                    continue
+                y[idx1, idx2] = expert(x[idx1])
+            y = (y * expert_scores[:, :, None]).sum(axis=1)
+        else:
+            ys = [self.experts[e](x)[:, :, None] for e in expert_indices.squeeze().tolist()]
+            y = mx.concatenate(ys, axis=-1)
+            y = (y * expert_scores[:, None, 0]).sum(axis=-1)
 
-        y = []
-        for xt, st, it in zip(x, scores, inds.tolist()):
-            yt = mx.concatenate([self.experts[e](xt)[:, None] for e in it], axis=-1)
-            yt = (yt * st).sum(axis=-1)
-            y.append(yt[None, :])
-        y = mx.concatenate(y)
+        ########
+        # Calculate expert router loss
+        # References:
+        # https://github.com/huggingface/transformers/blob/19e83d174c1e2802a459c9b5831628817e1c286f/src/transformers/models/mixtral/modeling_mixtral.py#L77
+        # https://arxiv.org/abs/2101.03961 (Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity)
+        ########
+        if training:
+            # Calculate routing weights and router probability per expert
+            routing_weights = mx.softmax(gate_logits, axis=-1)
+            router_prob_per_expert = mx.mean(routing_weights, axis=0)
+            
+            # Calculate expert counts and tokens per expert
+            expert_counts = np.bincount(expert_indices.flatten(), minlength=8)
+            tokens_per_expert = expert_counts / expert_counts.sum()
+            
+            # Calculate expert loss and total router loss
+            expert_losses = tokens_per_expert * router_prob_per_expert
+            router_loss = expert_losses.sum()
+        else:
+            router_loss = 0.0
 
-        return y.reshape(orig_shape)
+        print(router_loss)
+
+        return y.reshape(orig_shape), router_loss
     
 ########
 # Based on mlx-examples:
 # https://github.com/ml-explore/mlx-examples/blob/d8680a89f986492dbc27c36af3294034db26458f/llms/mixtral/mixtral.py#L163
 ########
 class TransformerBlock(nn.Module):
-    def __init__(self, args: model.ModelArgs):
+    def __init__(self, args: ModelArgs):
         super().__init__()
         self.n_heads = args.n_heads
         self.dim = args.dim
@@ -180,27 +217,30 @@ class TransformerBlock(nn.Module):
         self.ffn_norm = llama.RMSNorm(args.dim, eps=args.norm_eps)
         self.args = args
 
-    def __call__(
-        self,
-        x: mx.array,
-        mask: Optional[mx.array] = None,
-        cache: Optional[Tuple[mx.array, mx.array]] = None,
-    ) -> mx.array:
+    def __call__(self,
+                 x: mx.array,
+                 mask: mx.array = None,
+                 cache = None,
+                 training: bool = False
+                 ) -> mx.array:
         r, cache = self.attention(self.attention_norm(x), mask, cache)
         h = x + r
-        r = self.feed_forward(self.ffn_norm(h))
+        if training:
+            r, router_loss = self.feed_forward(mx.stop_gradient(self.ffn_norm(h)), training)
+        else:
+            r, router_loss = self.feed_forward(self.ffn_norm(h), training)
         out = h + r
-        return out, cache
+        return out, cache, router_loss
     
 ########
 # Based on mlx-examples:
 # https://github.com/ml-explore/mlx-examples/blob/e74889d0fa0fb49d95bfdf6a1dcad907713eb50e/llms/mixtral/mixtral.py#L187
 ########
-class Model(model.Model):
+class Model(BaseModel):
     """
     Mixtral model.
     """
-    def __init__(self, args: model.ModelArgs):
+    def __init__(self, args: ModelArgs):
         """
         Args:
             args: Model arguments.
@@ -210,13 +250,17 @@ class Model(model.Model):
 
         self.n_layers = args.n_layers
         self.vocab_size = args.vocab_size
+        self.router_aux_loss_coef = args.router_aux_loss_coef
 
         self.tok_embeddings = nn.Embedding(args.vocab_size, args.dim)
-        self.layers = [llama.TransformerBlock(args=args) for _ in range(args.n_layers)]
+        self.layers = [TransformerBlock(args=args) for _ in range(args.n_layers)]
         self.norm = llama.RMSNorm(args.dim, eps=args.norm_eps)
         self.output = nn.Linear(args.dim, args.vocab_size, bias=False)
 
-    def __call__(self, inputs: mx.array, cache=None):
+    def __call__(self,
+                 inputs: mx.array,
+                 cache = None
+                 ):
         """
         Args:
             inputs: Input tokens.
@@ -236,52 +280,44 @@ class Model(model.Model):
             cache = [None] * len(self.layers)
 
         for e, layer in enumerate(self.layers):
-            h, cache[e] = layer(h, mask, cache[e])
+            h, cache[e], _ = layer(h, mask, cache[e])
 
         return self.output(self.norm(h[:, T - 1 : T, :])), cache
     
-def one_hot(
-        indices: mx.array,
-        num_classes: int
-        ):
-    encoded = [[0] * num_classes for _ in range(len(indices))]
-    for i, index in enumerate(indices):
-        encoded[i][index] = 1
+    def loss(self,
+        inputs: mx.array,
+        targets: mx.array,
+        lengths: mx.array):
+        """
+        Calculate loss for inputs.
+        Args:
+            inputs: Input tokens.
+            targets: Target tokens.
+            lengths: Lengths of inputs.
+        Returns:
+            Cross-entropy + router loss.
+        """
+        h = self.tok_embeddings(inputs)
 
-    return encoded
+        mask = None
+        T = h.shape[1]
+        if T > 1:
+            mask = nn.MultiHeadAttention.create_additive_causal_mask(T)
+            mask = mask.astype(h.dtype)
 
-########
-# See mixtral transformers implementation:
-# https://github.com/huggingface/transformers/blob/19e83d174c1e2802a459c9b5831628817e1c286f/src/transformers/models/mixtral/modeling_mixtral.py#L77
-########
-def load_balancing_loss(
-        gate_logits: mx.array,
-        num_experts: int,
-        top_k: int = 2
-        ):
-    """
-    Calculate load balancing loss.
-    Args:
-        gate_logits: Gate logits.
-        num_experts: Total number of experts in model.
-        top_k: Number of experts to consider.
-    """
-    # Calculate routing weights
-    routing_weights = mx.softmax(gate_logits, axis=-1)
+        aux_loss = 0.0
+        for layer in self.layers:
+            h, _, router_loss = layer(h, mask, None, training=True)
+            aux_loss += router_loss * self.router_aux_loss_coef
 
-    # Calculate selected experts and their probabilities
-    selected_experts = mx.topk(routing_weights, k=top_k, axis=-1)
+        logits = self.output(self.norm(h[:, T - 1 : T, :])).astype(mx.float32)
 
-    # Calculate expert mask
-    expert_mask = one_hot(selected_experts, num_experts)
+        # Mask padding tokens
+        length_mask = mx.arange(inputs.shape[1])[None, :] < lengths[:, None]
+        cross_entropy_loss = nn.losses.cross_entropy(logits, targets) * length_mask
+        num_tokens = length_mask.sum()
+        cross_entropy_loss = cross_entropy_loss.sum() / num_tokens
 
-    # Calculate tokens per expert
-    tokens_per_expert = mx.mean(expert_mask, axis=1)
+        overall_loss = cross_entropy_loss + aux_loss
 
-    # Calculate router probability per expert
-    router_prob_per_expert = mx.mean(routing_weights, axis=0)
-
-    # Calculate overall loss
-    overall_loss = mx.sum(tokens_per_expert * router_prob_per_expert)
-
-    return overall_loss * num_experts
+        return overall_loss, num_tokens

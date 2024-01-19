@@ -247,6 +247,6 @@ class Model(BaseModel):
         # Calculate the loss
         cross_entropy_loss = nn.losses.cross_entropy(logits, targets) * length_mask
         num_tokens = length_mask.sum()
-        cross_entropy_loss = cross_entropy_loss.sum() / num_tokens
+        loss_value = cross_entropy_loss.sum() / num_tokens
 
-        return cross_entropy_loss, num_tokens
+        return loss_value, num_tokens

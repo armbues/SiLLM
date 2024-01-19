@@ -197,6 +197,14 @@ class TrainableLLM(LLM):
 
         self._lora = None
 
+    def init_moe(self,
+                 num_layers: int = -1
+                 ):
+        """
+        Initialize MoE for training.
+        """
+        #TODO: Implement specific MoE training
+
     def save_adapters(self, adapter_path):
         """
         Save adapter weights.
@@ -303,8 +311,6 @@ class TrainableLLM(LLM):
             validation_batches: Number of batches to evaluate on.
         """
         logging.info(f"Training the model for {iterations} iterations with batch size {batch_size} and learning rate {learning_rate}")
-        self.model._training = True
-        # TODO switch off training
         
         optimizer = optim.Adam(learning_rate=learning_rate)
 
@@ -321,14 +327,14 @@ class TrainableLLM(LLM):
             self.iterate_batches(dataset_training, batch_size, train=True),
         ):
             # Forward and backward pass
-            (lvalue, toks), grad = loss_value_and_grad(*batch)
+            (loss_value, toks), grad = loss_value_and_grad(*batch)
 
             # Model update
             optimizer.update(self.model, grad)
-            mx.eval(self.model.parameters(), optimizer.state, lvalue)
+            mx.eval(self.model.parameters(), optimizer.state, loss_value)
 
             # Record loss
-            losses.append(lvalue.item())
+            losses.append(loss_value.item())
             num_tokens += toks.item()
 
             # Report training loss if needed

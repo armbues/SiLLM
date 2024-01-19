@@ -11,6 +11,7 @@ if __name__ == "__main__":
     # Parse commandline arguments
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("model_path", type=str, help="The model directory")
+    parser.add_argument("-q", "--quantize", default=None, type=int, help="Quantize the model to the given number of bits")
     parser.add_argument("-t", "--temp", type=float, default=0.7, help="Sampling temperature")
     parser.add_argument("-s", "--seed", type=int, default=-1, help="Seed for randomization")
     parser.add_argument("-n", "--num_tokens", type=int, default=512, help="Max. number of tokens to generate")
@@ -31,6 +32,10 @@ if __name__ == "__main__":
     model = sillm.LLM(tokenizer, model_args)
     model.load_weights(model_path)
 
+    if args.quantize is not None:
+        # Quantize model
+        model.quantize(bits=args.quantize)
+    
     while True:
         prompt = input("> ")
 

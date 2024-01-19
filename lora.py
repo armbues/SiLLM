@@ -19,6 +19,7 @@ if __name__ == "__main__":
     parser.add_argument("--layers", default=-1, type=int, help="Layers to use for LoRA (default: -1 for all layers)")
     parser.add_argument("--rank", default=8, type=int, help="Rank to use for LoRA (default: 8)")
     parser.add_argument("--iterations", default=1000, type=int, help="Number of iterations (default: 1000)")
+    parser.add_argument("--rate", default=1e-5, type=float, help="Learning rate (default: 1e-5)")
     parser.add_argument("--batch_size", default=4, type=int, help="Size of training batches (default: 4)")
     parser.add_argument("--seed", default=0, type=int, help="Seed for randomization (default: 0)")
     parser.add_argument("-v", "--verbose", default=1, action="count", help="Increase output verbosity")
