@@ -7,7 +7,7 @@ from mlx.utils import tree_unflatten
 
 import sillm.model as model
 import sillm.llama as llama
-import sillm.llama as mixtral
+import sillm.mixtral as mixtral
 
 class LLM():
     """
