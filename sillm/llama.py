@@ -193,7 +193,10 @@ class Model(model.Model):
         self.norm = RMSNorm(args.dim, eps=args.norm_eps)
         self.output = nn.Linear(args.dim, args.vocab_size, bias=False)
 
-    def __call__(self, inputs: mx.array, cache=None):
+    def __call__(self,
+                 inputs: mx.array,
+                 cache=None
+                 ):
         """
         Args:
             inputs: Input tokens.
@@ -215,3 +218,34 @@ class Model(model.Model):
             h, cache[e] = layer(h, mask, cache[e])
 
         return self.output(self.norm(h)), cache
+    
+    ########
+    # Based on mlx-examples:
+    # https://github.com/ml-explore/mlx-examples/blob/047d4650c4f63d55e5bfbaf8f589c1679cbdd971/lora/lora.py#L151
+    ########
+    def loss(self,
+            inputs: mx.array,
+            targets: mx.array,
+            lengths: mx.array):
+        """
+        Calculate loss for inputs.
+        Args:
+            inputs: Input tokens.
+            targets: Target tokens.
+            lengths: Lengths of inputs.
+        Returns:
+            Cross-entropy loss.
+        """
+        # Run model on inputs
+        logits, _ = self.__call__(inputs)
+        logits = logits.astype(mx.float32)
+
+        # Mask padding tokens
+        length_mask = mx.arange(inputs.shape[1])[None, :] < lengths[:, None]
+
+        # Calculate the loss
+        cross_entropy_loss = nn.losses.cross_entropy(logits, targets) * length_mask
+        num_tokens = length_mask.sum()
+        cross_entropy_loss = cross_entropy_loss.sum() / num_tokens
+
+        return cross_entropy_loss, num_tokens
