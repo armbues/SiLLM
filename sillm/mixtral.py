@@ -198,8 +198,6 @@ class FeedForward(nn.Module):
         else:
             router_loss = 0.0
 
-        print(router_loss)
-
         return y.reshape(orig_shape), router_loss
     
 ########
