@@ -33,7 +33,7 @@ if __name__ == "__main__":
     # Load and init tokenizer/configuration/model and load the weights
     tokenizer = sillm.Tokenizer(str(model_path / "tokenizer.model"))
     model_args = sillm.ModelArgs.load(str(model_path / "config.json"))
-    model = sillm.TrainableLLM(tokenizer, model_args)
+    model = sillm.TrainableLoRA(tokenizer, model_args)
     model.load_weights(model_path)
     
     if args.seed >= 0:

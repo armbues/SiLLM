@@ -12,7 +12,7 @@ from mlx.utils import tree_flatten
 
 from sillm.llm import LLM
 from sillm.args import ModelArgs
-from sillm.dataset import Dataset
+from sillm.training.dataset import Dataset
 
 ########
 # Based on mlx-examples:
@@ -126,7 +126,7 @@ class LoRALinear(nn.Module):
 
         return y + self.scale * z
 
-class TrainableLLM(LLM):
+class TrainableLoRA(LLM):
     """
     Trainable LLM model wrapper.
     """
@@ -196,14 +196,6 @@ class TrainableLLM(LLM):
             logging.info(f"Merged LoRA layers back into model")
 
         self._lora = None
-
-    def init_moe(self,
-                 num_layers: int = -1
-                 ):
-        """
-        Initialize MoE for training.
-        """
-        #TODO: Implement specific MoE training
 
     def save_adapters(self, adapter_path):
         """

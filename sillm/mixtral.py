@@ -162,20 +162,30 @@ class FeedForward(nn.Module):
         expert_indices = mx.argpartition(-gate_logits, kth=top_k, axis=-1)[:, :top_k]
         expert_scores = mx.softmax(mx.take_along_axis(gate_logits, expert_indices, axis=-1), axis=-1)
 
+        print(expert_indices)
+        print(expert_scores)
+
         if x.shape[0] > 1:
             mx.eval(expert_indices)
             expert_indices = np.array(expert_indices)
             y = mx.zeros((x.shape[0], self.num_experts_per_tok, x.shape[-1]))
+
             for e, expert in enumerate(self.experts):
                 idx1, idx2 = map(mx.array, np.where(expert_indices == e))
                 if idx1.size == 0:
                     continue
                 y[idx1, idx2] = expert(x[idx1])
+
             y = (y * expert_scores[:, :, None]).sum(axis=1)
         else:
-            ys = [self.experts[e](x)[:, :, None] for e in expert_indices.squeeze().tolist()]
-            y = mx.concatenate(ys, axis=-1)
-            y = (y * expert_scores[:, None, 0]).sum(axis=-1)
+            y = []
+
+            for xt, st, it in zip(x, expert_scores, expert_indices.tolist()):
+                yt = mx.concatenate([self.experts[e](xt)[:, None] for e in it], axis=-1)
+                yt = (yt * st).sum(axis=-1)
+                y.append(yt[None, :])
+
+            y = mx.concatenate(y)
 
         ########
         # Calculate expert router loss
