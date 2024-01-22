@@ -102,7 +102,7 @@ class LoRALinear(nn.Module):
         if quantized:
             output_dims, input_dims = weight.shape
             bias = "bias" in linear
-            linear = nn.Linear(input_dims, output_dims, bias=bias)
+            linear = nn.Linear(input_dims, output_dims, bias=linear.bias)
 
             return nn.QuantizedLinear.from_linear(linear, group_size, bits)
         else:
@@ -173,6 +173,10 @@ class TrainableLoRA(LLM):
                     sub, mod = target.split(".")
                     layer[sub][mod] = LoRALinear.from_linear(layer[sub][mod], rank=rank)
                     trainable_params += layer[sub][mod].lora_size
+
+                # Add LoRA for MoE gates
+                if hasattr(layer, "block_sparse_moe"):
+                    layer.block_sparse_moe.gate = LoRALinear.from_linear(layer.block_sparse_moe.gate)
 
             logging.info(f"Initialized LoRA with rank {rank} for {num_layers} layers")
             logging.debug(f"LoRA target modules: {', '.join(target_modules)}")
