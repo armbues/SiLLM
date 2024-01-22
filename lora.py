@@ -27,7 +27,7 @@ if __name__ == "__main__":
     model_path = pathlib.Path(args.model)
 
     # Initialize logging
-    log_level = 30 - (10 * args.verbose) if args.verbose > 0 else 0
+    log_level = 40 - (10 * args.verbose) if args.verbose > 0 else 0
     logging.basicConfig(level=log_level, stream=sys.stdout, format="%(asctime)s %(levelname)s %(message)s")
 
     # Load and init tokenizer/configuration/model and load the weights

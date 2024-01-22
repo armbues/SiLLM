@@ -1,8 +1,9 @@
 import pathlib
 import time
 import logging
-
 import math
+
+import tqdm
 import numpy as np
 
 import mlx.core as mx
@@ -214,6 +215,18 @@ class TrainableLoRA(LLM):
 
         logging.info(f"Saved adapter weights to {adapter_path}")
 
+    def load_adapters(self, adapter_path: str):
+        """
+        Load adapter weights.
+        Args:
+            adapter_path: Path to adapter weights.
+        """
+        assert pathlib.Path(adapter_path).exists(), adapter_path
+
+        self.model.load_weights(adapter_path)
+
+        logging.info(f"Loaded adapter weights from {adapter_path}")
+
     ########
     # Based on mlx-examples:
     # https://github.com/ml-explore/mlx-examples/blob/e74889d0fa0fb49d95bfdf6a1dcad907713eb50e/lora/lora.py#L166
@@ -291,6 +304,7 @@ class TrainableLoRA(LLM):
               batch_size: int = 4,
               learning_rate: float = 1e-5,
               iterations: int = 1000,
+              epochs: int = 1,
               report_steps: int = 10,
               eval_steps: int = 100,
               validation_batches: int = 25):
@@ -302,11 +316,18 @@ class TrainableLoRA(LLM):
             batch_size: Batch size.
             learning_rate: Learning rate.
             iterations: Number of iterations.
+            epochs: Number of epochs.
             report_steps: Report every `report_steps` iterations.
             eval_steps: Evaluate every `eval_steps` iterations.
             validation_batches: Number of batches to evaluate on.
         """
-        logging.info(f"Training the model for {iterations} iterations with batch size {batch_size} and learning rate {learning_rate}")
+        # Calculate number of iterations if epochs is set
+        if epochs > 0:
+            iterations = len(dataset_training) * epochs
+        
+        logging.info(f"Training the model for {epochs} epochs of {iterations} batch iterations")
+        logging.debug(f"Training batch size: {batch_size}")
+        logging.debug(f"Training learning rate: {learning_rate}")
         
         optimizer = optim.Adam(learning_rate=learning_rate)
 
@@ -318,48 +339,38 @@ class TrainableLoRA(LLM):
 
         # Main training loop
         start = time.perf_counter()
-        for i, batch in zip(
-            range(iterations),
-            self.iterate_batches(dataset_training, batch_size, train=True),
-        ):
-            # Forward and backward pass
-            (loss_value, toks), grad = loss_value_and_grad(*batch)
+        pbar_epochs = tqdm.tqdm(range(epochs), desc="Epoch")
+        pbar_iterations = tqdm.tqdm(range(iterations), desc="Iter.")
+        for _ in pbar_epochs:
+            for i in pbar_iterations:
+                batch = next(self.iterate_batches(dataset_training, batch_size, train=True))
 
-            # Model update
-            optimizer.update(self.model, grad)
-            mx.eval(self.model.parameters(), optimizer.state, loss_value)
+                # Forward and backward pass
+                (loss_value, toks), grad = loss_value_and_grad(*batch)
 
-            # Record loss
-            losses.append(loss_value.item())
-            num_tokens += toks.item()
+                # Model update
+                optimizer.update(self.model, grad)
+                mx.eval(self.model.parameters(), optimizer.state, loss_value)
 
-            # Report training loss if needed
-            if (i + 1) % report_steps == 0:
-                train_loss = np.mean(losses)
-                stop = time.perf_counter()
+                # Record loss
+                losses.append(loss_value.item())
+                num_tokens += toks.item()
 
-                logging.info(f"Iter {i + 1}: Train loss {train_loss:.3f} It/sec {report_steps / (stop - start):.3f} Tokens/sec {float(num_tokens) / (stop - start):.3f}")
-                
-                losses = []
-                num_tokens = 0
-                start = time.perf_counter()
+                # Report training loss if needed
+                if (i + 1) % report_steps == 0:
+                    train_loss = np.mean(losses)
+                    stop = time.perf_counter()
 
-            # Report validation loss if needed
-            if i == 0 or (i + 1) % eval_steps == 0:
-                stop = time.perf_counter()
-                val_loss = self.evaluate(dataset_validation, batch_size, validation_batches)
-                start = time.perf_counter()
+                    pbar_epochs.write(f"#{i + 1}:\tTrain loss {train_loss:.3f}\tTokens/sec {float(num_tokens) / (stop - start):.3f}")
+                    
+                    losses = []
+                    num_tokens = 0
+                    start = time.perf_counter()
 
-                logging.info(f"Iter {i + 1}: Val loss {val_loss:.3f} Val took {(start - stop):.3f}s")
+                # Report validation loss if needed
+                if i == 0 or (i + 1) % eval_steps == 0:
+                    stop = time.perf_counter()
+                    val_loss = self.evaluate(dataset_validation, batch_size, validation_batches)
+                    start = time.perf_counter()
 
-    def load_adapters(self, adapter_path: str):
-        """
-        Load adapter weights.
-        Args:
-            adapter_path: Path to adapter weights.
-        """
-        assert pathlib.Path(adapter_path).exists(), adapter_path
-
-        self.model.load_weights(adapter_path)
-
-        logging.info(f"Loaded adapter weights from {adapter_path}")
+                    pbar_epochs.write(f"#{i + 1}:\tValid loss {val_loss:.3f}\tVal took {(start - stop):.3f}s")
