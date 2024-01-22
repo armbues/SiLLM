@@ -1,3 +1,4 @@
 mlx>=0.0.10
 sentencepiece
 numpy
+tqdm
