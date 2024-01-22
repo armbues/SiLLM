@@ -19,8 +19,7 @@ class ModelArgs:
     vocab_size: int
     rope_theta: float
     rope_traditional: bool
-    moe: dict = None
-    rope_scaling: dict = None
+    rope_scaling_factor: float
 
     def __repr__(self):
         return json.dumps(dataclasses.asdict(self), indent=4)
@@ -64,8 +63,9 @@ class LlamaArgs(ModelArgs):
     """
     Llama model arguments.
     """
-    rope_traditional: bool = True
     rope_theta: float = 10000.0
+    rope_traditional: bool = True
+    rope_scaling_factor: float = 1
 
 @dataclasses.dataclass
 class MixtralArgs(ModelArgs):
@@ -75,3 +75,11 @@ class MixtralArgs(ModelArgs):
     rope_theta: float = 1000000.0
     rope_traditional: bool = False
     router_aux_loss_coef: float = 0.001
+    moe: dict = None
+
+    def __post_init__(self):
+        if self.moe is None:
+            self.moe = {
+                "num_experts": 8,
+                "num_experts_per_token": 2
+            }
