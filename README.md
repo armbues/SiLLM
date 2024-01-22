@@ -1,1 +1,2 @@
-# SiLLM
+# SiLLM - Silicon LLM Training & Inference
+The goal of this project is to streamline running and training LLMs on Apple Silicon using the [MLX](https://github.com/ml-explore/mlx/) framework. The code is based on the (MLX Examples)[https://github.com/ml-explore/mlx-examples] repository but development is focused on implementing new features and techniques for MLX.
