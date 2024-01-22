@@ -1,13 +1,13 @@
 import mlx.core as mx
 import mlx.nn as nn
 
-import sillm.args as args
+from sillm.args import ModelArgs
 
 class BaseModel(nn.Module):
     """
     Base class for LLM models.
     """
-    def __init__(self, args: args.ModelArgs):
+    def __init__(self, args: ModelArgs):
         super().__init__()
     
     def __call__(self,

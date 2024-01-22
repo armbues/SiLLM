@@ -18,7 +18,7 @@ class ModelArgs:
     norm_eps: float
     vocab_size: int
     rope_theta: float
-    rope_traditional: bool = True
+    rope_traditional: bool
     moe: dict = None
     rope_scaling: dict = None
 
@@ -41,7 +41,7 @@ class ModelArgs:
 
         ArgsClass = ModelArgs
         if "model_type" in config:
-            if config["model_type"] in ("llama", "mistral"):
+            if config["model_type"] == "llama":
                 ArgsClass = LlamaArgs
             elif config["model_type"] == "mixtral":
                 ArgsClass = MixtralArgs
@@ -58,12 +58,13 @@ class ModelArgs:
             logging.debug(f"Config {k}: {v}")
 
         return args
-
+    
 @dataclasses.dataclass
 class LlamaArgs(ModelArgs):
     """
     Llama model arguments.
     """
+    rope_traditional: bool = True
     rope_theta: float = 10000.0
 
 @dataclasses.dataclass
@@ -72,4 +73,5 @@ class MixtralArgs(ModelArgs):
     Mixtral model arguments.
     """
     rope_theta: float = 1000000.0
+    rope_traditional: bool = False
     router_aux_loss_coef: float = 0.001

@@ -1,3 +1,4 @@
+import dataclasses
 from typing import Optional, Tuple
 import logging
 
@@ -128,7 +129,7 @@ class Attention(nn.Module):
 
 ########
 # Based on mlx-examples:
-# https://github.com/ml-explore/mlx-examples/blob/047d4650c4f63d55e5bfbaf8f589c1679cbdd971/llms/mixtral/mixtral.py#L132
+# https://github.com/ml-explore/mlx-examples/blob/1415595409874971b5ad96d55980e7d4aa8a8043/lora/models/mixtral.py#L141
 ########
 class FeedForward(nn.Module):
     """
@@ -159,41 +160,29 @@ class FeedForward(nn.Module):
 
         gate_logits = self.gate(x)
         
-        expert_indices = mx.argpartition(-gate_logits, kth=top_k, axis=-1)[:, :top_k]
-        expert_scores = mx.softmax(mx.take_along_axis(gate_logits, expert_indices, axis=-1), axis=-1)
+        expert_indices = mx.stop_gradient(mx.argpartition(-gate_logits, kth=top_k, axis=-1)[:, :top_k])
+        expert_scores = mx.softmax(mx.take_along_axis(gate_logits, expert_indices, axis=-1).astype(mx.float32), axis=-1)            
+        mx.eval(expert_indices)
+        expert_indices = np.array(expert_indices)
 
-        print(expert_indices)
-        print(expert_scores)
+        y = mx.zeros((x.shape[0], self.num_experts_per_tok, x.shape[-1]))
 
-        if x.shape[0] > 1:
-            mx.eval(expert_indices)
-            expert_indices = np.array(expert_indices)
-            y = mx.zeros((x.shape[0], self.num_experts_per_tok, x.shape[-1]))
+        for e, expert in enumerate(self.experts):
+            idx1, idx2 = map(mx.array, np.where(expert_indices == e))
+            if idx1.size == 0:
+                continue
+            y[idx1, idx2] = expert(x[idx1])
 
-            for e, expert in enumerate(self.experts):
-                idx1, idx2 = map(mx.array, np.where(expert_indices == e))
-                if idx1.size == 0:
-                    continue
-                y[idx1, idx2] = expert(x[idx1])
+        y = (y * expert_scores[:, :, None]).sum(axis=1)
 
-            y = (y * expert_scores[:, :, None]).sum(axis=1)
-        else:
-            y = []
-
-            for xt, st, it in zip(x, expert_scores, expert_indices.tolist()):
-                yt = mx.concatenate([self.experts[e](xt)[:, None] for e in it], axis=-1)
-                yt = (yt * st).sum(axis=-1)
-                y.append(yt[None, :])
-
-            y = mx.concatenate(y)
-
-        ########
-        # Calculate expert router loss
-        # References:
-        # https://github.com/huggingface/transformers/blob/19e83d174c1e2802a459c9b5831628817e1c286f/src/transformers/models/mixtral/modeling_mixtral.py#L77
-        # https://arxiv.org/abs/2101.03961 (Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity)
-        ########
         if training:
+            ########
+            # Calculate expert router loss
+            # References:
+            # https://github.com/huggingface/transformers/blob/19e83d174c1e2802a459c9b5831628817e1c286f/src/transformers/models/mixtral/modeling_mixtral.py#L77
+            # https://arxiv.org/abs/2101.03961 (Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity)
+            ########
+            
             # Calculate routing weights and router probability per expert
             routing_weights = mx.softmax(gate_logits, axis=-1)
             router_prob_per_expert = mx.mean(routing_weights, axis=0)
@@ -205,10 +194,10 @@ class FeedForward(nn.Module):
             # Calculate expert loss and total router loss
             expert_losses = tokens_per_expert * router_prob_per_expert
             router_loss = expert_losses.sum()
-        else:
-            router_loss = 0.0
 
-        return y.reshape(orig_shape), router_loss
+            return y.reshape(orig_shape), router_loss
+
+        return y.reshape(orig_shape), 0.0
     
 ########
 # Based on mlx-examples:
@@ -233,10 +222,7 @@ class TransformerBlock(nn.Module):
                  ) -> mx.array:
         r, cache = self.attention(self.attention_norm(x), mask, cache)
         h = x + r
-        if training:
-            r, router_loss = self.feed_forward(mx.stop_gradient(self.ffn_norm(h)), training)
-        else:
-            r, router_loss = self.feed_forward(self.ffn_norm(h), training)
+        r, router_loss = self.feed_forward(self.ffn_norm(h), training)
         out = h + r
         return out, cache, router_loss
     
@@ -316,7 +302,7 @@ class Model(BaseModel):
         aux_loss = 0.0
         for layer in self.layers:
             h, _, router_loss = layer(h, mask, None, training=True)
-            aux_loss += router_loss * self.router_aux_loss_coef
+            aux_loss += router_loss
 
         logits = self.output(self.norm(h[:, T - 1 : T, :])).astype(mx.float32)
 
@@ -326,6 +312,6 @@ class Model(BaseModel):
         num_tokens = length_mask.sum()
         cross_entropy_loss = cross_entropy_loss.sum() / num_tokens
 
-        overall_loss = cross_entropy_loss + aux_loss
+        overall_loss = cross_entropy_loss + aux_loss * self.router_aux_loss_coef
 
         return overall_loss, num_tokens

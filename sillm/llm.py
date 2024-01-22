@@ -68,7 +68,8 @@ class LLM():
 
         logging.info(f"Saved model weights to {weights_path}")
 
-    def quantize(self, group_size=64, bits=4):
+    def quantize(self,
+                 group_size=64, bits=4):
         """
         Quantize model.
         Args:
@@ -76,14 +77,43 @@ class LLM():
             bits: Number of bits for quantization.
         """
         if self._quantization is None:
-            self._quantization = {
-                group_size: group_size,
-                bits: bits
+            quantization = {
+                "group_size": group_size,
+                "bits": bits
             }
+            self._quantization = quantization
 
-            nn.QuantizedLinear.quantize_module(self.model, group_size, bits)
+            nn.QuantizedLinear.quantize_module(
+                model = self.model,
+                **quantization,
+                linear_class_predicate = lambda m: isinstance(m, nn.Linear) and m.weight.shape[0] != 8
+            )
 
             logging.info(f"Quantized model with group size {group_size} and {bits} bits")
+
+    def dequantize(self):
+        """
+        Dequantize model.
+        """
+        if self._quantization is not None:
+            layers = []
+            for name, module in self.model.named_modules():
+                if isinstance(module, nn.QuantizedLinear):
+                    bias = "bias" in module
+                    weight = module.weight()
+                    weight = mx.dequantize(weight, module.scales, module.biases, module.group_size, module.bits).astype(mx.float16)
+                    output_dims, input_dims = weight.shape
+                    linear = nn.Linear(input_dims, output_dims, bias=bias)
+                    linear.weight = weight
+                    if bias:
+                        linear.bias = module.bias
+
+                    layers.append((name, linear))
+            
+            self.model.update_modules(tree_unflatten(layers))
+            self._quantization = None
+
+            logging.info(f"Dequantized model")
 
     def generate(self, prompt, temp=0.0, num_tokens=256, flush=5):
         """
