@@ -19,7 +19,7 @@ class ModelArgs:
     vocab_size: int
     rope_theta: float
     rope_traditional: bool
-    rope_scaling_factor: float
+    rope_scaling_factor: float = 1
 
     def __repr__(self):
         return json.dumps(dataclasses.asdict(self), indent=4)
@@ -65,7 +65,6 @@ class LlamaArgs(ModelArgs):
     """
     rope_theta: float = 10000.0
     rope_traditional: bool = True
-    rope_scaling_factor: float = 1
 
 @dataclasses.dataclass
 class MixtralArgs(ModelArgs):
