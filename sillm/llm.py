@@ -13,7 +13,10 @@ class LLM():
     """
     LLM model wrapper.
     """
-    def __init__(self, tokenizer, args: sillm.args.ModelArgs):
+    def __init__(self,
+                 tokenizer,
+                 args: sillm.args.ModelArgs
+                 ):
         """
         Args:
             tokenizer: Tokenizer instance.
@@ -31,7 +34,6 @@ class LLM():
             raise NotImplementedError(f"Model type {args.model_type} is not supported")
         self.tokenizer = tokenizer
 
-        self.eos_id = tokenizer.eos_id
         self._quantization = None
 
     def load_weights(self, model_path: str):
@@ -151,7 +153,7 @@ class LLM():
 
         tokens = []
         for token, _ in zip(generate_step(), range(num_tokens)):
-            if token[0] == self.eos_id:
+            if token[0] == self.tokenizer.eos_id:
                 break
             tokens.append(token)
 

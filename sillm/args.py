@@ -19,6 +19,8 @@ class ModelArgs:
     vocab_size: int
     rope_theta: float
     rope_traditional: bool
+    bos_token_id: int = None
+    eos_token_id: int = None
 
     def __repr__(self):
         return json.dumps(dataclasses.asdict(self), indent=4)

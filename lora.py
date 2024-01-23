@@ -31,8 +31,8 @@ if __name__ == "__main__":
     logging.basicConfig(level=log_level, stream=sys.stdout, format="%(asctime)s %(levelname)s %(message)s")
 
     # Load and init tokenizer/configuration/model and load the weights
-    tokenizer = sillm.Tokenizer(str(model_path / "tokenizer.model"))
     model_args = sillm.ModelArgs.load(str(model_path / "config.json"))
+    tokenizer = sillm.Tokenizer(str(model_path / "tokenizer.model"), model_args)
     model = sillm.TrainableLoRA(tokenizer, model_args)
     model.load_weights(model_path)
     

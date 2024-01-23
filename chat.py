@@ -27,8 +27,8 @@ if __name__ == "__main__":
         mx.random.seed(0)
 
     # Load and init LLM
-    tokenizer = sillm.Tokenizer(str(model_path / "tokenizer.model"))
     model_args = sillm.ModelArgs.load(str(model_path / "config.json"))
+    tokenizer = sillm.Tokenizer(str(model_path / "tokenizer.model"), model_args)
     model = sillm.LLM(tokenizer, model_args)
     model.load_weights(model_path)
 

@@ -5,6 +5,8 @@ from typing import List
 
 import sentencepiece
 
+import sillm.args
+
 ########
 # Based on mlx-examples:
 # https://github.com/ml-explore/mlx-examples/blob/e74889d0fa0fb49d95bfdf6a1dcad907713eb50e/llms/mixtral/mixtral.py#L221
@@ -13,7 +15,10 @@ class Tokenizer:
     """
     Tokenizer wrapper.
     """
-    def __init__(self, tokenizer_path: str):
+    def __init__(self,
+                 tokenizer_path: str,
+                 args: sillm.args.ModelArgs
+                 ):
         """
         Args:
             tokenizer_path: Path to tokenizer file.
@@ -26,6 +31,15 @@ class Tokenizer:
 
         assert self._model.vocab_size() == self._model.get_piece_size()
 
+        if args.bos_token_id is None:
+            self.bos_id = self._model.bos_id()
+        else:
+            self.bos_id = args.bos_token_id
+        if args.eos_token_id is None:
+            self.eos_id = self._model.eos_id()
+        else:
+            self.eos_id = args.eos_token_id
+
         logging.info(f"Loaded tokenizer from {tokenizer_path}")
 
     def encode(self, s: str, eos: bool = False) -> List[int]:
@@ -37,7 +51,7 @@ class Tokenizer:
         Returns:
             Encoded tokens.
         """
-        tokens = [self._model.bos_id(), *self._model.encode(s)]
+        tokens = [self.bos_id, *self._model.encode(s)]
         if eos:
             tokens.append(self.eos_id)
 
@@ -56,27 +70,6 @@ class Tokenizer:
             return " " + s
         
         return s
-
-    @property
-    def bos_id(self) -> int:
-        """
-        BOS token ID.
-        """
-        return self._model.bos_id()
-    
-    @property
-    def eos_id(self) -> int:
-        """
-        EOS token ID.
-        """
-        return self._model.eos_id()
-    
-    @property
-    def pad_id(self) -> int:
-        """
-        PAD token ID.
-        """
-        return self._model.pad_id()
 
     @property
     def vocab_size(self) -> int:
