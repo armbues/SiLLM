@@ -58,6 +58,13 @@ class Tokenizer:
         return s
 
     @property
+    def bos_id(self) -> int:
+        """
+        BOS token ID.
+        """
+        return self._model.bos_id()
+    
+    @property
     def eos_id(self) -> int:
         """
         EOS token ID.
