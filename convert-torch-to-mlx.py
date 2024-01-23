@@ -203,7 +203,7 @@ if __name__ == "__main__":
             # Write shard if it exceeds the max shard size
             if shard_size + estimated_size > max_shard_size:
                 logging.info(f"Saving shard weights.{num_shards}.npz with {shard_size/10**9:.2f}GB")
-                # mx.savez(str(output_path / f"weights.{num_shards}.npz"), **shard)
+                mx.savez(str(output_path / f"weights.{num_shards}.npz"), **shard)
                 shard, shard_size, num_shards = {}, 0, num_shards + 1
 
             shard[mapping[k]] = torch_to_mx(v, dtype=args.dtype)
@@ -223,10 +223,10 @@ if __name__ == "__main__":
     if shard_size > 0:
         if num_shards == 0:
             logging.info(f"Saving weights.npz with {shard_size/10**9:.2f}GB")
-            # mx.savez(str(output_path / "weights.npz"), **shard)
+            mx.savez(str(output_path / "weights.npz"), **shard)
         else:
             logging.info(f"Saving shard weights.{num_shards}.npz with {shard_size/10**9:.2f}GB")
-            # mx.savez(str(output_path / f"weights.{num_shards}.npz"), **shard)
+            mx.savez(str(output_path / f"weights.{num_shards}.npz"), **shard)
 
     # Calculate and print total number of parameters
     logging.debug(f"Total parameters: {total_params/10**9:.2f}B")
