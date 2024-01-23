@@ -1,3 +1,5 @@
+import sys
+import logging
 import argparse
 import glob
 import pathlib
@@ -14,14 +16,14 @@ def load_weights_torch(files_torch):
     weights = {}
 
     for fpath_weights in files_torch:
-        print(f"Loading {fpath_weights}")
+        logging.info(f"Loading weights from {fpath_weights}")
 
         w = torch.load(fpath_weights, map_location="cpu")
         weights.update(w)
 
     return weights
     
-def map_keys(keys, verbose=False):
+def map_keys(keys):
     mapping = {}
 
     for k1 in keys:
@@ -57,16 +59,13 @@ def map_keys(keys, verbose=False):
             elif k1.endswith(".self_attn.rotary_emb.inv_freq"):
                 continue
             else:
-                print(f"Unknown key: {k1}")
-                raise NotImplementedError
+                logging.warning(f"Unknown key: {k1}")
         elif k1.startswith("layers."):
             k2 = k1
         else:
-            print(f"Unknown key: {k1}")
-            raise NotImplementedError
+            logging.warning(f"Unknown key: {k1}")
         
-        if verbose:
-            print(f"{k1} => {k2}")
+        logging.debug(f"Mapping: {k1} => {k2}")
 
         mapping[k1] = k2
     
@@ -76,7 +75,7 @@ def load_config(config_path):
     with open(config_path) as f:
         return json.loads(f.read())
 
-def map_config(config, weights):
+def map_config(config):
     params = {}
 
     if "dim" in config:
@@ -103,8 +102,6 @@ def map_config(config, weights):
         params["hidden_dim"] = config["hidden_dim"]
     elif "intermediate_size" in params:
         params["hidden_dim"] = config["intermediate_size"]
-    else:
-        params["hidden_dim"] = weights["layers.0.feed_forward.w1.weight"].shape[0]
     
     if "n_kv_heads" in config:
         params["n_kv_heads"] = config["n_kv_heads"]
@@ -120,21 +117,28 @@ def map_config(config, weights):
 
     if "vocab_size" in config and config.get("vocab_size", -1) > 0:
         params["vocab_size"] = config["vocab_size"]
-    else:
-        params["vocab_size"] = weights["output.weight"].shape[-1]
 
     if "rope_theta" in config:
         params["rope_theta"] = config["rope_theta"]
 
+    if "rope_scaling" in config:
+        params["rope_scaling"] = config["rope_scaling"]
+
     return params
 
-def torch_to_mx(a: torch.Tensor, *, dtype: str = "float16") -> mx.array:
-    if dtype == "bfloat16":
-        a = a.to(torch.float32)
-    else:
-        a = a.to(getattr(torch, dtype))
+def torch_to_mx(a: torch.Tensor, *, dtype: str = None) -> mx.array:
+    # Map dtype
+    if dtype is None:
+        dtype = str(v.dtype).split(".")[-1]
+    dtype = getattr(mx, dtype)
 
-    return mx.array(a.numpy(), getattr(mx, dtype))
+    # Convert to numpy
+    if a.dtype == torch.bfloat16:
+        a = a.to(dtype=torch.float32).numpy()
+    else:
+        a = a.numpy()
+
+    return mx.array(a, dtype)
 
 if __name__ == "__main__":
     # Parse commandline arguments
@@ -142,10 +146,33 @@ if __name__ == "__main__":
     parser.add_argument("model_input", type=str, help="The input model directory")
     parser.add_argument("model_output", type=str, help="The output directory to store MLX files")
     parser.add_argument("-t", "--model_type", type=str, default="llama", help="Model type")
-    parser.add_argument("--dtype", type=str, default="float16", help="Torch data type to load the model weights")
+    parser.add_argument("-d", "--dtype", type=str, default=None, help="Torch data type to save the model weights")
+    parser.add_argument("-s", "--max_shard_size", type=int, default=10, help="Max shard size for weights files in GB")
+    parser.add_argument("-v", "--verbose", default=1, action="count", help="Increase output verbosity")
     args = parser.parse_args()
     input_path = pathlib.Path(args.model_input)
     output_path = pathlib.Path(args.model_output)
+
+    # Initialize logging
+    log_level = 40 - (10 * args.verbose) if args.verbose > 0 else 0
+    logging.basicConfig(level=log_level, stream=sys.stdout, format="%(asctime)s %(levelname)s %(message)s")
+
+    # Create output directory if it doesn't exist
+    if not output_path.exists():
+        logging.debug(f"Creating output directory {output_path}")
+        output_path.mkdir(parents=True)
+
+    # Load and map config file
+    logging.info(f"Loading config from {args.model_input}")
+    if (input_path / "config.json").exists():
+        config = load_config(str(input_path / "config.json"))
+    elif (input_path / "params.json").exists():
+        config = load_config(str(input_path / "params.json"))
+    else:
+        logging.error(f"No configuration file found in {args.model_input}")
+        exit(0)
+    config = map_config(config)
+    config["model_type"] = args.model_type
 
     # Load weights from input model
     files_torch_pth = sorted(glob.glob(str(input_path / "consolidated.*.pth")))
@@ -156,43 +183,66 @@ if __name__ == "__main__":
     elif len(files_torch_bin) > 0:
         weights = load_weights_torch(files_torch_bin)
     else:
-        print(f"No weights found in {args.model_input}")
+        logging.error(f"No weights found in {args.model_input}")
         exit(0)
 
-    # Convert keys and weights
-    state = {}
-    mapping = map_keys(weights.keys(), verbose=args.verbose)
-    for k, v in tqdm.tqdm(weights.items(), total=len(weights), desc="Converting weights"):
-        if k in mapping:
-            state[mapping[k]] = torch_to_mx(v, dtype=args.dtype)
+    # Map keys
+    mapping = map_keys(weights.keys())
 
-    np.savez(str(output_path / "weights.npz"), **state)
+    # Convert weights to MLX
+    max_shard_size = args.max_shard_size * 10**9
+    total_params = 0
+
+    shard, shard_size, num_shards = {}, 0, 0
+    pbar = tqdm.tqdm(weights.items(), total=len(weights), desc="Converting weights")
+    for k, v in pbar:
+        if k in mapping:
+            total_params += v.numel()
+            estimated_size = v.numel() * v.dtype.itemsize
+
+            # Write shard if it exceeds the max shard size
+            if shard_size + estimated_size > max_shard_size:
+                logging.info(f"Saving shard weights.{num_shards}.npz with {shard_size/10**9:.2f}GB")
+                # mx.savez(str(output_path / f"weights.{num_shards}.npz"), **shard)
+                shard, shard_size, num_shards = {}, 0, num_shards + 1
+
+            shard[mapping[k]] = torch_to_mx(v, dtype=args.dtype)
+            shard_size += estimated_size
+
+            # Add missing config parameters
+            if mapping[k] == "output.weight":
+                if "vocab_size" not in config:
+                    config["vocab_size"] = v.shape[-1]
+            elif mapping[k] == "layers.0.feed_forward.w1.weight":
+                if "hidden_dim" not in config:
+                    config["hidden_dim"] = v.shape[0]
+        else:
+            logging.warning(f"Unmapped key {k}")
+
+    # Write remaining shard
+    if shard_size > 0:
+        if num_shards == 0:
+            logging.info(f"Saving weights.npz with {shard_size/10**9:.2f}GB")
+            # mx.savez(str(output_path / "weights.npz"), **shard)
+        else:
+            logging.info(f"Saving shard weights.{num_shards}.npz with {shard_size/10**9:.2f}GB")
+            # mx.savez(str(output_path / f"weights.{num_shards}.npz"), **shard)
 
     # Calculate and print total number of parameters
-    num_params = sum(v.size for v in state.values()) / 10**9
-    print(f"Total parameters: {num_params:.2f}B")
+    logging.debug(f"Total parameters: {total_params/10**9:.2f}B")
 
     # Copy the tokenizer
     tokenizer_path = input_path / "tokenizer.model"
     if tokenizer_path.exists():
-        print(f"Copying tokenizer: {tokenizer_path}")
+        logging.info(f"Copying tokenizer: {tokenizer_path}")
         shutil.copyfile(str(tokenizer_path), str(output_path / "tokenizer.model"))
     else:
-        print(f"Make sure there is a file tokenizer.model in {args.torch_model}")
+        logging.error(f"No tokenizer found in {args.model_input}")
         exit(0)
 
-    # Load and convert config file
-    if (input_path / "config.json").exists():
-        config = load_config(str(input_path / "config.json"))
-    elif (input_path / "params.json").exists():
-        config = load_config(str(input_path / "params.json"))
-    else:
-        print(f"No configuration file found in {args.torch_model}")
-        exit(0)
-        
-    config = map_config(config, state)
-    config["model_type"] = args.model_type
-    print(json.dumps(config, indent=4))
+    # Write config file
+    for k, v in config.items():
+        logging.debug(f"Config {k}: {v}")
 
     params_path = output_path / "config.json"
     with open(str(params_path), "w") as f:

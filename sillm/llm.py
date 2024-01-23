@@ -69,7 +69,8 @@ class LLM():
         logging.info(f"Saved model weights to {weights_path}")
 
     def quantize(self,
-                 group_size=64, bits=4):
+                 group_size: int = 64,
+                 bits: int = 4):
         """
         Quantize model.
         Args:
@@ -115,7 +116,11 @@ class LLM():
 
             logging.info(f"Dequantized model")
 
-    def generate(self, prompt, temp=0.0, num_tokens=256, flush=5):
+    def generate(self,
+                 prompt,
+                 temp: float = 0.0,
+                 num_tokens: int = 256,
+                 flush: int = 5):
         """
         Iterator for generating tokens.
         Args:
