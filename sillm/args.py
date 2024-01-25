@@ -3,6 +3,8 @@ import json
 import logging
 import dataclasses
 
+import sillm.utils as utils
+
 @dataclasses.dataclass
 class ModelArgs:
     """
@@ -12,13 +14,13 @@ class ModelArgs:
     dim: int
     n_layers: int
     head_dim: int
-    hidden_dim: int
     n_heads: int
     n_kv_heads: int
     norm_eps: float
     vocab_size: int
     rope_theta: float
     rope_traditional: bool
+    hidden_dim: int = 0
     max_position_embeddings: int = 0
     bos_token_id: int = None
     eos_token_id: int = None
@@ -40,6 +42,8 @@ class ModelArgs:
 
         with open(config_path, "r") as f:
             config = json.loads(f.read())
+
+        config = utils.map_config(config)
 
         ArgsClass = ModelArgs
         if "model_type" in config:

@@ -1,5 +1,28 @@
 import re
-import logging
+
+import mlx.core as mx
+
+def load_torch(weights_path):
+    """
+    Load PyTorch weights and convert to MLX.
+    """
+    try:
+        import torch
+    except ImportError:
+        raise ImportError("Please install torch library to load PyTorch weights")
+    
+    weights = {}
+    for k, v in torch.load(weights_path, map_location="cpu").items():
+        # Convert to numpy
+        if v.dtype == torch.bfloat16:
+            v = v.to(dtype=torch.float32).numpy()
+        else:
+            v = v.numpy()
+
+        dtype = getattr(mx,str(v.dtype).split(".")[-1])
+        weights[k] = mx.array(v, dtype)
+
+    return weights
 
 def map_key(k):
     """
@@ -33,8 +56,6 @@ def map_key(k):
         k = re.sub(r"\.mlp\.up_proj\.", ".feed_forward.w3.", k)
 
         return k
-    
-    logging.warning(f"Unknown key: {k}")
 
     return None
 
@@ -66,17 +87,13 @@ def map_config(config):
         if key in config:
             result[key] = config[key]
 
-    if result["vocab_size"] <= 0:
-        del(result["vocab_size"])
-    if "dim" in result and "n_heads" in result:
-        result["head_dim"] = result["dim"] // result["n_heads"]
     if "hidden_size" in config:
         result["dim"] = config["hidden_size"]
     if "num_hidden_layers" in config:
         result["n_layers"] = config["num_hidden_layers"]
     if "num_attention_heads" in config:
         result["n_heads"] = config["num_attention_heads"]
-    if "intermediate_size" in result:
+    if "intermediate_size" in config:
         result["hidden_dim"] = config["intermediate_size"]
     if "num_key_value_heads" in config:
         result["n_kv_heads"] = config["num_key_value_heads"]
@@ -84,5 +101,10 @@ def map_config(config):
         result["n_kv_heads"] = config["n_heads"]
     if "rms_norm_eps" in config:
         result["norm_eps"] = config["rms_norm_eps"]
+
+    if result["vocab_size"] <= 0:
+        del(result["vocab_size"])
+    if "dim" in result and "n_heads" in result:
+        result["head_dim"] = result["dim"] // result["n_heads"]
 
     return result

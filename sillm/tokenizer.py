@@ -27,7 +27,7 @@ class Tokenizer():
         if tokenizer_sentencepiece.exists():
             return SentencePieceTokenizer(str(tokenizer_sentencepiece), args)
         elif tokenizer_transformers.exists():
-            return TransformerTokenizer(str(tokenizer_transformers), args)
+            return TransformerTokenizer(str(tokenizer_dir), args)
         else:
             raise ValueError(f"Tokenizer not found in {tokenizer_dir}")
     
