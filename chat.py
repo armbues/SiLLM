@@ -10,7 +10,7 @@ import sillm
 if __name__ == "__main__":
     # Parse commandline arguments
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument("model_path", type=str, help="The model directory")
+    parser.add_argument("model_path", type=str, help="The model directory or GGUF file")
     parser.add_argument("-q", "--quantize", default=None, type=int, help="Quantize the model to the given number of bits")
     parser.add_argument("-t", "--temp", type=float, default=0.7, help="Sampling temperature")
     parser.add_argument("-s", "--seed", type=int, default=-1, help="Seed for randomization")
@@ -26,9 +26,10 @@ if __name__ == "__main__":
     if args.seed >= 0:
         mx.random.seed(0)
 
-    # Load and init LLM
+    model_path = pathlib.Path(model_path)
+
     model_args = sillm.ModelArgs.load(str(model_path / "config.json"))
-    tokenizer = sillm.Tokenizer(str(model_path / "tokenizer.model"), model_args)
+    tokenizer = sillm.Tokenizer.load(model_path, model_args)
     model = sillm.LLM(tokenizer, model_args)
     model.load_weights(model_path)
 

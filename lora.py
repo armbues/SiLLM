@@ -13,7 +13,7 @@ if __name__ == "__main__":
     parser.add_argument("model", type=str, help="Directory for the base model")
     parser.add_argument("-i", "--load_adapter_path", default=None, type=str, help="Path to load adapter weights from .npz file")
     parser.add_argument("-a", "--save_adapter_path", default=None, type=str, help="Path to save adapter weights as .npz file")
-    parser.add_argument("-o", "--save_merge_path", default=None, type=str, help="Path to save merged model weights as .npz file")
+    parser.add_argument("-o", "--save_merge_path", default=None, type=str, help="Folder to save merged model weights")
     parser.add_argument("-t", "--training_data", default=None, type=str, help="Train the model with training dataset in the directory")
     parser.add_argument("-q", "--quantize", default=None, type=int, help="Quantize the model to the given number of bits")
     parser.add_argument("--layers", default=-1, type=int, help="Layers to use for LoRA (default: -1 for all layers)")
@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     # Load and init tokenizer/configuration/model and load the weights
     model_args = sillm.ModelArgs.load(str(model_path / "config.json"))
-    tokenizer = sillm.Tokenizer(str(model_path / "tokenizer.model"), model_args)
+    tokenizer = sillm.Tokenizer.load(model_path, model_args)
     model = sillm.TrainableLoRA(tokenizer, model_args)
     model.load_weights(model_path)
     
@@ -68,4 +68,5 @@ if __name__ == "__main__":
         model.merge_and_unload_lora()
 
         # Save merged weights
-        model.save_weights(args.save_merge_path)
+        model.save_npz(args.save_merge_path)
+        # TODO save sharded weights

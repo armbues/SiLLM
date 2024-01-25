@@ -19,8 +19,10 @@ class ModelArgs:
     vocab_size: int
     rope_theta: float
     rope_traditional: bool
+    max_position_embeddings: int = 0
     bos_token_id: int = None
     eos_token_id: int = None
+    quantization: dict = None
 
     def __repr__(self):
         return json.dumps(dataclasses.asdict(self), indent=4)
@@ -41,16 +43,19 @@ class ModelArgs:
 
         ArgsClass = ModelArgs
         if "model_type" in config:
-            if config["model_type"] == "llama":
+            if config["model_type"] in ("llama", "mistral"):
                 ArgsClass = LlamaArgs
             elif config["model_type"] == "mixtral":
                 ArgsClass = MixtralArgs
+            else:
+                logging.warn(f"Unknown model type {config['model_type']} - falling back to default config")
 
         fields = ModelArgs.__annotations__
         if ArgsClass is not ModelArgs:
             fields.update(ArgsClass.__annotations__)
 
         config = {k:v for k, v in config.items() if k in fields}
+        print(config)
         args = ArgsClass(**config)
 
         logging.info(f"Loaded model config from {config_path}")

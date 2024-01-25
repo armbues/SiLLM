@@ -66,7 +66,6 @@ class Attention(nn.Module):
                             traditional=args.rope_traditional,
                             base=args.rope_theta,
                             scale=scale)
-        
 
     def __call__(
             self,

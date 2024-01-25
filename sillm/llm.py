@@ -3,11 +3,12 @@ import logging
 
 import mlx.core as mx
 import mlx.nn as nn
-from mlx.utils import tree_unflatten
+from mlx.utils import tree_flatten, tree_unflatten
 
 import sillm.args
 import sillm.llama as llama
 import sillm.mixtral as mixtral
+import sillm.utils as utils
 
 class LLM():
     """
@@ -35,23 +36,42 @@ class LLM():
         self.tokenizer = tokenizer
 
         self._quantization = None
+        if args.quantization is not None:
+            self.quantize(group_size=args.quantization["group_size"], bits=args.quantization["bits"])
 
-    def load_weights(self, model_path: str):
+    def load_weights(self,
+                     model_path,
+                     verify: bool = True):
         """
         Load model weights.
         Args:
             model_path: Path to model files.
         """
-        model_path = pathlib.Path(model_path)
-        assert pathlib.Path(model_path).exists(), model_path
+        if isinstance(model_path, str):
+            model_path = pathlib.Path(model_path)
 
-        weights_files = list(model_path.glob("*.npz"))
-
+        weights_files = []
+        if model_path.is_file():
+            weights_files = [model_path]
+        elif model_path.is_dir():
+            weights_files = list(model_path.glob("*.npz")) + list(model_path.glob("*.safetensors"))
+            
+            if len(weights_files) == 0:
+                raise ValueError("No weights files found")
+    
         weights = {}
         for weights_path in weights_files:
-            logging.debug(f"Loading model weights from {weights_path}")
-            weights.update(mx.load(str(weights_path)).items())
+            logging.debug(f"Loading model weights file {weights_path}")
+
+            for k, v in mx.load(str(weights_path)).items():
+                k = utils.map_key(k)
+
+                if k:
+                    weights[k] = v
         total_params = sum(v.size for v in weights.values())
+
+        if verify:
+            self.verify_weights(weights)
         
         weights = tree_unflatten(list(weights.items()))
         self.model.update(weights)
@@ -60,7 +80,7 @@ class LLM():
 
         logging.info(f"Loaded model weights with {total_params/10**9:.2f}B total parameters")
 
-    def save_weights(self, weights_path: str):
+    def save_npz(self, weights_path: str):
         """
         Save model weights.
         Args:
@@ -72,7 +92,8 @@ class LLM():
 
     def quantize(self,
                  group_size: int = 64,
-                 bits: int = 4):
+                 bits: int = 4
+                 ):
         """
         Quantize model.
         Args:
@@ -93,6 +114,8 @@ class LLM():
             )
 
             logging.info(f"Quantized model with group size {group_size} and {bits} bits")
+        else:
+            logging.warn(f"Model is already quantized")
 
     def dequantize(self):
         """
@@ -117,6 +140,21 @@ class LLM():
             self._quantization = None
 
             logging.info(f"Dequantized model")
+
+    def verify_weights(self, weights):
+        """
+        Verify weights for all modules are present.
+        Args:
+            weights: Weights to verify.
+        """
+        result = True
+        for name, _ in tree_flatten(self.model.parameters()):
+            if name not in weights:
+                result = False
+
+                logging.warn(f"Key {name} not found in weights")
+
+        return result
 
     def generate(self,
                  prompt,
