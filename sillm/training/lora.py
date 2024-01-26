@@ -193,7 +193,7 @@ class TrainableLoRA(LLM):
                     trainable_params += layer[sub][mod].lora_size
 
                 # Add LoRA for MoE gates
-                if hasattr(layer, "feed_forward"):
+                if hasattr(layer, "feed_forward") and hasattr(layer.feed_forward, "gate"):
                     layer.feed_forward.gate = LoRALinear.from_linear(layer.feed_forward.gate)
 
             logging.info(f"Initialized LoRA with rank {rank} for {num_layers} layers")
