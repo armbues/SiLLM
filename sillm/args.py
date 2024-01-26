@@ -17,10 +17,10 @@ class ModelArgs:
     n_heads: int
     n_kv_heads: int
     norm_eps: float
-    vocab_size: int
-    rope_theta: float
-    rope_traditional: bool
-    hidden_dim: int = 0
+    hidden_dim: int = None
+    vocab_size: int = -1
+    rope_theta: float = 10000.0
+    rope_traditional: bool = True
     max_position_embeddings: int = 0
     bos_token_id: int = None
     eos_token_id: int = None
@@ -28,6 +28,19 @@ class ModelArgs:
 
     def __repr__(self):
         return json.dumps(dataclasses.asdict(self), indent=4)
+    
+    def log_config(self):
+        for k, v in dataclasses.asdict(self).items():
+            logging.debug(f"Config {k}: {v}")
+    
+    def fix_config(self, weights):
+        """
+        Fix config with shape information from weights.
+        """
+        if "layers.0.feed_forward.w1.weight" in weights:
+            self.hidden_dim = weights["layers.0.feed_forward.w1.weight"].shape[-1]
+        if "output.weight" in weights:
+            self.vocab_size = weights["output.weight"].shape[-1]
 
     @staticmethod
     def load(config_path):
@@ -45,26 +58,23 @@ class ModelArgs:
 
         config = utils.map_config(config)
 
-        ArgsClass = ModelArgs
+        ArgsClass = None
         if "model_type" in config:
             if config["model_type"] in ("llama", "mistral"):
                 ArgsClass = LlamaArgs
             elif config["model_type"] == "mixtral":
                 ArgsClass = MixtralArgs
-            else:
-                logging.warn(f"Unknown model type {config['model_type']} - falling back to default config")
+        if ArgsClass is None:
+            config["model_type"] = "llama"
+            ArgsClass = LlamaArgs
+            logging.warn(f"No model type specified - falling back to default model type `llama`")
 
         fields = ModelArgs.__annotations__
-        if ArgsClass is not ModelArgs:
-            fields.update(ArgsClass.__annotations__)
+        fields.update(ArgsClass.__annotations__)
 
         config = {k:v for k, v in config.items() if k in fields}
-        print(config)
         args = ArgsClass(**config)
-
         logging.info(f"Loaded model config from {config_path}")
-        for k, v in dataclasses.asdict(args).items():
-            logging.debug(f"Config {k}: {v}")
 
         return args
     
@@ -73,8 +83,6 @@ class LlamaArgs(ModelArgs):
     """
     Llama model arguments.
     """
-    rope_theta: float = 10000.0
-    rope_traditional: bool = True
     rope_scaling: dict = None
 
 @dataclasses.dataclass

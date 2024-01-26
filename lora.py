@@ -24,17 +24,13 @@ if __name__ == "__main__":
     parser.add_argument("--seed", default=0, type=int, help="Seed for randomization (default: 0)")
     parser.add_argument("-v", "--verbose", default=1, action="count", help="Increase output verbosity")
     args = parser.parse_args()
-    model_path = pathlib.Path(args.model)
-
+    
     # Initialize logging
     log_level = 40 - (10 * args.verbose) if args.verbose > 0 else 0
     logging.basicConfig(level=log_level, stream=sys.stdout, format="%(asctime)s %(levelname)s %(message)s")
 
-    # Load and init tokenizer/configuration/model and load the weights
-    model_args = sillm.ModelArgs.load(str(model_path / "config.json"))
-    tokenizer = sillm.Tokenizer.load(model_path, model_args)
-    model = sillm.TrainableLoRA(tokenizer, model_args)
-    model.load_weights(model_path)
+    # Load model
+    model, tokenizer = sillm.load(args.model)
     
     if args.seed >= 0:
         mx.random.seed(args.seed)

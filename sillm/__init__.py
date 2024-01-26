@@ -1,3 +1,4 @@
+from sillm.core import load
 from sillm.llm import LLM
 from sillm.training.lora import TrainableLoRA
 from sillm.training.dataset import Dataset

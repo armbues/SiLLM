@@ -1,29 +1,5 @@
 import re
 
-import mlx.core as mx
-
-def load_torch(weights_path):
-    """
-    Load PyTorch weights and convert to MLX.
-    """
-    try:
-        import torch
-    except ImportError:
-        raise ImportError("Please install torch library to load PyTorch weights")
-    
-    weights = {}
-    for k, v in torch.load(weights_path, map_location="cpu").items():
-        # Convert to numpy
-        if v.dtype == torch.bfloat16:
-            v = v.to(dtype=torch.float32).numpy()
-        else:
-            v = v.numpy()
-
-        dtype = getattr(mx,str(v.dtype).split(".")[-1])
-        weights[k] = mx.array(v, dtype)
-
-    return weights
-
 def map_key(k):
     """
     Map key to MLX naming scheme.

@@ -1,5 +1,4 @@
 import pathlib
-import logging
 
 from typing import List
 
@@ -15,21 +14,6 @@ class Tokenizer():
     @property
     def vocab_size(self) -> int:
         raise NotImplementedError("Class tokenizer.Tokenizer is used for inheritance only")
-    
-    @staticmethod
-    def load(tokenizer_dir : str, args: sillm.args.ModelArgs):
-        """
-        Load tokenizer from a directory.
-        """
-        tokenizer_sentencepiece = tokenizer_dir / "tokenizer.model"
-        tokenizer_transformers = tokenizer_dir / "tokenizer.json"
-
-        if tokenizer_sentencepiece.exists():
-            return SentencePieceTokenizer(str(tokenizer_sentencepiece), args)
-        elif tokenizer_transformers.exists():
-            return TransformerTokenizer(str(tokenizer_dir), args)
-        else:
-            raise ValueError(f"Tokenizer not found in {tokenizer_dir}")
     
 ########
 # Based on mlx-examples:
@@ -67,8 +51,6 @@ class SentencePieceTokenizer(Tokenizer):
             self.eos_id = self._model.eos_id()
         else:
             self.eos_id = args.eos_token_id
-
-        logging.info(f"Loaded tokenizer from {tokenizer_path}")
 
     def encode(self, s: str, eos: bool = False) -> List[int]:
         """
@@ -135,8 +117,6 @@ class TransformerTokenizer(Tokenizer):
             self.eos_id = self._model.eos_token_id
         else:
             self.eos_id = args.eos_token_id
-
-        logging.info(f"Loaded tokenizer from {tokenizer_dir}")
 
     def encode(self, s: str, eos: bool = False) -> List[int]:
         """
