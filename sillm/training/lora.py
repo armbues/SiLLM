@@ -18,13 +18,20 @@ from sillm.training.dataset import Dataset
 ########
 # Based on mlx-examples:
 # https://github.com/ml-explore/mlx-examples/blob/e74889d0fa0fb49d95bfdf6a1dcad907713eb50e/lora/models.py#L55
+# https://github.com/ml-explore/mlx-examples/blob/854ad8747a9c703773adf8866602b114f68aa54a/llms/mlx_lm/tuner/lora.py#L7
 ########
 class LoRALinear(nn.Module):
     """
     Linear layer with LoRA weights.
     """
     @staticmethod
-    def from_linear(linear: nn.Linear, rank: int = 8):
+    def from_linear(
+        linear: nn.Linear,
+        rank: int = 8,
+        alpha: float = 16,
+        dropout: float = 0.05,
+        scale : float = 10.0
+        ):
         """
         Convert linear layer to LoRA linear layer.
         Args:
@@ -38,7 +45,7 @@ class LoRALinear(nn.Module):
         if isinstance(linear, nn.QuantizedLinear):
             input_dims *= 32 // linear.bits
 
-        lora_lin = LoRALinear(input_dims, output_dims, rank)
+        lora_lin = LoRALinear(input_dims, output_dims, rank, alpha, dropout, scale)
         lora_lin.linear = linear
 
         return lora_lin
@@ -46,8 +53,10 @@ class LoRALinear(nn.Module):
     def __init__(self,
                  input_dims: int,
                  output_dims: int,
-                 lora_rank: int = 8,
-                 scale : float = 2.0,
+                 rank: int = 8,
+                 alpha: float = 16,
+                 dropout: float = 0.0,
+                 scale : float = 10.0,
                  bias: bool = False):
         """
         Args:
@@ -60,13 +69,16 @@ class LoRALinear(nn.Module):
         super().__init__()
 
         # Initialize linear layer weights
-        self.scale = scale
         self.linear = nn.Linear(input_dims, output_dims, bias=bias)
 
+        # Initialize LoRA dropout
+        self.lora_dropout = nn.Dropout(p=dropout)
+
         # Initialize LoRA weights
+        self.scale = scale * (alpha / rank)
         bound = 1 / math.sqrt(input_dims)
-        input_shape = (input_dims, lora_rank)
-        output_shape = (lora_rank, output_dims)
+        input_shape = (input_dims, rank)
+        output_shape = (rank, output_dims)
 
         self.lora_a = mx.random.uniform(low=-bound, high=bound, shape=input_shape)
         self.lora_b = mx.zeros(shape=output_shape)
@@ -123,7 +135,7 @@ class LoRALinear(nn.Module):
             dtype = self.linear.scales.dtype
 
         y = self.linear(x.astype(dtype))
-        z = (x @ self.lora_a) @ self.lora_b
+        z = (self.lora_dropout(x) @ self.lora_a) @ self.lora_b
 
         return y + self.scale * z
 
