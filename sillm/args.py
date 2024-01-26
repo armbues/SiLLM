@@ -37,27 +37,13 @@ class ModelArgs:
         """
         Fix config with shape information from weights.
         """
-        if "layers.0.feed_forward.w1.weight" in weights:
-            self.hidden_dim = weights["layers.0.feed_forward.w1.weight"].shape[-1]
-        if "output.weight" in weights:
+        if self.hidden_dim is None and "layers.0.feed_forward.w1.weight" in weights:
+            self.hidden_dim = weights["layers.0.feed_forward.w1.weight"].shape[0]
+        if self.vocab_size <= 0 and "output.weight" in weights:
             self.vocab_size = weights["output.weight"].shape[-1]
 
     @staticmethod
-    def load(config_path):
-        """
-        Load model config from JSON file.
-        Args:
-            config_path: Path to config file.
-        Returns:
-            ModelArgs instance.
-        """
-        assert pathlib.Path(config_path).exists(), config_path
-
-        with open(config_path, "r") as f:
-            config = json.loads(f.read())
-
-        config = utils.map_config(config)
-
+    def load_config(config):
         ArgsClass = None
         if "model_type" in config:
             if config["model_type"] in ("llama", "mistral"):
@@ -71,9 +57,26 @@ class ModelArgs:
 
         fields = ModelArgs.__annotations__
         fields.update(ArgsClass.__annotations__)
-
         config = {k:v for k, v in config.items() if k in fields}
-        args = ArgsClass(**config)
+
+        return ArgsClass(**config)
+    
+    @staticmethod
+    def load_file(config_path):
+        """
+        Load model config from JSON file.
+        Args:
+            config_path: Path to config file.
+        Returns:
+            ModelArgs instance.
+        """
+        assert pathlib.Path(config_path).exists(), config_path
+
+        with open(config_path, "r") as f:
+            config = json.loads(f.read())
+        config = utils.map_config(config)
+
+        args = ModelArgs.load_config(config)
         logging.info(f"Loaded model config from {config_path}")
 
         return args

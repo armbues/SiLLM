@@ -26,7 +26,7 @@ if __name__ == "__main__":
         mx.random.seed(0)
 
     # Load model
-    model, tokenizer = sillm.load(args.model)
+    model = sillm.load(args.model)
 
     if args.quantize is not None:
         model.quantize(bits=args.quantize)

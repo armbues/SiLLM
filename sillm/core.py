@@ -9,6 +9,102 @@ import sillm.utils as utils
 def load(model_path):
     """
     Load model from directory.
+    Args:
+        model_path: Path to model directory.
+    """
+    model_path = pathlib.Path(model_path)
+
+    if model_path.is_dir():
+        return load_model_dir(str(model_path))
+    elif model_path.is_file():
+        return load_model_file(str(model_path))
+
+def load_model_file(model_path):
+    """
+    Load model from file.
+    Args:
+        model_path: Path to model file.
+    """
+    model_path = pathlib.Path(model_path)
+
+    if model_path.suffix == ".gguf":
+        return load_gguf_file(str(model_path))
+    else:
+        raise ValueError(f"Unknown model file type: {model_path}")
+    
+def load_gguf_file(model_path):
+    """
+    Load model from GGUF file.
+    """
+    gguf_weights, metadata = mx.load(model_path, return_metadata=True)
+
+    # Map weights keys
+    weights = {}
+    for gguf_key, value in gguf_weights.items():
+        mlx_key = utils.map_key(gguf_key)
+
+        if mlx_key is None:
+            logging.warn(f"Unknown key: {gguf_key}")
+        else:
+            weights[mlx_key] = value
+
+    # Map metadata and load configuration
+    config = utils.map_config(metadata)
+    model_args = sillm.ModelArgs.load_config(config)
+
+    # Map quantization configuration
+    gguf_file_type = metadata["general.file_type"].item()
+    logging.debug(f"GGUF file type: {gguf_file_type}")
+    quantization = None
+    if gguf_file_type == 0 or gguf_file_type == 1:
+        # ALL_F32 or MOSTLY_F16
+        pass
+    elif gguf_file_type == 2 or gguf_file_type == 3:
+        quantization = {"group_size": 32, "bits": 4}
+    elif gguf_file_type == 7:
+        quantization = {"group_size": 32, "bits": 8}
+    else:
+        logging.warn(f"Unsupported GGUF file type: {gguf_file_type}")
+    model_args.quantization = quantization
+
+    # Fix configuration
+    model_args.fix_config(weights)
+    model_args.log_config()
+
+    # Load tokenizer
+    tokenizer = sillm.tokenizer.GGUFTokenizer(metadata)
+    logging.info("Loaded tokenizer from GGUF metadata")
+
+    # Initialize model
+    model = sillm.LLM(tokenizer, model_args)
+
+    # Quantize model
+    if quantization is not None:
+        model.quantize(group_size=model_args.quantization["group_size"], bits=model_args.quantization["bits"])
+
+    def dequantize(k):
+        weight = weights.pop(f"{k}.weight")
+        scales = weights.pop(f"{k}.scales")
+        biases = weights.pop(f"{k}.biases")
+        weights[f"{k}.weight"] = mx.dequantize(weight, scales=scales, biases=biases, **quantization)
+    dequantize("tok_embeddings")
+
+    # Verify that all model weights are present
+    model.verify_weights(weights)
+
+    # Update model weights
+    model.update_weights(weights)
+
+    total_params = sum(v.size for v in weights.values())
+    logging.info(f"Loaded model weights with {total_params/10**9:.2f}B total parameters")
+
+    return model
+
+def load_model_dir(model_path):
+    """
+    Load model from directory.
+    Args:
+        model_path: Path to model directory.
     """
     model_path = pathlib.Path(model_path)
 
@@ -19,25 +115,22 @@ def load(model_path):
     weights_files_bin = sorted(list(model_path.glob("pytorch_model-*.bin")))
 
     if len(weights_files_npz) > 0:
-        weights = load_weights_mlx(weights_files_npz)
+        weights = load_mlx_weights(weights_files_npz)
     elif len(weights_files_safetensors) > 0:
-        weights = load_weights_mlx(weights_files_safetensors)
+        weights = load_mlx_weights(weights_files_safetensors)
     elif len(weights_files_consolidated) > 0:
-        weights = load_weights_torch(weights_files_consolidated)
+        weights = load_torch_weights(weights_files_consolidated)
     elif len(weights_files_bin) > 0:
-       weights = load_weights_torch(weights_files_bin)
+       weights = load_torch_weights(weights_files_bin)
     else:
         raise ValueError("No weights files found")
-    
-    total_params = sum(v.size for v in weights.values())
-    logging.info(f"Loaded model weights with {total_params/10**9:.2f}B total parameters")
 
     # Load configuration
     model_args = None
     for config_file in ("config.json", "params.json"):
         config_path = model_path / config_file
         if config_path.exists():
-            model_args = sillm.ModelArgs.load(config_path)
+            model_args = sillm.ModelArgs.load_file(config_path)
             break
         else:
             logging.debug(f"No config file {config_path} not found")
@@ -65,15 +158,22 @@ def load(model_path):
     # Initialize model
     model = sillm.LLM(tokenizer, model_args)
 
+    # Quantize model
+    if model_args.quantization is not None:
+        model.quantize(group_size=model_args.quantization["group_size"], bits=model_args.quantization["bits"])
+
     # Verify that all model weights are present
     model.verify_weights(weights)
 
     # Update model weights
     model.update_weights(weights)
 
-    return model, tokenizer
+    total_params = sum(v.size for v in weights.values())
+    logging.info(f"Loaded model weights with {total_params/10**9:.2f}B total parameters")
 
-def load_weights_mlx(weights_files):
+    return model
+
+def load_mlx_weights(weights_files):
     """
     Load model weights using MLX.
     Args:
@@ -86,14 +186,14 @@ def load_weights_mlx(weights_files):
         for k, v in mx.load(str(weights_path)).items():
             k = utils.map_key(k)
 
-            if k:
-                weights[k] = v
-            else:
+            if k is None:
                 logging.warning(f"Unknown key: {k}")
+            else:
+                weights[k] = v
 
     return weights
 
-def load_weights_torch(weights_files):
+def load_torch_weights(weights_files):
     """
     Load model weights using PyTorch.
     Args:
@@ -103,17 +203,17 @@ def load_weights_torch(weights_files):
     for weights_path in weights_files:
         logging.debug(f"Loading model weights file {weights_path}")
 
-        for k, v in load_torch(str(weights_path)).items():
+        for k, v in load_torch_file(str(weights_path)).items():
             k = utils.map_key(k)
 
-            if k:
-                weights[k] = v
-            else:
+            if k is None:
                 logging.warning(f"Unknown key: {k}")
+            else:
+                weights[k] = v
 
     return weights
 
-def load_torch(weights_path):
+def load_torch_file(weights_path):
     """
     Load PyTorch weights and convert to MLX.
     """

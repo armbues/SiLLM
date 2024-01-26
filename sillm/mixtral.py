@@ -229,7 +229,7 @@ class TransformerBlock(nn.Module):
 ########
 class Model(BaseModel):
     """
-    Mixtral model.
+    Mixtral model wrapper.
     """
     def __init__(self, args: ModelArgs):
         """

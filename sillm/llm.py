@@ -33,8 +33,6 @@ class LLM():
         self.tokenizer = tokenizer
 
         self._quantization = None
-        if args.quantization is not None:
-            self.quantize(group_size=args.quantization["group_size"], bits=args.quantization["bits"])
 
     def update_weights(self, weights):
         """

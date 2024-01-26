@@ -30,7 +30,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=log_level, stream=sys.stdout, format="%(asctime)s %(levelname)s %(message)s")
 
     # Load model
-    model, tokenizer = sillm.load(args.model)
+    model = sillm.load(args.model)
     
     if args.seed >= 0:
         mx.random.seed(args.seed)
@@ -50,7 +50,7 @@ if __name__ == "__main__":
 
     if args.training_data:
         # Load training dataset
-        dataset_training, dataset_validation, dataset_test = sillm.Dataset.load(tokenizer, args.training_data)
+        dataset_training, dataset_validation, dataset_test = sillm.Dataset.load(model.tokenizer, args.training_data)
 
         # Start training
         model.train(dataset_training, dataset_validation, batch_size=args.batch_size, iterations=args.iterations)

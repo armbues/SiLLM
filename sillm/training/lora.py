@@ -37,6 +37,9 @@ class LoRALinear(nn.Module):
         Args:
             linear: Linear layer to convert.
             rank: Rank to use for LoRA.
+            alpha: Alpha to use for LoRA.
+            dropout: Dropout to use for LoRA.
+            scale: Scale to use for LoRA.
         Returns:
             LoRA linear layer.
         """
@@ -62,7 +65,9 @@ class LoRALinear(nn.Module):
         Args:
             input_dims: Input dimensions.
             output_dims: Output dimensions.
-            lora_rank: Rank to use for LoRA.
+            rank: Rank to use for LoRA.
+            alpha: Alpha to use for LoRA.
+            dropout: Dropout to use for LoRA.
             scale: Scale to use for LoRA.
             bias: Whether to use bias.
         """
