@@ -1,6 +1,5 @@
 import sys
 import argparse
-import pathlib
 import logging
 
 import mlx.core as mx

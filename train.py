@@ -1,6 +1,5 @@
 import sys
 import argparse
-import pathlib
 import logging
 
 import mlx.core as mx
@@ -43,8 +42,6 @@ if __name__ == "__main__":
     model.init_lora(num_layers=args.layers, rank=args.rank)
 
     if args.load_adapter_path is not None:
-        assert pathlib.Path(args.load_adapter).exists(), args.adapter_input
-
         # Load adapter file
         model.load_adapters(args.load_adapter)
 
