@@ -22,6 +22,7 @@ if __name__ == "__main__":
     log_level = 40 - (10 * args.verbose) if args.verbose > 0 else 0
     logging.basicConfig(level=log_level, stream=sys.stdout, format="%(asctime)s %(levelname)s %(message)s")
 
+    # Set random seed
     if args.seed >= 0:
         mx.random.seed(0)
 

@@ -10,9 +10,9 @@ import sillm
 if __name__ == "__main__":
     # Parse commandline arguments
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument("model", type=str, help="Directory for the base model")
-    parser.add_argument("-i", "--load_adapter_path", default=None, type=str, help="Path to load adapter weights from .npz file")
-    parser.add_argument("-a", "--save_adapter_path", default=None, type=str, help="Path to save adapter weights as .npz file")
+    parser.add_argument("model", type=str, help="The directory or file for the base model (MLX, Torch, GGUF)")
+    parser.add_argument("-i", "--load_adapter_path", default=None, type=str, help="Load adapter weights from file (.npz)")
+    parser.add_argument("-a", "--save_adapter_path", default=None, type=str, help="Save adapter weights to file (.npz)")
     parser.add_argument("-o", "--save_merge_path", default=None, type=str, help="Folder to save merged model weights")
     parser.add_argument("-t", "--training_data", default=None, type=str, help="Train the model with training dataset in the directory")
     parser.add_argument("-q", "--quantize", default=None, type=int, help="Quantize the model to the given number of bits")
