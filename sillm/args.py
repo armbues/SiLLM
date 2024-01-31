@@ -3,7 +3,7 @@ import json
 import logging
 import dataclasses
 
-import sillm.utils as utils
+from sillm.mapping import map_config
 
 @dataclasses.dataclass
 class ModelArgs:
@@ -74,7 +74,7 @@ class ModelArgs:
 
         with open(config_path, "r") as f:
             config = json.loads(f.read())
-        config = utils.map_config(config)
+        config = map_config(config)
 
         args = ModelArgs.load_config(config)
         logging.info(f"Loaded model config from {config_path}")

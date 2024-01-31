@@ -4,7 +4,7 @@ import pathlib
 import mlx.core as mx
 
 import sillm
-import sillm.utils as utils
+from sillm.mapping import map_key, map_config
 
 def load(model_path):
     """
@@ -41,7 +41,7 @@ def load_gguf_file(model_path):
     # Map weights keys
     weights = {}
     for gguf_key, value in gguf_weights.items():
-        mlx_key = utils.map_key(gguf_key)
+        mlx_key = map_key(gguf_key)
 
         if mlx_key is None:
             logging.warn(f"Unknown key: {gguf_key}")
@@ -49,7 +49,7 @@ def load_gguf_file(model_path):
             weights[mlx_key] = value
 
     # Map metadata and load configuration
-    config = utils.map_config(metadata)
+    config = map_config(metadata)
     model_args = sillm.ModelArgs.load_config(config)
 
     # Map quantization configuration
@@ -184,7 +184,7 @@ def load_mlx_weights(weights_files):
         logging.debug(f"Loading model weights file {weights_path}")
 
         for k, v in mx.load(str(weights_path)).items():
-            k = utils.map_key(k)
+            k = map_key(k)
 
             if k is None:
                 logging.warning(f"Unknown key: {k}")
@@ -204,7 +204,7 @@ def load_torch_weights(weights_files):
         logging.debug(f"Loading model weights file {weights_path}")
 
         for k, v in load_torch_file(str(weights_path)).items():
-            k = utils.map_key(k)
+            k = map_key(k)
 
             if k is None:
                 logging.warning(f"Unknown key: {k}")
