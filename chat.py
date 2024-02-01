@@ -24,7 +24,7 @@ if __name__ == "__main__":
 
     # Set random seed
     if args.seed >= 0:
-        mx.random.seed(0)
+        mx.random.seed(args.seed)
 
     # Load model
     model = sillm.load(args.model)
