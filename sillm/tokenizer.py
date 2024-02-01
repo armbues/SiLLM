@@ -52,7 +52,10 @@ class SentencePieceTokenizer(Tokenizer):
         else:
             self.eos_id = args.eos_token_id
 
-    def encode(self, s: str, eos: bool = False) -> List[int]:
+    def encode(self,
+               s: str,
+               bos: bool = True,
+               eos: bool = False) -> List[int]:
         """
         Encode string.
         Args:
@@ -61,7 +64,11 @@ class SentencePieceTokenizer(Tokenizer):
         Returns:
             Encoded tokens.
         """
-        tokens = [self.bos_id, *self._model.encode(s)]
+        if bos is True:
+            tokens = [self.bos_id, *self._model.encode(s)]
+        else:
+            tokens = self._model.encode(s)
+            
         if eos:
             tokens.append(self.eos_id)
 
