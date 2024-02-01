@@ -15,7 +15,8 @@ if __name__ == "__main__":
     parser.add_argument("-a", "--save_adapter_path", default=None, type=str, help="Save adapter weights to file (.npz)")
     parser.add_argument("-o", "--save_merge_path", default=None, type=str, help="Folder to save merged model weights")
     parser.add_argument("-t", "--training_data", default=None, type=str, help="Train the model with training dataset in the directory")
-    parser.add_argument("-q", "--quantize", default=None, type=int, help="Quantize the model to the given number of bits")
+    parser.add_argument("-q4", default=False, action="store_true", help="Quantize the model to 4 bits")
+    parser.add_argument("-q8", default=False, action="store_true", help="Quantize the model to 8 bits")
     parser.add_argument("--layers", default=-1, type=int, help="Layers to use for LoRA (default: -1 for all layers)")
     parser.add_argument("--rank", default=8, type=int, help="Rank to use for LoRA (default: 8)")
     parser.add_argument("--iterations", default=1000, type=int, help="Number of iterations (default: 1000)")
@@ -33,13 +34,15 @@ if __name__ == "__main__":
     model = sillm.load(args.model)
     utils.log_memory_usage()
     
+    # Set random seed
     if args.seed >= 0:
         mx.random.seed(args.seed)
 
-    if args.quantize is not None:
-        # Quantize model
-        model.quantize(bits=args.quantize)
-        utils.log_memory_usage()
+    # Quantize model
+    if args.q4 is True:
+        model.quantize(bits=4)
+    elif args.q8 is True:
+        model.quantize(bits=8)
 
     # Initialize LoRA layers
     model.init_lora(num_layers=args.layers, rank=args.rank)

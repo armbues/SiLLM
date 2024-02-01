@@ -113,7 +113,9 @@ class LLM():
         """
         Dequantize model.
         """
-        if self._quantization is not None:
+        if self._quantization is None:
+            logging.warn(f"Model is not quantized")
+        else:
             layers = []
             for name, module in self.model.named_modules():
                 if isinstance(module, nn.QuantizedLinear):
