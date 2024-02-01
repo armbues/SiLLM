@@ -9,7 +9,7 @@ import sillm.utils as utils
 
 if __name__ == "__main__":
     # Parse commandline arguments
-    parser = argparse.ArgumentParser(description="")
+    parser = argparse.ArgumentParser(description="A simple CLI for generating text with SiLLM.")
     parser.add_argument("model", type=str, help="The model directory or file")
     parser.add_argument("-q", "--quantize", default=None, type=int, help="Quantize the model to the given number of bits")
     parser.add_argument("-t", "--temp", type=float, default=0.7, help="Sampling temperature")

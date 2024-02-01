@@ -9,7 +9,7 @@ import sillm.utils as utils
 
 if __name__ == "__main__":
     # Parse commandline arguments
-    parser = argparse.ArgumentParser(description="")
+    parser = argparse.ArgumentParser(description="Interface for training SiLLM models with LoRA/QLoRA.")
     parser.add_argument("model", type=str, help="The directory or file for the base model (MLX, Torch, GGUF)")
     parser.add_argument("-i", "--load_adapter_path", default=None, type=str, help="Load adapter weights from file (.npz)")
     parser.add_argument("-a", "--save_adapter_path", default=None, type=str, help="Save adapter weights to file (.npz)")
