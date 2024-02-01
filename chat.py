@@ -5,6 +5,7 @@ import logging
 import mlx.core as mx
 
 import sillm
+import sillm.utils as utils
 
 if __name__ == "__main__":
     # Parse commandline arguments
@@ -27,9 +28,11 @@ if __name__ == "__main__":
 
     # Load model
     model = sillm.load(args.model)
+    utils.log_memory_usage()
 
     if args.quantize is not None:
         model.quantize(bits=args.quantize)
+        utils.log_memory_usage()
     
     while True:
         prompt = input("> ")

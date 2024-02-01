@@ -5,6 +5,7 @@ import logging
 import mlx.core as mx
 
 import sillm
+import sillm.utils as utils
 
 if __name__ == "__main__":
     # Parse commandline arguments
@@ -30,6 +31,7 @@ if __name__ == "__main__":
 
     # Load model
     model = sillm.load(args.model)
+    utils.log_memory_usage()
     
     if args.seed >= 0:
         mx.random.seed(args.seed)
@@ -37,6 +39,7 @@ if __name__ == "__main__":
     if args.quantize is not None:
         # Quantize model
         model.quantize(bits=args.quantize)
+        utils.log_memory_usage()
 
     # Initialize LoRA layers
     model.init_lora(num_layers=args.layers, rank=args.rank)

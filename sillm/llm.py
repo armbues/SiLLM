@@ -1,4 +1,3 @@
-import pathlib
 import logging
 
 import mlx.core as mx
