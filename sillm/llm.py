@@ -1,4 +1,5 @@
 import logging
+import time
 
 import mlx.core as mx
 import mlx.nn as nn
@@ -148,6 +149,11 @@ class LLM():
             flush: Flush every `flush` tokens.
         """
         logging.debug(f"Generating {num_tokens} tokens with temperature {temp} and flushing every {flush} tokens")
+        start = time.perf_counter()
+        stats = {
+            "runtime": 0.0,
+            "num_tokens": 0
+        }
 
         prompt = mx.array(self.tokenizer.encode(prompt))
 
@@ -175,13 +181,21 @@ class LLM():
 
             if (len(tokens) % flush) == 0:
                 mx.eval(tokens)
-                s = self.tokenizer.decode([t.item() for t in tokens])
+                result = self.tokenizer.decode([t.item() for t in tokens])
 
-                yield s
+                stats["num_tokens"] += len(tokens)
+                stats["runtime"] = time.perf_counter() - start
+
+                yield result, stats
 
                 tokens = []
 
         mx.eval(tokens)
-        s = self.tokenizer.decode([t.item() for t in tokens])
+        result = self.tokenizer.decode([t.item() for t in tokens])
 
-        yield s
+        stats["num_tokens"] += len(tokens)
+        stats["runtime"] = time.perf_counter() - start
+
+        yield result, stats
+
+        stop = time.perf_counter()

@@ -378,7 +378,7 @@ class TrainableLoRA(LLM):
                     train_loss = np.mean(losses)
                     stop = time.perf_counter()
 
-                    pbar_epochs.write(f"#{i + 1}:\tTrain loss {train_loss:.3f}\tTokens/sec {float(num_tokens) / (stop - start):.3f}")
+                    pbar_epochs.write(f"#{i + 1}:\tTrain loss {train_loss:.3f}\t{float(num_tokens) / (stop - start):.3f} tok/sec")
                     
                     losses = []
                     num_tokens = 0

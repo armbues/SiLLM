@@ -40,6 +40,8 @@ if __name__ == "__main__":
         if prompt.startswith('.'):
             break
         
-        for s in model.generate(prompt, temp=args.temp, num_tokens=args.num_tokens):
-            print(s, end="", flush=True)
+        for result, stats in model.generate(prompt, temp=args.temp, num_tokens=args.num_tokens):
+            print(result, end="", flush=True)
         print()
+
+        logging.info(f"Generated {stats['num_tokens']} tokens in {stats['runtime']:.2f}s ({stats['num_tokens'] / stats['runtime']:.2f} tok/sec)")
