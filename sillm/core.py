@@ -2,6 +2,7 @@ import logging
 import pathlib
 
 import mlx.core as mx
+from mlx.utils import tree_flatten
 
 import sillm
 from sillm.mapping import map_key, map_config
@@ -43,6 +44,7 @@ def load_gguf_file(model_path):
     for gguf_key, value in gguf_weights.items():
         mlx_key = map_key(gguf_key)
 
+        print(gguf_key, value.dtype)
         if mlx_key is None:
             logging.warn(f"Unknown key: {gguf_key}")
         else:
@@ -57,7 +59,7 @@ def load_gguf_file(model_path):
     logging.debug(f"GGUF file type: {gguf_file_type}")
     quantization = None
     if gguf_file_type == 0 or gguf_file_type == 1:
-        # ALL_F32 or MOSTLY_F16
+        # No quantization
         pass
     elif gguf_file_type == 2 or gguf_file_type == 3:
         quantization = {"group_size": 32, "bits": 4}
@@ -80,7 +82,10 @@ def load_gguf_file(model_path):
 
     # Quantize model
     if quantization is not None:
-        model.quantize(group_size=model_args.quantization["group_size"], bits=model_args.quantization["bits"])
+        excluded = []
+        if "output.scales" not in weights:
+            excluded = ["output"]
+        model.quantize(group_size=model_args.quantization["group_size"], bits=model_args.quantization["bits"], excluded=excluded)
 
     def dequantize(k):
         weight = weights.pop(f"{k}.weight")

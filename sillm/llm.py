@@ -22,6 +22,7 @@ class LLM():
             args: Model arguments.
         """
         self.args = args
+        self._quantization = None
 
         if args.model_type in ("llama", "mistral"):
             self.model = llama.Model(args)
@@ -29,9 +30,16 @@ class LLM():
             self.model = mixtral.Model(args)
         else:
             raise NotImplementedError(f"Model type {args.model_type} is not supported")
+        self._update_names()
+
         self.tokenizer = tokenizer
 
-        self._quantization = None
+    def _update_names(self):
+        """
+        Update module names.
+        """
+        for name, module in self.model.named_modules():
+            module.name = name
 
     def update_weights(self, weights):
         """
@@ -70,13 +78,15 @@ class LLM():
 
     def quantize(self,
                  group_size: int = 64,
-                 bits: int = 4
+                 bits: int = 4,
+                 excluded: list[str] = None
                  ):
         """
         Quantize model.
         Args:
             group_size: Group size for quantization.
             bits: Number of bits for quantization.
+            excluded: List of module names to exclude from quantization.
         """
         if self._quantization is None:
             quantization = {
@@ -85,11 +95,14 @@ class LLM():
             }
             self._quantization = quantization
 
+            linear_class_predicate = lambda m: isinstance(m, nn.Linear) and m.weight.shape[0] != 8 and m.name not in excluded
             nn.QuantizedLinear.quantize_module(
                 model = self.model,
                 **quantization,
-                linear_class_predicate = lambda m: isinstance(m, nn.Linear) and m.weight.shape[0] != 8
+                linear_class_predicate = linear_class_predicate
             )
+
+            self._update_names()
 
             logging.info(f"Quantized model with group size {group_size} and {bits} bits")
         else:
@@ -116,6 +129,8 @@ class LLM():
             
             self.model.update_modules(tree_unflatten(layers))
             self._quantization = None
+
+            self._update_names()
 
             logging.info(f"Dequantized model")
 
