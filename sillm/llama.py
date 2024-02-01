@@ -179,27 +179,6 @@ class TransformerBlock(nn.Module):
         
         return out, cache
 
-class LlamaModel(nn.Module):
-    def __init__(self, args: ModelArgs):
-        """
-        Args:
-            args: Model arguments.
-        """
-
-
-    def __call__(self,
-                 inputs: mx.array,
-                 cache=None
-                 ):
-        """
-        Args:
-            inputs: Input tokens.
-            cache: Cache from previous forward pass.
-        Returns:
-            Output logits and cache.
-        """
-
-
 ########
 # Based on mlx-examples:
 # https://github.com/ml-explore/mlx-examples/blob/047d4650c4f63d55e5bfbaf8f589c1679cbdd971/llms/llama/llama.py#L140
