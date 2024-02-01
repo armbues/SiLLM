@@ -2,7 +2,6 @@ import logging
 import pathlib
 
 import mlx.core as mx
-from mlx.utils import tree_flatten
 
 import sillm
 from sillm.mapping import map_key, map_config
