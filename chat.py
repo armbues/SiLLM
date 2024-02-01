@@ -40,8 +40,11 @@ if __name__ == "__main__":
         if prompt.startswith('.'):
             break
         
-        for result, stats in model.generate(prompt, temp=args.temp, num_tokens=args.num_tokens):
+        logging.debug(f"Generating {args.num_tokens} tokens with temperature {args.temp}")
+
+        for result, metadata in model.generate(prompt, temp=args.temp, num_tokens=args.num_tokens):
             print(result, end="", flush=True)
         print()
 
-        logging.info(f"Generated {stats['num_tokens']} tokens in {stats['runtime']:.2f}s ({stats['num_tokens'] / stats['runtime']:.2f} tok/sec)")
+        logging.debug(f"Evaluated {metadata['num_input']} prompt tokens in {metadata['eval_time']:.2f}s ({metadata['num_input'] / metadata['eval_time']:.2f} tok/sec)")
+        logging.debug(f"Generated {metadata['num_tokens']} tokens in {metadata['runtime']:.2f}s ({metadata['num_tokens'] / metadata['runtime']:.2f} tok/sec)")

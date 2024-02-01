@@ -44,7 +44,6 @@ def load_gguf_file(model_path):
     for gguf_key, value in gguf_weights.items():
         mlx_key = map_key(gguf_key)
 
-        print(gguf_key, value.dtype)
         if mlx_key is None:
             logging.warn(f"Unknown key: {gguf_key}")
         else:

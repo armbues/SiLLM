@@ -148,14 +148,19 @@ class LLM():
             num_tokens: Max number of tokens to generate.
             flush: Flush every `flush` tokens.
         """
-        logging.debug(f"Generating {num_tokens} tokens with temperature {temp} and flushing every {flush} tokens")
         start = time.perf_counter()
-        stats = {
-            "runtime": 0.0,
-            "num_tokens": 0
-        }
 
+        # Tokenize prompt
         prompt = mx.array(self.tokenizer.encode(prompt))
+
+        # Initialize metadata
+        metadata = {
+            "runtime": 0.0,
+            "eval_time": 0.0,
+            "tokenizer_time": time.perf_counter() - start,
+            "num_tokens": 0,
+            "num_input": len(prompt)
+        }
 
         def generate_step():
             def sample(logits):
@@ -166,11 +171,16 @@ class LLM():
 
             logits, cache = self.model(prompt[None])
             y = sample(logits[:, -1, :])
+
             yield y
 
+            metadata["eval_time"] = time.perf_counter() - start
+
             while True:
-                logits, cache = self.model(y[:, None], cache)
-                y = sample(logits.squeeze(1))
+                logits, cache = self.model(y[None], cache)
+                logits = logits[:, -1, :]
+                y = sample(logits)
+
                 yield y
 
         tokens = []
@@ -183,19 +193,19 @@ class LLM():
                 mx.eval(tokens)
                 result = self.tokenizer.decode([t.item() for t in tokens])
 
-                stats["num_tokens"] += len(tokens)
-                stats["runtime"] = time.perf_counter() - start
+                metadata["num_tokens"] += len(tokens)
+                metadata["runtime"] = time.perf_counter() - start
 
-                yield result, stats
+                yield result, metadata
 
                 tokens = []
 
         mx.eval(tokens)
         result = self.tokenizer.decode([t.item() for t in tokens])
 
-        stats["num_tokens"] += len(tokens)
-        stats["runtime"] = time.perf_counter() - start
+        metadata["num_tokens"] += len(tokens)
+        metadata["runtime"] = time.perf_counter() - start
 
-        yield result, stats
+        yield result, metadata
 
         stop = time.perf_counter()
