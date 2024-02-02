@@ -52,11 +52,13 @@ class LLM():
         self.model.update(weights)
         mx.eval(self.model.parameters())
 
-    def verify_weights(self, weights):
+    def verify_weights(self, weights) -> bool:
         """
         Verify that weights for all modules are present.
         Args:
             weights: Weights to verify.
+        Returns:
+            True if all weights are present, False otherwise.
         """
         result = True
         for name, _ in tree_flatten(self.model.parameters()):
@@ -67,7 +69,9 @@ class LLM():
 
         return result
 
-    def save_npz(self, weights_path: str):
+    def save_npz(self,
+                 weights_path: str
+                 ):
         """
         Save model weights.
         Args:
@@ -209,5 +213,3 @@ class LLM():
         metadata["runtime"] = time.perf_counter() - start
 
         yield result, metadata
-
-        stop = time.perf_counter()

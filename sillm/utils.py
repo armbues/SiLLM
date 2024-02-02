@@ -2,7 +2,7 @@ import os
 import resource
 import logging
 
-def get_process_memory():
+def get_process_memory() -> int:
     """
     Get process memory usage.
     Returns:
@@ -10,7 +10,7 @@ def get_process_memory():
     """
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 
-def get_system_memory():
+def get_system_memory() -> int:
     """
     Get total system memory.
     Returns:

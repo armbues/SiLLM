@@ -6,11 +6,13 @@ import mlx.core as mx
 import sillm
 from sillm.mapping import map_key, map_config
 
-def load(model_path):
+def load(model_path) -> sillm.LLM:
     """
     Load model from directory.
     Args:
         model_path: Path to model directory.
+    Returns:
+        SiLLM model.
     """
     model_path = pathlib.Path(model_path)
 
@@ -19,7 +21,7 @@ def load(model_path):
     elif model_path.is_file():
         return load_model_file(str(model_path))
 
-def load_model_file(model_path):
+def load_model_file(model_path) -> sillm.LLM:
     """
     Load model from file.
     Args:
@@ -32,9 +34,13 @@ def load_model_file(model_path):
     else:
         raise ValueError(f"Unknown model file type: {model_path}")
     
-def load_gguf_file(model_path):
+def load_gguf_file(model_path) -> sillm.LLM:
     """
     Load model from GGUF file.
+    Args:
+        model_path: Path to GGUF file.
+    Returns:
+        SiLLM model.
     """
     gguf_weights, metadata = mx.load(model_path, return_metadata=True)
 
@@ -103,11 +109,13 @@ def load_gguf_file(model_path):
 
     return model
 
-def load_model_dir(model_path):
+def load_model_dir(model_path) -> sillm.LLM:
     """
     Load model from directory.
     Args:
         model_path: Path to model directory.
+    Returns:
+        SiLLM model.
     """
     model_path = pathlib.Path(model_path)
 
@@ -176,11 +184,13 @@ def load_model_dir(model_path):
 
     return model
 
-def load_mlx_weights(weights_files):
+def load_mlx_weights(weights_files) -> dict:
     """
     Load model weights using MLX.
     Args:
         weights_files: List of weights files.
+    Returns:
+        Model weights.
     """
     weights = {}
     for weights_path in weights_files:
@@ -196,11 +206,13 @@ def load_mlx_weights(weights_files):
 
     return weights
 
-def load_torch_weights(weights_files):
+def load_torch_weights(weights_files) -> dict:
     """
     Load model weights using PyTorch.
     Args:
         weights_files: List of weights files.
+    Returns:
+        Model weights.
     """
     weights = {}
     for weights_path in weights_files:
@@ -216,9 +228,13 @@ def load_torch_weights(weights_files):
 
     return weights
 
-def load_torch_file(weights_path):
+def load_torch_file(weights_path) -> dict:
     """
     Load PyTorch weights and convert to MLX.
+    Args:
+        weights_path: Path to weights file.
+    Returns:
+        Model weights.
     """
     try:
         import torch

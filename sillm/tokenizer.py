@@ -55,7 +55,8 @@ class SentencePieceTokenizer(Tokenizer):
     def encode(self,
                s: str,
                bos: bool = True,
-               eos: bool = False) -> List[int]:
+               eos: bool = False
+               ) -> List[int]:
         """
         Encode string.
         Args:
@@ -68,13 +69,15 @@ class SentencePieceTokenizer(Tokenizer):
             tokens = [self.bos_id, *self._model.encode(s)]
         else:
             tokens = self._model.encode(s)
-            
+
         if eos:
             tokens.append(self.eos_id)
 
         return tokens
     
-    def decode(self, t: List[int]) -> str:
+    def decode(self,
+               t: List[int]
+               ) -> str:
         """
         Decode tokens.
         Args:
@@ -125,7 +128,10 @@ class TransformerTokenizer(Tokenizer):
         else:
             self.eos_id = args.eos_token_id
 
-    def encode(self, s: str, eos: bool = False) -> List[int]:
+    def encode(self,
+               s: str,
+               eos: bool = False
+               ) -> List[int]:
         """
         Encode string.
         Args:
@@ -140,7 +146,9 @@ class TransformerTokenizer(Tokenizer):
 
         return tokens
     
-    def decode(self, t: List[int]) -> str:
+    def decode(self,
+               t: List[int]
+               ) -> str:
         """
         Decode tokens.
         Args:
