@@ -54,18 +54,22 @@ class LLM():
 
     def verify_weights(self, weights) -> bool:
         """
-        Verify that weights for all modules are present.
+        Verify that weights for all modules are present and shapes match.
         Args:
             weights: Weights to verify.
         Returns:
-            True if all weights are present, False otherwise.
+            True if all weights are present and shapes match, False otherwise.
         """
         result = True
-        for name, _ in tree_flatten(self.model.parameters()):
+        for name, weight in tree_flatten(self.model.parameters()):
             if name not in weights:
                 result = False
 
                 logging.warn(f"Key {name} not found in weights")
+            elif weight.shape != weights[name].shape:
+                result = False
+
+                logging.warn(f"Shape mismatch for key {name}: {weight.shape} != {weights[name].shape}")
 
         return result
 
@@ -84,7 +88,7 @@ class LLM():
     def quantize(self,
                  group_size: int = 64,
                  bits: int = 4,
-                 excluded: list[str] = None
+                 excluded: list[str] = []
                  ):
         """
         Quantize model.
@@ -124,8 +128,7 @@ class LLM():
             for name, module in self.model.named_modules():
                 if isinstance(module, nn.QuantizedLinear):
                     bias = "bias" in module
-                    weight = module.weight()
-                    weight = mx.dequantize(weight, module.scales, module.biases, module.group_size, module.bits).astype(mx.float16)
+                    weight = mx.dequantize(module.weight, module.scales, module.biases, module.group_size, module.bits).astype(mx.float16)
                     output_dims, input_dims = weight.shape
                     linear = nn.Linear(input_dims, output_dims, bias=bias)
                     linear.weight = weight

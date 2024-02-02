@@ -76,10 +76,7 @@ class ModelArgs:
             config = json.loads(f.read())
         config = map_config(config)
 
-        args = ModelArgs.load_config(config)
-        logging.info(f"Loaded model config from {config_path}")
-
-        return args
+        return ModelArgs.load_config(config)
     
 @dataclasses.dataclass
 class LlamaArgs(ModelArgs):
@@ -102,5 +99,5 @@ class MixtralArgs(ModelArgs):
         if self.moe is None:
             self.moe = {
                 "num_experts": 8,
-                "num_experts_per_token": 2
+                "num_experts_per_tok": 2
             }

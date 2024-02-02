@@ -148,7 +148,7 @@ def load_model_dir(model_path) -> LLM:
             logging.debug(f"No config file {config_path} not found")
     if model_args is None:
         raise ValueError(f"Configuration could not be loaded from {model_path}")
-    logging.info(f"Loaded model configuration from {config_path}")
+    logging.info(f"Loaded model config from {config_path}")
 
     # Fix configuration
     model_args.fix_config(weights)

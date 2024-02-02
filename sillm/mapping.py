@@ -90,7 +90,8 @@ def map_config(config):
         "rope_theta",
         "rope_scaling",
         "bos_token_id",
-        "eos_token_id"
+        "eos_token_id",
+        "moe"
     ]
     for key in mlx_keys:
         if key in config:
@@ -116,7 +117,7 @@ def map_config(config):
     }
 
     for key in key_map:
-        if key in config:
+        if key in config and key_map[key] not in result:
             value = config[key]
             if isinstance(value, mx.array):
                 value = value.item()

@@ -6,7 +6,7 @@ import mlx.core as mx
 import mlx.nn as nn
 
 from sillm.model import BaseModel
-from sillm.args import ModelArgs
+from sillm.args import MixtralArgs
 import sillm.llama as llama
 
 ########
@@ -64,7 +64,7 @@ class Attention(nn.Module):
     """
     Multi-head attention module.
     """
-    def __init__(self, args: ModelArgs):
+    def __init__(self, args: MixtralArgs):
         """
         Args:
             args: Model arguments.
@@ -132,7 +132,7 @@ class FeedForward(nn.Module):
     """
     MoE Feed-forward module for Mixtral models.
     """
-    def __init__(self, args: ModelArgs):
+    def __init__(self, args: MixtralArgs):
         super().__init__()
 
         self.num_experts = args.moe["num_experts"]
@@ -201,7 +201,7 @@ class FeedForward(nn.Module):
 # https://github.com/ml-explore/mlx-examples/blob/d8680a89f986492dbc27c36af3294034db26458f/llms/mixtral/mixtral.py#L163
 ########
 class TransformerBlock(nn.Module):
-    def __init__(self, args: ModelArgs):
+    def __init__(self, args: MixtralArgs):
         super().__init__()
         self.n_heads = args.n_heads
         self.dim = args.dim
@@ -231,7 +231,7 @@ class Model(BaseModel):
     """
     Mixtral model wrapper.
     """
-    def __init__(self, args: ModelArgs):
+    def __init__(self, args: MixtralArgs):
         """
         Args:
             args: Model arguments.
