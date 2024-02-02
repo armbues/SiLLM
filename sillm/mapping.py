@@ -53,6 +53,13 @@ def map_key(k):
 
         k = re.sub(r"\.attn_(q|k|v)\.", r".attention.w\1.", k)
         k = re.sub(r"\.attn_output\.", r".attention.wo.", k)
+
+        # MoE
+        k = re.sub(r"\.ffn_gate_inp\.", ".feed_forward.gate.", k)
+        k = re.sub(r"\.ffn_gate\.(\d+)\.", r".feed_forward.experts.\1.w1.", k)
+        k = re.sub(r"\.ffn_down\.(\d+)\.", r".feed_forward.experts.\1.w2.", k)
+        k = re.sub(r"\.ffn_up\.(\d+)\.", r".feed_forward.experts.\1.w3.", k)
+
         k = re.sub(r"\.ffn_gate\.", ".feed_forward.w1.", k)
         k = re.sub(r"\.ffn_down\.", ".feed_forward.w2.", k)
         k = re.sub(r"\.ffn_up\.", ".feed_forward.w3.", k)
@@ -104,7 +111,8 @@ def map_config(config):
         "llama.feed_forward_length": "hidden_dim",
         "llama.attention.head_count_kv": "n_kv_heads",
         "llama.attention.layer_norm_rms_epsilon": "norm_eps",
-        "llama.rope.freq_base": "rope_theta"
+        "llama.rope.freq_base": "rope_theta",
+        "llama.context_length": "max_position_embeddings"
     }
 
     for key in key_map:
