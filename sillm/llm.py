@@ -86,7 +86,7 @@ class LLM():
         logging.info(f"Saved model weights to {weights_path}")
 
     def quantize(self,
-                 group_size: int = 64,
+                 group_size: int = 32,
                  bits: int = 4,
                  excluded: list[str] = []
                  ):

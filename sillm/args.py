@@ -31,7 +31,11 @@ class ModelArgs:
     
     def log_config(self):
         for k, v in dataclasses.asdict(self).items():
-            logging.debug(f"Config {k}: {v}")
+            if isinstance(v, dict):
+                for k2, v2 in v.items():
+                    logging.debug(f"Config {k}.{k2}: {v2}")
+            else:
+                logging.debug(f"Config {k}: {v}")
     
     def fix_config(self, weights):
         """

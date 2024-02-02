@@ -199,6 +199,7 @@ def load_mlx_weights(weights_files) -> dict:
 
         for k, v in mx.load(str(weights_path)).items():
             k = map_key(k)
+            mx.eval(v)
 
             if k is None:
                 logging.warning(f"Unknown key: {k}")
