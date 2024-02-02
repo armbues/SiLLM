@@ -120,7 +120,7 @@ class LoRALinear(nn.Module):
         if quantized:
             output_dims, input_dims = weight.shape
             bias = "bias" in linear
-            linear = nn.Linear(input_dims, output_dims, bias=linear.bias)
+            linear = nn.Linear(input_dims, output_dims, bias=bias)
 
             return nn.QuantizedLinear.from_linear(linear, group_size, bits)
         else:

@@ -4,9 +4,10 @@ import pathlib
 import mlx.core as mx
 
 import sillm
+from sillm.llm import LLM
 from sillm.mapping import map_key, map_config
 
-def load(model_path) -> sillm.LLM:
+def load(model_path) -> LLM:
     """
     Load model from directory.
     Args:
@@ -21,7 +22,7 @@ def load(model_path) -> sillm.LLM:
     elif model_path.is_file():
         return load_model_file(str(model_path))
 
-def load_model_file(model_path) -> sillm.LLM:
+def load_model_file(model_path) -> LLM:
     """
     Load model from file.
     Args:
@@ -34,7 +35,7 @@ def load_model_file(model_path) -> sillm.LLM:
     else:
         raise ValueError(f"Unknown model file type: {model_path}")
     
-def load_gguf_file(model_path) -> sillm.LLM:
+def load_gguf_file(model_path) -> LLM:
     """
     Load model from GGUF file.
     Args:
@@ -82,7 +83,7 @@ def load_gguf_file(model_path) -> sillm.LLM:
     logging.info("Loaded tokenizer from GGUF metadata")
 
     # Initialize model
-    model = sillm.LLM(tokenizer, model_args)
+    model = LLM(tokenizer, model_args)
 
     # Quantize model
     if quantization is not None:
@@ -109,7 +110,7 @@ def load_gguf_file(model_path) -> sillm.LLM:
 
     return model
 
-def load_model_dir(model_path) -> sillm.LLM:
+def load_model_dir(model_path) -> LLM:
     """
     Load model from directory.
     Args:
@@ -167,7 +168,7 @@ def load_model_dir(model_path) -> sillm.LLM:
     logging.info(f"Loaded tokenizer from {tokenizer_path}")
 
     # Initialize model
-    model = sillm.LLM(tokenizer, model_args)
+    model = LLM(tokenizer, model_args)
 
     # Quantize model
     if model_args.quantization is not None:
