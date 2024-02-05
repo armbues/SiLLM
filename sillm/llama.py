@@ -57,21 +57,20 @@ class Attention(nn.Module):
         self.wo = nn.Linear(args.n_heads * args.head_dim, args.dim, bias=False)
 
         if args.rope_scaling is None:
-            scale = 1
+            rope_scale = 1
         elif args.rope_scaling["type"] == "linear":
-            scale = 1 / args.rope_scaling["factor"]
+            rope_scale = 1 / args.rope_scaling["factor"]
         else:
             raise NotImplementedError(f"Unknown scaling type {args.rope_scaling['type']}")
         self.rope = nn.RoPE(args.head_dim,
                             traditional=args.rope_traditional,
                             base=args.rope_theta,
-                            scale=scale)
+                            scale=rope_scale)
 
-    def __call__(
-            self,
-            x: mx.array,
-            mask: Optional[mx.array] = None,
-            cache: Optional[Tuple[mx.array, mx.array]] = None,
+    def __call__(self,
+                 x: mx.array,
+                 mask: Optional[mx.array] = None,
+                 cache: Optional[Tuple[mx.array, mx.array]] = None,
     ) -> mx.array:
         B, L, D = x.shape
 
