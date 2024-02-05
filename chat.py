@@ -37,10 +37,13 @@ if __name__ == "__main__":
     elif args.q8 is True:
         model.quantize(bits=8)
 
+    import gc
+    gc.collect()
+
     # Log memory usage
     utils.log_memory_usage()
 
-    # Input loop    
+    # Input loop
     while True:
         prompt = input("> ")
 

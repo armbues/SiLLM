@@ -113,7 +113,9 @@ def map_config(config):
         "llama.attention.head_count_kv": "n_kv_heads",
         "llama.attention.layer_norm_rms_epsilon": "norm_eps",
         "llama.rope.freq_base": "rope_theta",
-        "llama.context_length": "max_position_embeddings"
+        "llama.context_length": "max_position_embeddings",
+        "tokenizer.ggml.bos_token_id": "bos_token_id",
+        "tokenizer.ggml.eos_token_id": "eos_token_id"
     }
 
     for key in key_map:

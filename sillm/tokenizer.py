@@ -187,19 +187,37 @@ class GGUFTokenizer(SentencePieceTokenizer):
             raise ImportError("Please install sentencepiece library to use SentencePieceTokenizer")
         
         tokens = metadata["tokenizer.ggml.tokens"]
+        scores = metadata.get("tokenizer.ggml.scores", None)
+        scores = scores.tolist() if scores is not None else None
+        token_types = metadata.get("tokenizer.ggml.token_type", None)
+        token_types = token_types.tolist() if token_types is not None else None
+        
+        # Determine if there enough tokens to use byte fallback
+        byte_fallback = False
+        if token_types:
+            # 6 is the token type for BYTE
+            if token_types.count(6) >= 256:
+                byte_fallback = True
 
-        self.unk_id = metadata["tokenizer.ggml.unknown_token_id"].item() if "tokenizer.ggml.unknown_token_id" in metadata else 0
+        if "tokenizer.ggml.unknown_token_id" in metadata:
+            self.unk_id = metadata["tokenizer.ggml.unknown_token_id"].item()
+        else:
+            self.unk_id = len(tokens)
+            tokens.append("<unk>")
+            if scores:
+                scores.append(0)
+            if token_types:
+                token_types.append(2) # 2 is the token type for UNKNOWN
         self.bos_id = metadata["tokenizer.ggml.bos_token_id"].item()
         self.eos_id = metadata["tokenizer.ggml.eos_token_id"].item()
+        if "tokenizer.ggml.padding_token_id" in metadata:
+            pad_id = metadata["tokenizer.ggml.padding_token_id"].item()
+            pad_token = tokens[pad_id]
+        else:
+            pad_id = -1
+            pad_token = "<pad>"
         self._sep = "▁"
 
-        normalizer_spec = sentencepiece.sentencepiece_model_pb2.NormalizerSpec(
-            name="identity",
-            precompiled_charsmap=b"",
-            add_dummy_prefix=True,
-            remove_extra_whitespaces=False,
-            normalization_rule_tsv=b"",
-        )
         trainer_spec = sentencepiece.sentencepiece_model_pb2.TrainerSpec(
             model_type="BPE",
             vocab_size=len(tokens),
@@ -211,22 +229,25 @@ class GGUFTokenizer(SentencePieceTokenizer):
             split_digits=True,
             allow_whitespace_only_pieces=True,
             vocabulary_output_piece_score=True,
-            byte_fallback=True,
+            byte_fallback=byte_fallback,
             unk_id=self.unk_id,
             bos_id=self.bos_id,
             eos_id=self.eos_id,
-            pad_id=-1,
+            pad_id=pad_id,
             unk_piece=tokens[self.unk_id],
             bos_piece=tokens[self.bos_id],
             eos_piece=tokens[self.eos_id],
-            pad_piece="<pad>",
+            pad_piece=pad_token,
             pretokenization_delimiter="",
         )
+        normalizer_spec = sentencepiece.sentencepiece_model_pb2.NormalizerSpec(
+            name="identity",
+            precompiled_charsmap=b"",
+            add_dummy_prefix=True,
+            remove_extra_whitespaces=False,
+            normalization_rule_tsv=b"",
+        )
         model_proto = sentencepiece.sentencepiece_model_pb2.ModelProto(trainer_spec=trainer_spec, normalizer_spec=normalizer_spec)
-        scores = metadata.get("tokenizer.ggml.scores", None)
-        scores = scores.tolist() if scores is not None else None
-        token_types = metadata.get("tokenizer.ggml.token_type", None)
-        token_types = token_types.tolist() if token_types is not None else None
 
         for i, token in enumerate(tokens):
             score = scores[i] if scores else 0

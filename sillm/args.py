@@ -95,7 +95,7 @@ class MixtralArgs(ModelArgs):
     Mixtral model arguments.
     """
     rope_theta: float = 1000000.0
-    rope_traditional: bool = False
+    rope_traditional: bool = True
     router_aux_loss_coef: float = 0.001
     moe: dict = None
 
