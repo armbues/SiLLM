@@ -37,10 +37,6 @@ if __name__ == "__main__":
     elif args.q8 is True:
         model.quantize(bits=8)
 
-    import gc
-    gc.collect()
-
-    # Log memory usage
     utils.log_memory_usage()
 
     # Input loop
@@ -58,3 +54,5 @@ if __name__ == "__main__":
 
         logging.debug(f"Evaluated {metadata['num_input']} prompt tokens in {metadata['eval_time']:.2f}s ({metadata['num_input'] / metadata['eval_time']:.2f} tok/sec)")
         logging.debug(f"Generated {metadata['num_tokens']} tokens in {metadata['runtime']:.2f}s ({metadata['num_tokens'] / metadata['runtime']:.2f} tok/sec)")
+
+        utils.log_memory_usage()
