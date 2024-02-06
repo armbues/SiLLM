@@ -174,6 +174,9 @@ class TrainableLoRA(LLM):
             num_layers: Number of layers to apply LoRA to.
             target_modules: Modules to apply LoRA to.
             rank: Rank to use for LoRA.
+            alpha: Alpha to use for LoRA.
+            dropout: Dropout to use for LoRA.
+            scale: Scale to use for LoRA.
         """
         if self._lora is None:
             if num_layers < 0:
