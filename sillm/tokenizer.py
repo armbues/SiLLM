@@ -51,6 +51,7 @@ class SentencePieceTokenizer(Tokenizer):
             self.eos_id = self._model.eos_id()
         else:
             self.eos_id = args.eos_token_id
+        self.pad_id = self._model.pad_id()
 
     def encode(self,
                s: str,
@@ -127,6 +128,7 @@ class TransformerTokenizer(Tokenizer):
             self.eos_id = self._model.eos_token_id
         else:
             self.eos_id = args.eos_token_id
+        self.pad_id = self._model.pad_token_id
 
     def encode(self,
                s: str,
@@ -216,10 +218,10 @@ class GGUFTokenizer(SentencePieceTokenizer):
         self.bos_id = metadata["tokenizer.ggml.bos_token_id"].item()
         self.eos_id = metadata["tokenizer.ggml.eos_token_id"].item()
         if "tokenizer.ggml.padding_token_id" in metadata:
-            pad_id = metadata["tokenizer.ggml.padding_token_id"].item()
-            pad_token = tokens[pad_id]
+            self.pad_id = metadata["tokenizer.ggml.padding_token_id"].item()
+            pad_token = tokens[self.pad_id]
         else:
-            pad_id = -1
+            self.pad_id = -1
             pad_token = "<pad>"
         self._sep = "▁"
 
@@ -238,7 +240,7 @@ class GGUFTokenizer(SentencePieceTokenizer):
             unk_id=self.unk_id,
             bos_id=self.bos_id,
             eos_id=self.eos_id,
-            pad_id=pad_id,
+            pad_id=self.pad_id,
             unk_piece=tokens[self.unk_id],
             bos_piece=tokens[self.bos_id],
             eos_piece=tokens[self.eos_id],
