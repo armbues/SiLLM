@@ -44,11 +44,11 @@ class LoRALinear(nn.Module):
             LoRA linear layer.
         """
         output_dims, input_dims = linear.weight.shape
-
         if isinstance(linear, nn.QuantizedLinear):
             input_dims *= 32 // linear.bits
+        bias = "bias" in linear
 
-        lora_lin = LoRALinear(input_dims, output_dims, rank, alpha, dropout, scale)
+        lora_lin = LoRALinear(input_dims, output_dims, rank, alpha, dropout, scale, bias)
         lora_lin.linear = linear
 
         return lora_lin
@@ -164,7 +164,10 @@ class TrainableLoRA(LLM):
     def init_lora(self,
                   num_layers: int = -1,
                   target_modules: list = ["attention.wq", "attention.wv"],
-                  rank: int = 8):
+                  rank: int = 8,
+                  alpha: float = 16,
+                  dropout: float = 0.05,
+                  scale : float = 10.0):
         """
         Initialize LoRA for model.
         Args:
@@ -189,12 +192,12 @@ class TrainableLoRA(LLM):
             for layer in self.model.layers[-num_layers:]:
                 for target in target_modules:
                     sub, mod = target.split(".")
-                    layer[sub][mod] = LoRALinear.from_linear(layer[sub][mod], rank=rank)
+                    layer[sub][mod] = LoRALinear.from_linear(layer[sub][mod], rank=rank, alpha=alpha, dropout=dropout, scale=scale)
                     trainable_params += layer[sub][mod].lora_size
 
                 # Add LoRA for MoE gates
                 if hasattr(layer, "feed_forward") and hasattr(layer.feed_forward, "gate"):
-                    layer.feed_forward.gate = LoRALinear.from_linear(layer.feed_forward.gate)
+                    layer.feed_forward.gate = LoRALinear.from_linear(layer.feed_forward.gate, rank=rank, alpha=alpha, dropout=dropout, scale=scale)
 
             logging.info(f"Initialized LoRA with rank {rank} for {num_layers} layers")
             logging.debug(f"LoRA target modules: {', '.join(target_modules)}")
