@@ -86,7 +86,8 @@ class Attention(nn.Module):
 
             return a.reshape([B, self.n_heads, L, -1])
 
-        keys, values = map(repeat, (keys, values))
+        if self.repeats > 1:
+            keys, values = map(repeat, (keys, values))
 
         if cache is not None:
             key_cache, value_cache = cache

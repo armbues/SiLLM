@@ -20,7 +20,7 @@ class ModelArgs:
     hidden_dim: int = None
     vocab_size: int = -1
     rope_theta: float = 10000.0
-    rope_traditional: bool = True
+    rope_traditional: bool = False
     max_position_embeddings: int = 0
     bos_token_id: int = None
     eos_token_id: int = None

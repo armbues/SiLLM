@@ -197,14 +197,14 @@ def load_mlx_weights(weights_files) -> dict:
     for weights_path in weights_files:
         logging.debug(f"Loading model weights file {weights_path}")
 
-        for k, v in mx.load(str(weights_path)).items():
-            k = map_key(k)
-            mx.eval(v)
+        for key, value in mx.load(str(weights_path)).items():
+            mlx_key = map_key(key)
+            mx.eval(value)
 
-            if k is None:
-                logging.warning(f"Unknown key: {k}")
+            if mlx_key is None:
+                logging.warning(f"Unknown key: {key}")
             else:
-                weights[k] = v
+                weights[mlx_key] = value
 
     return weights
 
