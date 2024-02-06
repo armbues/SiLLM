@@ -130,6 +130,7 @@ class TransformerTokenizer(Tokenizer):
 
     def encode(self,
                s: str,
+               bos: bool = True,
                eos: bool = False
                ) -> List[int]:
         """
@@ -140,7 +141,11 @@ class TransformerTokenizer(Tokenizer):
         Returns:
             Encoded tokens.
         """
-        tokens = self._model.encode(s, add_special_tokens=False)
+        if bos is True:
+            tokens = [self.bos_id, *self._model.encode(s, add_special_tokens=False)]
+        else:
+            tokens = self._model.encode(s, add_special_tokens=False)
+
         if eos:
             tokens.append(self.eos_id)
 
