@@ -200,19 +200,19 @@ class LLM():
 
             if (len(tokens) % flush) == 0:
                 mx.eval(tokens)
-                result = self.tokenizer.decode([t.item() for t in tokens])
+                s = self.tokenizer.decode([t.item() for t in tokens])
 
                 metadata["num_tokens"] += len(tokens)
                 metadata["runtime"] = time.perf_counter() - start
 
-                yield result, metadata
+                yield s, metadata
 
                 tokens = []
 
         mx.eval(tokens)
-        result = self.tokenizer.decode([t.item() for t in tokens])
+        s = self.tokenizer.decode([t.item() for t in tokens])
 
         metadata["num_tokens"] += len(tokens)
         metadata["runtime"] = time.perf_counter() - start
 
-        yield result, metadata
+        yield s, metadata

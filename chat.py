@@ -48,8 +48,8 @@ if __name__ == "__main__":
         
         logging.debug(f"Generating {args.num_tokens} tokens with temperature {args.temp}")
 
-        for result, metadata in model.generate(prompt, temp=args.temp, num_tokens=args.num_tokens, flush=args.flush):
-            print(result, end="", flush=True)
+        for s, metadata in model.generate(prompt, temp=args.temp, num_tokens=args.num_tokens, flush=args.flush):
+            print(s, end="", flush=True)
         print()
 
         logging.debug(f"Evaluated {metadata['num_input']} prompt tokens in {metadata['eval_time']:.2f}s ({metadata['num_input'] / metadata['eval_time']:.2f} tok/sec)")
