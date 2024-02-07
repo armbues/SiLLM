@@ -5,6 +5,7 @@ import mlx.core as mx
 import mlx.nn as nn
 from mlx.utils import tree_flatten, tree_unflatten
 
+import sillm.tokenizer
 import sillm.args
 import sillm.llama as llama
 import sillm.mixtral as mixtral
@@ -14,7 +15,7 @@ class LLM():
     LLM model wrapper.
     """
     def __init__(self,
-                 tokenizer,
+                 tokenizer: sillm.tokenizer.Tokenizer,
                  args: sillm.args.ModelArgs
                  ):
         """
@@ -42,7 +43,9 @@ class LLM():
         for name, module in self.model.named_modules():
             module.name = name
 
-    def update_weights(self, weights):
+    def update_weights(self,
+                       weights: dict
+                       ):
         """
         Update model weights.
         Args:
@@ -52,7 +55,9 @@ class LLM():
         self.model.update(weights)
         mx.eval(self.model.parameters())
 
-    def verify_weights(self, weights) -> bool:
+    def verify_weights(self,
+                       weights: dict
+                       ) -> bool:
         """
         Verify that weights for all modules are present and shapes match.
         Args:
@@ -145,7 +150,7 @@ class LLM():
             logging.info(f"Dequantized model")
 
     def generate(self,
-                 prompt,
+                 prompt: str,
                  temp: float = 0.0,
                  num_tokens: int = 256,
                  flush: int = 5):

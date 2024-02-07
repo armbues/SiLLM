@@ -226,7 +226,7 @@ def load_torch_weights(weights_files) -> dict:
             if k is None:
                 logging.warning(f"Unknown key: {k}")
             else:
-                weights[k] = v
+                weights[k] = v.astype(mx.float16)
 
     return weights
 
@@ -252,6 +252,6 @@ def load_torch_file(weights_path) -> dict:
             v = v.numpy()
 
         dtype = getattr(mx,str(v.dtype).split(".")[-1])
-        weights[k] = mx.array(v, dtype)
+        weights[k] = mx.array(v, dtype=dtype)
 
     return weights
