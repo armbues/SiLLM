@@ -5,10 +5,16 @@ from typing import List
 import sillm.args
 
 class Tokenizer():
-    def encode(self, s: str, eos: bool = False) -> List[int]:
+    def encode(self,
+               s: str,
+               bos: bool = True,
+               eos: bool = False
+               ) -> List[int]:
         raise NotImplementedError("Class tokenizer.Tokenizer is used for inheritance only")
     
-    def decode(self, t: List[int]) -> str:
+    def decode(self,
+               t: List[int]
+               ) -> str:
         raise NotImplementedError("Class tokenizer.Tokenizer is used for inheritance only")
     
     @property
