@@ -191,7 +191,7 @@ class GGUFTokenizer(SentencePieceTokenizer):
                  ):
         """
         Args:
-            tokenizer_path: Path to tokenizer directory.
+            metadata: Model metadata in GGUF format.
         """
         try:
             import sentencepiece

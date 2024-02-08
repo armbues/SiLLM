@@ -20,7 +20,7 @@ class ModelArgs:
     hidden_dim: int = None
     vocab_size: int = -1
     rope_theta: float = 10000.0
-    rope_traditional: bool = False
+    rope_traditional: bool = True
     max_position_embeddings: int = 0
     bos_token_id: int = None
     eos_token_id: int = None
@@ -44,7 +44,7 @@ class ModelArgs:
         if self.hidden_dim is None and "layers.0.feed_forward.w1.weight" in weights:
             self.hidden_dim = weights["layers.0.feed_forward.w1.weight"].shape[0]
         if self.vocab_size <= 0 and "output.weight" in weights:
-            self.vocab_size = weights["output.weight"].shape[-1]
+            self.vocab_size = weights["output.weight"].shape[0]
 
     @staticmethod
     def load_config(config):

@@ -65,8 +65,10 @@ class LLM():
         Returns:
             True if all weights are present and shapes match, False otherwise.
         """
+        model_params = tree_flatten(self.model.parameters())
         result = True
-        for name, weight in tree_flatten(self.model.parameters()):
+
+        for name, weight in model_params:
             if name not in weights:
                 result = False
 
@@ -75,6 +77,11 @@ class LLM():
                 result = False
 
                 logging.warn(f"Shape mismatch for key {name}: {weight.shape} != {weights[name].shape}")
+
+        model_keys = {name for name, _ in model_params}
+        for name in weights:
+            if name not in model_keys:
+                logging.debug(f"Unused key {name} in weights")
 
         return result
 
@@ -161,6 +168,8 @@ class LLM():
             temp: Sampling temperature.
             num_tokens: Max number of tokens to generate.
             flush: Flush every `flush` tokens.
+        Yields:
+            Tuple of generated text and metadata.
         """
         start = time.perf_counter()
 
@@ -178,46 +187,46 @@ class LLM():
 
         def generate_step():
             def sample(logits):
-                if temp == 0:
-                    return mx.argmax(logits, axis=-1)
-                else:
+                if temp > 0:
                     return mx.random.categorical(logits * (1 / temp))
+                else:
+                    return mx.argmax(logits, axis=-1)
 
-            logits, cache = self.model(prompt[None])
-            y = sample(logits[:, -1, :])
-
-            yield y
-
-            metadata["eval_time"] = time.perf_counter() - start
-
+            y = prompt
+            cache = None
             while True:
-                logits, cache = self.model(y[None], cache)
+                logits, cache = self.model(y[None], cache=cache)
                 logits = logits[:, -1, :]
                 y = sample(logits)
 
                 yield y
 
         tokens = []
-        for token, _ in zip(generate_step(), range(num_tokens)):
+        for token, i in zip(generate_step(), range(num_tokens)):
+            if i == 0:
+                mx.eval(token)
+
+                metadata["eval_time"] = time.perf_counter() - start
+
             if token[0] == self.tokenizer.eos_id:
                 break
-            tokens.append(token)
+
+            tokens.append(token.item())
 
             if (len(tokens) % flush) == 0:
-                mx.eval(tokens)
-                s = self.tokenizer.decode([t.item() for t in tokens])
+                mx.eval(token)
+                s = self.tokenizer.decode(tokens)
+                tokens = []
 
-                metadata["num_tokens"] += len(tokens)
+                metadata["num_tokens"] = i+1
                 metadata["runtime"] = time.perf_counter() - start
 
                 yield s, metadata
 
-                tokens = []
+        mx.eval(token)
+        s = self.tokenizer.decode(tokens)
 
-        mx.eval(tokens)
-        s = self.tokenizer.decode([t.item() for t in tokens])
-
-        metadata["num_tokens"] += len(tokens)
+        metadata["num_tokens"] = i+1
         metadata["runtime"] = time.perf_counter() - start
 
         yield s, metadata

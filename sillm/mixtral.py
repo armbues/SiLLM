@@ -11,53 +11,6 @@ import sillm.llama as llama
 
 ########
 # Based on mlx-examples:
-# https://github.com/ml-explore/mlx-examples/blob/047d4650c4f63d55e5bfbaf8f589c1679cbdd971/llms/mixtral/mixtral.py#L43
-########
-class RoPE(nn.RoPE):
-    """
-    Rotary Position Embedding module for Mixtral models.
-    """
-    def __init__(self,
-                 dims: int,
-                 traditional: bool = False,
-                 base: float = 1000000):
-        """
-        Args:
-            dims: Embedding dimensions.
-            traditional: Whether to use traditional RoPE.
-            base: Base for traditional RoPE.
-        """
-        super().__init__(dims, traditional)
-
-        self.base = base
-
-    def __call__(self,
-                 x,
-                 offset: int = 0
-                 ):
-        """
-        Args:
-            x: Input tensor.
-            offset: Offset for RoPE.
-        Returns:
-            Output tensor.
-        """
-        shape = x.shape
-        x = mx.reshape(x, (-1, shape[-2], shape[-1]))
-        N = x.shape[1] + offset
-        costheta, sintheta = RoPE.create_cos_sin_theta(
-            N, self.dims, offset=offset, base=self.base, dtype=x.dtype
-        )
-
-        rope = (
-            self._compute_traditional_rope if self.traditional else self._compute_rope
-        )
-        rx = rope(costheta, sintheta, x)
-
-        return mx.reshape(rx, shape)
-
-########
-# Based on mlx-examples:
 # https://github.com/ml-explore/mlx-examples/blob/d8680a89f986492dbc27c36af3294034db26458f/llms/mixtral/mixtral.py#L63
 ########
 class Attention(nn.Module):
@@ -83,9 +36,9 @@ class Attention(nn.Module):
         self.wk = nn.Linear(args.dim, args.n_kv_heads * args.head_dim, bias=False)
         self.wv = nn.Linear(args.dim, args.n_kv_heads * args.head_dim, bias=False)
         self.wo = nn.Linear(args.n_heads * args.head_dim, args.dim, bias=False)
-        self.rope = RoPE(args.head_dim,
-                    traditional=args.rope_traditional,
-                    base=args.rope_theta)
+        self.rope = nn.RoPE(args.head_dim,
+                            traditional=args.rope_traditional,
+                            base=args.rope_theta)
 
     def __call__(self,
                  x: mx.array,

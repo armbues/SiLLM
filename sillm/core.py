@@ -1,5 +1,6 @@
 import logging
 import pathlib
+import enum
 
 import mlx.core as mx
 
@@ -74,6 +75,9 @@ def load_gguf_file(model_path) -> LLM:
         logging.warn(f"Unsupported GGUF file type: {gguf_file_type}")
     model_args.quantization = quantization
 
+    # Set RoPE type for GGUF
+    model_args.rope_traditional = True
+
     # Fix configuration
     model_args.fix_config(weights)
     model_args.log_config()
@@ -127,13 +131,13 @@ def load_model_dir(model_path) -> LLM:
     weights_files_bin = sorted(list(model_path.glob("pytorch_model-*.bin")))
 
     if len(weights_files_npz) > 0:
-        weights = load_mlx_weights(weights_files_npz)
+        weights, model_format = load_mlx_weights(weights_files_npz)
     elif len(weights_files_safetensors) > 0:
-        weights = load_mlx_weights(weights_files_safetensors)
+        weights, model_format = load_mlx_weights(weights_files_safetensors)
     elif len(weights_files_consolidated) > 0:
-        weights = load_torch_weights(weights_files_consolidated)
+        weights, model_format = load_torch_weights(weights_files_consolidated)
     elif len(weights_files_bin) > 0:
-       weights = load_torch_weights(weights_files_bin)
+       weights, model_format = load_torch_weights(weights_files_bin)
     else:
         raise ValueError("No weights files found")
 
@@ -149,6 +153,12 @@ def load_model_dir(model_path) -> LLM:
     if model_args is None:
         raise ValueError(f"Configuration could not be loaded from {model_path}")
     logging.info(f"Loaded model config from {config_path}")
+
+    # Set RoPE type based on model format
+    if model_format == ModelFormat.HUGGINGFACE:
+        model_args.rope_traditional = False
+    else:
+        model_args.rope_traditional = True
 
     # Fix configuration
     model_args.fix_config(weights)
@@ -194,19 +204,28 @@ def load_mlx_weights(weights_files) -> dict:
         Model weights.
     """
     weights = {}
+    format = ModelFormat.UNKNOWN
     for weights_path in weights_files:
         logging.debug(f"Loading model weights file {weights_path}")
+        weights_slice = mx.load(str(weights_path))
 
-        for key, value in mx.load(str(weights_path)).items():
+        # Guess model format according to key names
+        if format == ModelFormat.UNKNOWN:
+            format = ModelFormat.guess_from_weights(weights_slice)
+
+        for key, value in weights_slice.items():
             mlx_key = map_key(key)
             mx.eval(value)
 
             if mlx_key is None:
                 logging.warning(f"Unknown key: {key}")
             else:
+                if mlx_key in weights:
+                    logging.warning(f"Duplicate key: {mlx_key}")
+
                 weights[mlx_key] = value
 
-    return weights
+    return weights, format
 
 def load_torch_weights(weights_files) -> dict:
     """
@@ -217,18 +236,27 @@ def load_torch_weights(weights_files) -> dict:
         Model weights.
     """
     weights = {}
+    format = ModelFormat.UNKNOWN
     for weights_path in weights_files:
         logging.debug(f"Loading model weights file {weights_path}")
+        weights_slice = load_torch_file(str(weights_path))
 
-        for k, v in load_torch_file(str(weights_path)).items():
-            k = map_key(k)
+        # Guess model format according to key names
+        if format == ModelFormat.UNKNOWN:
+            format = ModelFormat.guess_from_weights(weights_slice)
 
-            if k is None:
-                logging.warning(f"Unknown key: {k}")
+        for key, value in weights_slice.items():
+            mlx_key = map_key(key)
+
+            if mlx_key is None:
+                logging.warning(f"Unknown key: {key}")
             else:
-                weights[k] = v.astype(mx.float16)
+                if mlx_key in weights:
+                    logging.warning(f"Duplicate key: {mlx_key}")
 
-    return weights
+                weights[mlx_key] = value
+
+    return weights, format
 
 def load_torch_file(weights_path) -> dict:
     """
@@ -247,11 +275,44 @@ def load_torch_file(weights_path) -> dict:
     for k, v in torch.load(weights_path, map_location="cpu").items():
         # Convert to numpy
         if v.dtype == torch.bfloat16:
-            v = v.to(dtype=torch.float32).numpy()
+            v = v.to(dtype=torch.float16).numpy()
         else:
             v = v.numpy()
 
-        dtype = getattr(mx,str(v.dtype).split(".")[-1])
-        weights[k] = mx.array(v, dtype=dtype)
+        weights[k] = mx.array(v)
 
     return weights
+
+class ModelFormat(enum.Enum):
+    """
+    Model type enumeration.
+    """
+    UNKNOWN = 0
+    MLX = 1
+    GGUF = 2
+    HUGGINGFACE = 3
+
+    @staticmethod
+    def guess_from_weights(weights):
+        """
+        Guess model type from weights.
+        Args:
+            weights: Model weights.
+        Returns:
+            Model type.
+        """
+        format = None
+        for k in weights:
+            if k.startswith("layers."):
+                format = ModelFormat.MLX
+                break
+            elif k.startswith("blk."):
+                format = ModelFormat.GGUF
+                break
+            elif k.startswith("model.layers."):
+                format = ModelFormat.HUGGINGFACE
+                break
+
+        logging.info(f"Guessed model format: {format}")
+
+        return format

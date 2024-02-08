@@ -4,7 +4,7 @@ import mlx.core as mx
 
 def map_key(k):
     """
-    Map key to MLX naming scheme.
+    Map weights key to MLX naming scheme.
     Args:
         k: Key to map.
     """
