@@ -6,7 +6,36 @@ import mlx.core as mx
 
 import sillm
 from sillm.llm import LLM
+from sillm.args import ModelArgs
 from sillm.mapping import map_key, map_config
+
+class ModelFormat(enum.Enum):
+    """
+    Model type enumeration.
+    """
+    UNKNOWN = 0
+    MLX = 1
+    GGUF = 2
+    HUGGINGFACE = 3
+
+    @staticmethod
+    def guess_from_weights(weights):
+        """
+        Guess model type from weights.
+        Args:
+            weights: Model weights.
+        Returns:
+            Model type.
+        """
+        for k in weights:
+            if k.startswith("layers."):
+                return ModelFormat.MLX
+            elif k.startswith("blk."):
+                return ModelFormat.GGUF
+            elif k.startswith("model.layers."):
+                return ModelFormat.HUGGINGFACE
+            
+        return ModelFormat.UNKNOWN
 
 def load(model_path) -> LLM:
     """
@@ -22,6 +51,8 @@ def load(model_path) -> LLM:
         return load_model_dir(str(model_path))
     elif model_path.is_file():
         return load_model_file(str(model_path))
+    else:
+        raise ValueError(f"Model path {model_path} is not a file or directory")
 
 def load_model_file(model_path) -> LLM:
     """
@@ -74,9 +105,6 @@ def load_gguf_file(model_path) -> LLM:
     else:
         logging.warn(f"Unsupported GGUF file type: {gguf_file_type}")
     model_args.quantization = quantization
-
-    # Set RoPE type for GGUF
-    model_args.rope_traditional = True
 
     # Fix configuration
     model_args.fix_config(weights)
@@ -154,11 +182,10 @@ def load_model_dir(model_path) -> LLM:
         raise ValueError(f"Configuration could not be loaded from {model_path}")
     logging.info(f"Loaded model config from {config_path}")
 
-    # Set RoPE type based on model format
     if model_format == ModelFormat.HUGGINGFACE:
-        model_args.rope_traditional = False
-    else:
-        model_args.rope_traditional = True
+        logging.debug("Permuting HuggingFace weights")
+
+        permute_hf_weights(weights, model_args)
 
     # Fix configuration
     model_args.fix_config(weights)
@@ -212,6 +239,7 @@ def load_mlx_weights(weights_files) -> dict:
         # Guess model format according to key names
         if format == ModelFormat.UNKNOWN:
             format = ModelFormat.guess_from_weights(weights_slice)
+            logging.info(f"Guessing model format: {format}")
 
         for key, value in weights_slice.items():
             mlx_key = map_key(key)
@@ -244,6 +272,7 @@ def load_torch_weights(weights_files) -> dict:
         # Guess model format according to key names
         if format == ModelFormat.UNKNOWN:
             format = ModelFormat.guess_from_weights(weights_slice)
+            logging.info(f"Guessing model format: {format}")
 
         for key, value in weights_slice.items():
             mlx_key = map_key(key)
@@ -279,40 +308,27 @@ def load_torch_file(weights_path) -> dict:
         else:
             v = v.numpy()
 
-        weights[k] = mx.array(v)
+        weights[k] = mx.array(v, dtype=mx.float16)
 
     return weights
 
-class ModelFormat(enum.Enum):
+########
+# Based on:
+# https://github.com/ggerganov/llama.cpp/blob/b7b74cef36a93ae01e0b9af8986d131761742d0e/convert.py#L1182
+########
+def permute_hf_weights(weights: dict,
+                       args: ModelArgs):
     """
-    Model type enumeration.
+    Permute weights stored in huggingface format.
     """
-    UNKNOWN = 0
-    MLX = 1
-    GGUF = 2
-    HUGGINGFACE = 3
+    def permute(x, n):
+        return (x.reshape(n, 2, x.shape[0] // n // 2, *x.shape[1:]).swapaxes(1, 2).reshape(x.shape))
 
-    @staticmethod
-    def guess_from_weights(weights):
-        """
-        Guess model type from weights.
-        Args:
-            weights: Model weights.
-        Returns:
-            Model type.
-        """
-        format = None
-        for k in weights:
-            if k.startswith("layers."):
-                format = ModelFormat.MLX
-                break
-            elif k.startswith("blk."):
-                format = ModelFormat.GGUF
-                break
-            elif k.startswith("model.layers."):
-                format = ModelFormat.HUGGINGFACE
-                break
+    n_heads = args.n_heads
+    n_kv_heads = args.n_kv_heads
 
-        logging.info(f"Guessed model format: {format}")
-
-        return format
+    for i in range(args.n_layers):
+        if f"layers.{i}.attention.wq.weight" in weights:
+            weights[f"layers.{i}.attention.wq.weight"] = permute(weights[f"layers.{i}.attention.wq.weight"], n_heads)
+        if f"layers.{i}.attention.wk.weight" in weights:
+            weights[f"layers.{i}.attention.wk.weight"] = permute(weights[f"layers.{i}.attention.wk.weight"], n_kv_heads)

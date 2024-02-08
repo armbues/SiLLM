@@ -26,4 +26,4 @@ def log_memory_usage():
     system_memory = get_system_memory() // (1024 * 1024)
     memory_utilization = 100 * process_memory / float(system_memory)
 
-    logging.debug(f"Memory utilization: {process_memory:,} MB / {system_memory:,} MB ({memory_utilization:.2f}%)")
+    logging.debug(f"Max. memory utilization: {process_memory:,} MB / {system_memory:,} MB ({memory_utilization:.2f}%)")
