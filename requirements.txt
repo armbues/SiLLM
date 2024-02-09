@@ -2,3 +2,4 @@ mlx>=0.1
 sentencepiece
 numpy
 tqdm
+psutil
