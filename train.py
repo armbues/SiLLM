@@ -11,10 +11,10 @@ if __name__ == "__main__":
     # Parse commandline arguments
     parser = argparse.ArgumentParser(description="Interface for training SiLLM models with LoRA/QLoRA.")
     parser.add_argument("model", type=str, help="The directory or file for the base model (MLX, Torch, GGUF)")
-    parser.add_argument("-i", "--load_adapter_path", default=None, type=str, help="Load adapter weights from file (.npz)")
-    parser.add_argument("-a", "--save_adapter_path", default=None, type=str, help="Save adapter weights to file (.npz)")
-    parser.add_argument("-o", "--save_merge_path", default=None, type=str, help="Folder to save merged model weights")
-    parser.add_argument("-t", "--training_data", default=None, type=str, help="Train the model with training dataset in the directory")
+    parser.add_argument("-i", "--load_adapter", default=None, type=str, help="Load adapter weights from file (.safetensors or .npz)")
+    parser.add_argument("-a", "--save_adapter", default=None, type=str, help="Save adapter weights to file (.safetensors or .npz)")
+    parser.add_argument("-o", "--save_merge", default=None, type=str, help="Save merged model weights to file (.safetensors or .npz)")
+    parser.add_argument("-d", "--data", default=None, type=str, help="Train the model with training dataset in the directory")
     parser.add_argument("-q4", default=False, action="store_true", help="Quantize the model to 4 bits")
     parser.add_argument("-q8", default=False, action="store_true", help="Quantize the model to 8 bits")
     parser.add_argument("--layers", default=-1, type=int, help="Layers to use for LoRA (default: -1 for all layers)")
@@ -67,5 +67,5 @@ if __name__ == "__main__":
         model.merge_and_unload_lora()
 
         # Save merged weights
-        model.save_npz(args.save_merge_path)
+        model.save_weights(args.save_merge_path)
         # TODO save sharded weights

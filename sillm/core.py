@@ -19,7 +19,7 @@ class ModelFormat(enum.Enum):
     HUGGINGFACE = 3
 
     @staticmethod
-    def guess_from_weights(weights):
+    def guess_from_weights(weights: dict):
         """
         Guess model type from weights.
         Args:
@@ -37,7 +37,7 @@ class ModelFormat(enum.Enum):
             
         return ModelFormat.UNKNOWN
 
-def load(model_path) -> LLM:
+def load(model_path: str) -> LLM:
     """
     Load model from directory.
     Args:
@@ -54,7 +54,7 @@ def load(model_path) -> LLM:
     else:
         raise ValueError(f"Model path {model_path} is not a file or directory")
 
-def load_model_file(model_path) -> LLM:
+def load_model_file(model_path: str) -> LLM:
     """
     Load model from file.
     Args:
@@ -67,7 +67,7 @@ def load_model_file(model_path) -> LLM:
     else:
         raise ValueError(f"Unknown model file type: {model_path}")
     
-def load_gguf_file(model_path) -> LLM:
+def load_gguf_file(model_path: str) -> LLM:
     """
     Load model from GGUF file.
     Args:
@@ -75,6 +75,7 @@ def load_gguf_file(model_path) -> LLM:
     Returns:
         SiLLM model.
     """
+    logging.debug(f"Loading GGUF file {model_path}")
     gguf_weights, metadata = mx.load(model_path, return_metadata=True)
 
     # Map weights keys
@@ -142,7 +143,7 @@ def load_gguf_file(model_path) -> LLM:
 
     return model
 
-def load_model_dir(model_path) -> LLM:
+def load_model_dir(model_path: str) -> LLM:
     """
     Load model from directory.
     Args:
@@ -234,14 +235,14 @@ def load_mlx_weights(weights_files) -> dict:
     format = ModelFormat.UNKNOWN
     for weights_path in weights_files:
         logging.debug(f"Loading model weights file {weights_path}")
-        weights_slice = mx.load(str(weights_path))
+        weights_shard = mx.load(str(weights_path))
 
         # Guess model format according to key names
         if format == ModelFormat.UNKNOWN:
-            format = ModelFormat.guess_from_weights(weights_slice)
+            format = ModelFormat.guess_from_weights(weights_shard)
             logging.info(f"Guessing model format: {format}")
 
-        for key, value in weights_slice.items():
+        for key, value in weights_shard.items():
             mlx_key = map_key(key)
             mx.eval(value)
 
@@ -267,14 +268,14 @@ def load_torch_weights(weights_files) -> dict:
     format = ModelFormat.UNKNOWN
     for weights_path in weights_files:
         logging.debug(f"Loading model weights file {weights_path}")
-        weights_slice = load_torch_file(str(weights_path))
+        weights_shard = load_torch_file(str(weights_path))
 
         # Guess model format according to key names
         if format == ModelFormat.UNKNOWN:
-            format = ModelFormat.guess_from_weights(weights_slice)
+            format = ModelFormat.guess_from_weights(weights_shard)
             logging.info(f"Guessing model format: {format}")
 
-        for key, value in weights_slice.items():
+        for key, value in weights_shard.items():
             mlx_key = map_key(key)
 
             if mlx_key is None:
@@ -317,7 +318,8 @@ def load_torch_file(weights_path) -> dict:
 # https://github.com/ggerganov/llama.cpp/blob/b7b74cef36a93ae01e0b9af8986d131761742d0e/convert.py#L1182
 ########
 def permute_hf_weights(weights: dict,
-                       args: ModelArgs):
+                       args: ModelArgs
+                       ):
     """
     Permute weights stored in huggingface format.
     """

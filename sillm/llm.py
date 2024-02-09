@@ -85,7 +85,7 @@ class LLM():
 
         return result
 
-    def save_npz(self,
+    def save_weights(self,
                  weights_path: str
                  ):
         """

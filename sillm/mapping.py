@@ -106,6 +106,7 @@ def map_config(config):
         "n_heads": "n_kv_heads",
         "rms_norm_eps": "norm_eps",
         # GGUF metadata
+        # https://github.com/ggerganov/ggml/blob/master/docs/gguf.md
         "llama.embedding_length": "dim",
         "llama.block_count": "n_layers",
         "llama.attention.head_count": "n_heads",
