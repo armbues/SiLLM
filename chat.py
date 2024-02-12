@@ -12,11 +12,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="A simple CLI for generating text with SiLLM.")
     parser.add_argument("model", type=str, help="The model directory or file")
     parser.add_argument("-s", "--seed", type=int, default=-1, help="Seed for randomization")
-    parser.add_argument("-q4", default=False, action="store_true", help="Quantize the model to 4 bits")
-    parser.add_argument("-q8", default=False, action="store_true", help="Quantize the model to 8 bits")
     parser.add_argument("-t", "--temp", type=float, default=0.7, help="Sampling temperature")
     parser.add_argument("-f", "--flush", type=int, default=5, help="Flush output every n tokens")
     parser.add_argument("-n", "--num_tokens", type=int, default=512, help="Max. number of tokens to generate")
+    parser.add_argument("-q4", default=False, action="store_true", help="Quantize the model to 4 bits")
+    parser.add_argument("-q8", default=False, action="store_true", help="Quantize the model to 8 bits")
     parser.add_argument("-v", "--verbose", default=1, action="count", help="Increase output verbosity")
     args = parser.parse_args()
     
@@ -37,6 +37,7 @@ if __name__ == "__main__":
     elif args.q8 is True:
         model.quantize(bits=8)
 
+    # Log memory usage
     utils.log_memory_usage()
 
     # Input loop

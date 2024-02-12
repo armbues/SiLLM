@@ -127,7 +127,7 @@ class LLM():
 
             logging.info(f"Quantized model with group size {group_size} and {bits} bits")
         else:
-            logging.warn(f"Model is already quantized")
+            logging.warn(f"Model is already quantized with group size {group_size} and {bits} bits")
 
     def dequantize(self):
         """

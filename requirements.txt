@@ -1,4 +1,4 @@
-mlx>=0.1
+mlx>=0.2.0
 sentencepiece
 numpy
 tqdm

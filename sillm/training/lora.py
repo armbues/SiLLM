@@ -50,6 +50,7 @@ class LoRALinear(nn.Module):
 
         lora_lin = LoRALinear(input_dims, output_dims, rank, alpha, dropout, scale, bias)
         lora_lin.linear = linear
+        lora_lin.name = linear.name
 
         return lora_lin
 
@@ -161,6 +162,18 @@ class TrainableLoRA(LLM):
 
         self._lora = None
 
+    @staticmethod
+    def from_model(llm: LLM):
+        """
+        Convert LLM to trainable LLM.
+        Args:
+            llm: LLM to convert.
+            args: Model arguments.
+        Returns:
+            Trainable LLM.
+        """
+        return TrainableLoRA(llm.tokenizer, llm.args)
+
     def init_lora(self,
                   num_layers: int = -1,
                   target_modules: list = ["attention.wq", "attention.wv"],
@@ -191,19 +204,26 @@ class TrainableLoRA(LLM):
             # Freeze all existing parameters
             self.model.freeze()
 
-            trainable_params = 0
+            self._lora["modules"] = {}
             for layer in self.model.layers[-num_layers:]:
                 for target in target_modules:
                     sub, mod = target.split(".")
-                    layer[sub][mod] = LoRALinear.from_linear(layer[sub][mod], rank=rank, alpha=alpha, dropout=dropout, scale=scale)
-                    trainable_params += layer[sub][mod].lora_size
+                    module = LoRALinear.from_linear(layer[sub][mod], rank=rank, alpha=alpha, dropout=dropout, scale=scale)
+                    layer[sub][mod] = module
+                    self._lora["modules"][module.name] = module
 
                 # Add LoRA for MoE gates
                 if hasattr(layer, "feed_forward") and hasattr(layer.feed_forward, "gate"):
-                    layer.feed_forward.gate = LoRALinear.from_linear(layer.feed_forward.gate, rank=rank, alpha=alpha, dropout=dropout, scale=scale)
+                    module = LoRALinear.from_linear(layer.feed_forward.gate, rank=rank, alpha=alpha, dropout=dropout, scale=scale)
+                    layer.feed_forward.gate = module
+                    self._lora["modules"][module.name] = module
 
             logging.info(f"Initialized LoRA with rank {rank} for {num_layers} layers")
             logging.debug(f"LoRA target modules: {', '.join(target_modules)}")
+
+            trainable_params = 0
+            for module in self._lora["modules"].values():
+                trainable_params += module.lora_size
             logging.debug(f"LoRA trainable parameters: {trainable_params/ 10**6:.2f}M")
 
     def merge_and_unload_lora(self):
@@ -225,7 +245,9 @@ class TrainableLoRA(LLM):
 
         self._lora = None
 
-    def save_adapters(self, adapter_path):
+    def save_adapters(self,
+                      adapter_path: str,
+                      ):
         """
         Save adapter weights.
         Args:
@@ -238,7 +260,29 @@ class TrainableLoRA(LLM):
 
         logging.info(f"Saved adapter weights to {adapter_path}")
 
-    def load_adapters(self, adapter_path: str):
+    def save_checkpoint(self,
+                        checkpoint_path: str,
+                        steps: int
+                        ):
+        """
+        Save model checkpoint.
+        Args:
+            checkpoint_path: Director to save checkpoints to.
+            steps: Number of steps.
+        """
+        assert self._lora is not None
+
+        checkpoint_path = pathlib.Path(checkpoint_path)
+        adapter_path = checkpoint_path / f"chkpt-{steps}.safetensors"
+
+        state = dict(tree_flatten(self.model.trainable_parameters()))
+        mx.savez(adapter_path, **state)
+
+        logging.info(f"Saved adapter checkpoint to {checkpoint_path}")
+
+    def load_adapters(self,
+                      adapter_path: str
+                      ):
         """
         Load adapter weights.
         Args:
@@ -249,43 +293,6 @@ class TrainableLoRA(LLM):
         self.model.load_weights(adapter_path)
 
         logging.info(f"Loaded adapter weights from {adapter_path}")
-
-    ########
-    # Based on mlx-examples:
-    # https://github.com/ml-explore/mlx-examples/blob/e74889d0fa0fb49d95bfdf6a1dcad907713eb50e/lora/lora.py#L166
-    ########
-    def iterate_batches(self,
-                        dataset: Dataset,
-                        batch_size: int,
-                        train: bool = False):
-        """
-        Iterate over batches.
-        Args:
-            dataset: Dataset to iterate over.
-            batch_size: Batch size.
-            train: Whether to train.
-        """
-        # Shuffle indices
-        while True:
-            indices = np.arange(len(dataset))
-            if train:
-                indices = np.random.permutation(indices)
-
-            # Collect batches from dataset
-            for i in range(0, len(indices) - batch_size + 1, batch_size):
-                batch = [dataset[i+j] for j in range(batch_size)]
-                lengths = [len(x) for x in batch]
-
-                # Pad to the max length
-                batch_arr = np.zeros((batch_size, max(lengths)), np.int32)
-                for j in range(batch_size):
-                    batch_arr[j, : lengths[j]] = batch[j]
-                batch = mx.array(batch_arr)
-
-                yield batch[:, :-1], batch[:, 1:], mx.array(lengths)
-
-            if not train:
-                break
 
     ########
     # Based on mlx-examples:
@@ -309,7 +316,7 @@ class TrainableLoRA(LLM):
         num_tokens = 0
         for _, batch in zip(
             range(num_batches),
-            self.iterate_batches(dataset, batch_size),
+            dataset.iterate_batches(batch_size),
         ):
             losses, toks = self.model.loss(*batch)
             all_losses.append((losses * toks).item())
@@ -326,10 +333,11 @@ class TrainableLoRA(LLM):
               dataset_validation: Dataset,
               batch_size: int = 4,
               learning_rate: float = 1e-5,
-              iterations: int = 1000,
               epochs: int = 1,
+              iterations: int = 0,
               report_steps: int = 10,
               eval_steps: int = 100,
+              eval_callback = None,
               validation_batches: int = 25):
         """
         Train model.
@@ -338,15 +346,16 @@ class TrainableLoRA(LLM):
             dataset_validation: Validation dataset.
             batch_size: Batch size.
             learning_rate: Learning rate.
-            iterations: Number of iterations.
             epochs: Number of epochs.
+            iterations: Number of iterations.
             report_steps: Report every `report_steps` iterations.
             eval_steps: Evaluate every `eval_steps` iterations.
+            eval_callback: Callback after eval.
             validation_batches: Number of batches to evaluate on.
         """
-        # Calculate number of iterations if epochs is set
-        if epochs > 0:
-            iterations = len(dataset_training) * epochs
+        # Calculate number of iterations
+        if iterations == 0:
+            iterations = len(dataset_training)
         
         logging.info(f"Training the model for {epochs} epochs of {iterations} batch iterations")
         logging.debug(f"Training batch size: {batch_size}")
@@ -366,7 +375,7 @@ class TrainableLoRA(LLM):
         pbar_iterations = tqdm.tqdm(range(iterations), desc="Iter.")
         for _ in pbar_epochs:
             for i in pbar_iterations:
-                batch = next(self.iterate_batches(dataset_training, batch_size, train=True))
+                batch = next(dataset_training.iterate_batches(batch_size, train=True))
 
                 # Forward and backward pass
                 (loss_value, toks), grad = loss_value_and_grad(*batch)
@@ -384,7 +393,7 @@ class TrainableLoRA(LLM):
                     train_loss = np.mean(losses)
                     stop = time.perf_counter()
 
-                    pbar_epochs.write(f"#{i + 1}:\tTrain loss {train_loss:.3f}\t{float(num_tokens) / (stop - start):.3f} tok/sec")
+                    pbar_epochs.write(f"#{i + 1}:\tTraining loss   {train_loss:.3f}\t{float(num_tokens) / (stop - start):.3f} tok/sec")
                     
                     losses = []
                     num_tokens = 0
@@ -392,8 +401,13 @@ class TrainableLoRA(LLM):
 
                 # Report validation loss if needed
                 if i == 0 or (i + 1) % eval_steps == 0:
+                    pbar_epochs.write(f"#{i + 1}:\tEvaluating loss")
+
                     stop = time.perf_counter()
                     val_loss = self.evaluate(dataset_validation, batch_size, validation_batches)
                     start = time.perf_counter()
 
-                    pbar_epochs.write(f"#{i + 1}:\tValid loss {val_loss:.3f}\tVal took {(start - stop):.3f}s")
+                    pbar_epochs.write(f"#{i + 1}:\tValidation loss {val_loss:.3f}\t{(start - stop):.3f} sec")
+
+                    # Eval callback
+                    eval_callback(i, val_loss)
