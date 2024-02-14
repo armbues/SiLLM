@@ -9,7 +9,7 @@ app = fastapi.FastAPI()
 @app.get("/")
 def index():
     return {
-        "message": "Welcome to the OpenAI API! Documentation is available at https://platform.openai.com/docs/api-reference"
+        "message": "Welcome to the SiLLM API!"
     }
 
 @app.get("/v1/models")
