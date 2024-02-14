@@ -273,7 +273,7 @@ class TrainableLoRA(LLM):
         assert self._lora is not None
 
         checkpoint_path = pathlib.Path(checkpoint_path)
-        adapter_path = checkpoint_path / f"chkpt-{steps}.safetensors"
+        adapter_path = checkpoint_path / f"ckpt-{steps}.safetensors"
 
         state = dict(tree_flatten(self.model.trainable_parameters()))
         mx.savez(adapter_path, **state)
@@ -337,7 +337,7 @@ class TrainableLoRA(LLM):
               iterations: int = 0,
               report_steps: int = 10,
               eval_steps: int = 100,
-              eval_callback = None,
+              eval_callback: callable = None,
               validation_batches: int = 25):
         """
         Train model.
@@ -355,7 +355,7 @@ class TrainableLoRA(LLM):
         """
         # Calculate number of iterations
         if iterations == 0:
-            iterations = len(dataset_training)
+            iterations = len(dataset_training) // batch_size
         
         logging.info(f"Training the model for {epochs} epochs of {iterations} batch iterations")
         logging.debug(f"Training batch size: {batch_size}")
