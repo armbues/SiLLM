@@ -35,6 +35,7 @@ class Dataset:
 
                     if len(tokens) < max_length:
                         self._data.append(tokens)
+                    # TODO warning if text is too long
 
     def __getitem__(self, idx: int):
         return self._data[idx]
@@ -63,7 +64,7 @@ class Dataset:
 
             # Collect batches from dataset
             for i in range(0, len(indices) - batch_size + 1, batch_size):
-                batch = [self._data[i+j] for j in range(batch_size)]
+                batch = [self._data[indices[i+j]] for j in range(batch_size)]
                 lengths = [len(x) for x in batch]
 
                 # Pad to the max length

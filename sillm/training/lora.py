@@ -59,7 +59,7 @@ class LoRALinear(nn.Module):
                  output_dims: int,
                  rank: int = 8,
                  alpha: float = 16,
-                 dropout: float = 0.0,
+                 dropout: float = 0.05,
                  scale : float = 10.0,
                  bias: bool = False):
         """
@@ -96,6 +96,22 @@ class LoRALinear(nn.Module):
             Number of LoRA parameters.
         """
         return self.lora_a.size + self.lora_b.size
+
+    def __call__(self, x):
+        """
+        Args:
+            x: Input tensor.
+        Returns:
+            Output tensor.
+        """
+        dtype = self.linear.weight.dtype
+        if isinstance(self.linear, nn.QuantizedLinear):
+            dtype = self.linear.scales.dtype
+
+        y = self.linear(x.astype(dtype))
+        z = (self.lora_dropout(x) @ self.lora_a) @ self.lora_b
+
+        return y + self.scale * z
     
     def merge(self):
         """
@@ -129,39 +145,10 @@ class LoRALinear(nn.Module):
 
             return linear
 
-    def __call__(self, x):
-        """
-        Args:
-            x: Input tensor.
-        Returns:
-            Output tensor.
-        """
-        dtype = self.linear.weight.dtype
-        if isinstance(self.linear, nn.QuantizedLinear):
-            dtype = self.linear.scales.dtype
-
-        y = self.linear(x.astype(dtype))
-        z = (self.lora_dropout(x) @ self.lora_a) @ self.lora_b
-
-        return y + self.scale * z
-
 class TrainableLoRA(LLM):
     """
-    Trainable LLM model wrapper.
+    Trainable LoRA model wrapper.
     """
-    def __init__(self,
-                 tokenizer,
-                 args: ModelArgs
-                 ):
-        """
-        Args:
-            tokenizer: Tokenizer instance.
-            args: Model arguments.
-        """
-        super().__init__(tokenizer, args)
-
-        self._lora = None
-
     @staticmethod
     def from_model(llm: LLM):
         """
@@ -172,7 +159,26 @@ class TrainableLoRA(LLM):
         Returns:
             Trainable LLM.
         """
-        return TrainableLoRA(llm.tokenizer, llm.args)
+        model = TrainableLoRA(llm.model, llm.tokenizer, llm.args)
+        model._quantization = llm._quantization
+
+        return model
+    
+    def __init__(self,
+                 model,
+                 tokenizer,
+                 args: ModelArgs
+                 ):
+        """
+        Args:
+            tokenizer: Tokenizer instance.
+            args: Model arguments.
+        """
+        self.model = model
+        self.tokenizer = tokenizer
+        self.args = args
+
+        self._lora = None
 
     def init_lora(self,
                   num_layers: int = -1,
@@ -200,6 +206,10 @@ class TrainableLoRA(LLM):
                 "target_modules": target_modules,
                 "rank": rank
             }
+
+            # Add LoRA for MoE gates
+            if self.args.model_type == "mixtral":
+                target_modules.append("feed_forward.gate")
             
             # Freeze all existing parameters
             self.model.freeze()
@@ -208,18 +218,16 @@ class TrainableLoRA(LLM):
             for layer in self.model.layers[-num_layers:]:
                 for target in target_modules:
                     sub, mod = target.split(".")
-                    module = LoRALinear.from_linear(layer[sub][mod], rank=rank, alpha=alpha, dropout=dropout, scale=scale)
-                    layer[sub][mod] = module
-                    self._lora["modules"][module.name] = module
-
-                # Add LoRA for MoE gates
-                if hasattr(layer, "feed_forward") and hasattr(layer.feed_forward, "gate"):
-                    module = LoRALinear.from_linear(layer.feed_forward.gate, rank=rank, alpha=alpha, dropout=dropout, scale=scale)
-                    layer.feed_forward.gate = module
-                    self._lora["modules"][module.name] = module
+                    if sub in layer and mod in layer[sub]:
+                        module = LoRALinear.from_linear(layer[sub][mod], rank=rank, alpha=alpha, dropout=dropout, scale=scale)
+                        layer[sub][mod] = module
+                        self._lora["modules"][module.name] = module
+                    else:
+                        logging.warning(f"Layer {layer} does not have target module {target}")
 
             logging.info(f"Initialized LoRA with rank {rank} for {num_layers} layers")
             logging.debug(f"LoRA target modules: {', '.join(target_modules)}")
+            logging.debug(f"LoRA parameters: Alpha {alpha}, Dropout {dropout}, Scale {scale}")
 
             trainable_params = 0
             for module in self._lora["modules"].values():
@@ -357,8 +365,7 @@ class TrainableLoRA(LLM):
         if iterations == 0:
             iterations = len(dataset_training) // batch_size
         
-        logging.info(f"Training the model for {epochs} epochs of {iterations} batch iterations")
-        logging.debug(f"Training batch size: {batch_size}")
+        logging.info(f"Training the model for {epochs} epochs of {iterations} batch iterations with batch size {batch_size}")
         logging.debug(f"Training learning rate: {learning_rate}")
         
         optimizer = optim.Adam(learning_rate=learning_rate)
@@ -374,9 +381,10 @@ class TrainableLoRA(LLM):
         pbar_epochs = tqdm.tqdm(range(epochs), desc="Epoch")
         pbar_iterations = tqdm.tqdm(range(iterations), desc="Iter.")
         for _ in pbar_epochs:
-            for i in pbar_iterations:
-                batch = next(dataset_training.iterate_batches(batch_size, train=True))
-
+            for i, batch in zip(
+                pbar_iterations,
+                dataset_training.iterate_batches(batch_size, train=True)
+            ):
                 # Forward and backward pass
                 (loss_value, toks), grad = loss_value_and_grad(*batch)
 

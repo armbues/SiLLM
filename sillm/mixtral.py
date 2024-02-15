@@ -228,7 +228,7 @@ class Model(BaseModel):
         for e, layer in enumerate(self.layers):
             h, cache[e], _ = layer(h, mask, cache[e])
 
-        return self.output(self.norm(h[:, T - 1 : T, :])), cache
+        return self.output(self.norm(h)), cache
     
     def loss(self,
         inputs: mx.array,
@@ -256,10 +256,13 @@ class Model(BaseModel):
             h, _, router_loss = layer(h, mask, None, training=True)
             aux_loss += router_loss
 
-        logits = self.output(self.norm(h[:, T - 1 : T, :])).astype(mx.float32)
+        logits = self.output(self.norm(h))
+        logits = logits.astype(mx.float32)
 
         # Mask padding tokens
         length_mask = mx.arange(inputs.shape[1])[None, :] < lengths[:, None]
+
+        # Calculate the loss
         cross_entropy_loss = nn.losses.cross_entropy(logits, targets) * length_mask
         num_tokens = length_mask.sum()
         cross_entropy_loss = cross_entropy_loss.sum() / num_tokens
