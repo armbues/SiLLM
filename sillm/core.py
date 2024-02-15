@@ -250,7 +250,7 @@ def load_mlx_weights(weights_files) -> dict:
                 logging.warning(f"Unknown key: {key}")
             else:
                 if mlx_key in weights:
-                    logging.warning(f"Duplicate key: {mlx_key}")
+                    logging.warning(f"Duplicate key: {mlx_key} {value.shape}")
 
                 weights[mlx_key] = value
 

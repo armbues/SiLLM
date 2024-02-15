@@ -15,7 +15,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--save_adapters", default=None, type=str, help="Save adapter weights to file (.safetensors or .npz)")
     parser.add_argument("-c", "--save_checkpoints", default=None, type=str, help="Save model checkpoints to directory")
     parser.add_argument("-m", "--save_merge", default=None, type=str, help="Save merged model weights to file (.safetensors or .npz)")
-    parser.add_argument("-d", "--data", default=None, type=str, help="Train the model with training dataset in the directory")
+    parser.add_argument("-d", "--data", default=None, type=str, help="Train the model with training dataset in the file/directory")
     parser.add_argument("--layers", default=-1, type=int, help="Layers to use for LoRA (default: -1 for all layers)")
     parser.add_argument("--rank", default=8, type=int, help="Rank to use for LoRA (default: 8)")
     parser.add_argument("--epochs", default=1, type=int, help="Number of epochs (default: 1)")

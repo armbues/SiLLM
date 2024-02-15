@@ -175,10 +175,12 @@ class TrainableLoRA(LLM):
             args: Model arguments.
         """
         self.model = model
+        self.model.train(mode=True)
         self.tokenizer = tokenizer
         self.args = args
 
         self._lora = None
+        self._lora_modules = {}
 
     def init_lora(self,
                   num_layers: int = -1,
@@ -221,16 +223,16 @@ class TrainableLoRA(LLM):
                     if sub in layer and mod in layer[sub]:
                         module = LoRALinear.from_linear(layer[sub][mod], rank=rank, alpha=alpha, dropout=dropout, scale=scale)
                         layer[sub][mod] = module
-                        self._lora["modules"][module.name] = module
-                    else:
-                        logging.warning(f"Layer {layer} does not have target module {target}")
+                        self._lora_modules[module.name] = module
+                    
+                    # TODO Add expert modules for MoE
 
             logging.info(f"Initialized LoRA with rank {rank} for {num_layers} layers")
             logging.debug(f"LoRA target modules: {', '.join(target_modules)}")
             logging.debug(f"LoRA parameters: Alpha {alpha}, Dropout {dropout}, Scale {scale}")
 
             trainable_params = 0
-            for module in self._lora["modules"].values():
+            for module in self._lora_modules.values():
                 trainable_params += module.lora_size
             logging.debug(f"LoRA trainable parameters: {trainable_params/ 10**6:.2f}M")
 
@@ -252,6 +254,7 @@ class TrainableLoRA(LLM):
             logging.info(f"Merged LoRA layers back into model")
 
         self._lora = None
+        self._lora_modules = {}
 
     def save_adapters(self,
                       adapter_path: str,
@@ -346,7 +349,8 @@ class TrainableLoRA(LLM):
               report_steps: int = 10,
               eval_steps: int = 100,
               eval_callback: callable = None,
-              validation_batches: int = 25):
+              validation_batches: int = 25,
+              debug: bool = True):
         """
         Train model.
         Args:
@@ -360,6 +364,7 @@ class TrainableLoRA(LLM):
             eval_steps: Evaluate every `eval_steps` iterations.
             eval_callback: Callback after eval.
             validation_batches: Number of batches to evaluate on.
+            debug: Whether to enable debug mode.
         """
         # Calculate number of iterations
         if iterations == 0:
@@ -370,7 +375,7 @@ class TrainableLoRA(LLM):
         
         optimizer = optim.Adam(learning_rate=learning_rate)
 
-        # Create value and grad function for loss
+        # Create value and gradient function for loss
         loss_value_and_grad = nn.value_and_grad(self.model, self.model.loss)
 
         losses = []
@@ -387,6 +392,12 @@ class TrainableLoRA(LLM):
             ):
                 # Forward and backward pass
                 (loss_value, toks), grad = loss_value_and_grad(*batch)
+
+                if debug and i > 0:
+                    # Check for zero gradients
+                    for module_name, module_grad in tree_flatten(grad):
+                        if not mx.any(module_grad):
+                            logging.debug(f"Gradient for module {module_name} is zero in iteration {i}")
 
                 # Model update
                 optimizer.update(self.model, grad)

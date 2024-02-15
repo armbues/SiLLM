@@ -45,7 +45,7 @@ class Attention(nn.Module):
                  mask: Optional[mx.array] = None,
                  cache: Optional[Tuple[mx.array, mx.array]] = None,
                  ) -> mx.array:
-        B, L, D = x.shape
+        B, L, _ = x.shape
 
         queries, keys, values = self.wq(x), self.wk(x), self.wv(x)
 
@@ -89,12 +89,12 @@ class FeedForward(nn.Module):
         self.num_experts = args.moe["num_experts"]
         self.num_experts_per_tok = args.moe["num_experts_per_tok"]
 
-        self.experts = [llama.FeedForward(args) for _ in range(self.num_experts)]
         self.gate = nn.Linear(args.dim, self.num_experts, bias=False)
+        self.experts = [llama.FeedForward(args=args) for _ in range(self.num_experts)]
 
     def __call__(self,
                  x: mx.array,
-                 training: bool = False
+                 training_loss: bool = False
                  ) -> mx.array:
         """
         Args:
@@ -109,21 +109,29 @@ class FeedForward(nn.Module):
         gate_logits = self.gate(x)
         
         expert_indices = mx.stop_gradient(mx.argpartition(-gate_logits, kth=top_k, axis=-1)[:, :top_k])
-        expert_scores = mx.softmax(mx.take_along_axis(gate_logits, expert_indices, axis=-1).astype(mx.float32), axis=-1)            
-        mx.eval(expert_indices)
-        expert_indices = np.array(expert_indices)
+        expert_scores = mx.softmax(mx.take_along_axis(gate_logits, expert_indices, axis=-1).astype(mx.float32), axis=-1)
+        
+        if self.training:
+            mx.eval(expert_indices)
+            expert_indices = np.array(expert_indices)
 
-        y = mx.zeros((x.shape[0], self.num_experts_per_tok, x.shape[-1]))
+            y = mx.zeros((x.shape[0], self.num_experts_per_tok, x.shape[-1]))
+            for e, expert in enumerate(self.experts):
+                idx1, idx2 = map(mx.array, np.where(expert_indices == e))
+                if idx1.size == 0:
+                    continue
+                y[idx1, idx2] = expert(x[idx1])
 
-        for e, expert in enumerate(self.experts):
-            idx1, idx2 = map(mx.array, np.where(expert_indices == e))
-            if idx1.size == 0:
-                continue
-            y[idx1, idx2] = expert(x[idx1])
+            y = (y * expert_scores[:, :, None]).sum(axis=1)
+        else:
+            y = []
+            for xt, st, it in zip(x, expert_scores, expert_indices.tolist()):
+                yt = mx.concatenate([self.experts[e](xt)[:, None] for e in it], axis=-1)
+                yt = (yt * st).sum(axis=-1)
+                y.append(yt[None, :])
+            y = mx.concatenate(y)
 
-        y = (y * expert_scores[:, :, None]).sum(axis=1)
-
-        if training:
+        if training_loss:
             ########
             # Calculate expert router loss
             # References:
@@ -156,7 +164,7 @@ class TransformerBlock(nn.Module):
         super().__init__()
         self.n_heads = args.n_heads
         self.dim = args.dim
-        self.attention = Attention(args)
+        self.attention = Attention(args=args)
         self.feed_forward = FeedForward(args=args)
         self.attention_norm = llama.RMSNorm(args.dim, eps=args.norm_eps)
         self.ffn_norm = llama.RMSNorm(args.dim, eps=args.norm_eps)
@@ -166,12 +174,13 @@ class TransformerBlock(nn.Module):
                  x: mx.array,
                  mask: mx.array = None,
                  cache = None,
-                 training: bool = False
+                 training_loss: bool = False
                  ) -> mx.array:
         r, cache = self.attention(self.attention_norm(x), mask, cache)
         h = x + r
-        r, router_loss = self.feed_forward(self.ffn_norm(h), training)
+        r, router_loss = self.feed_forward(self.ffn_norm(h), training_loss)
         out = h + r
+
         return out, cache, router_loss
     
 ########
@@ -225,7 +234,7 @@ class Model(BaseModel):
             h, cache[e], _ = layer(h, mask, cache[e])
 
         return self.output(self.norm(h)), cache
-    
+
     def loss(self,
         inputs: mx.array,
         targets: mx.array,
@@ -249,7 +258,7 @@ class Model(BaseModel):
 
         aux_loss = 0.0
         for layer in self.layers:
-            h, _, router_loss = layer(h, mask, None, training=True)
+            h, _, router_loss = layer(h, mask, None, training_loss=True)
             aux_loss += router_loss
 
         logits = self.output(self.norm(h))
@@ -261,8 +270,8 @@ class Model(BaseModel):
         # Calculate the loss
         cross_entropy_loss = nn.losses.cross_entropy(logits, targets) * length_mask
         num_tokens = length_mask.sum()
-        cross_entropy_loss = cross_entropy_loss.sum() / num_tokens
+        loss_value = cross_entropy_loss.sum() / num_tokens
 
-        overall_loss = cross_entropy_loss + aux_loss * self.router_aux_loss_coef
+        overall_loss = loss_value + aux_loss * self.router_aux_loss_coef
 
         return overall_loss, num_tokens

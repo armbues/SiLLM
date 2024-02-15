@@ -79,9 +79,12 @@ class Dataset:
                 break
     
     @staticmethod
-    def load(tokenizer, dataset_dir, key="text", max_length=4096):
+    def load(tokenizer,
+             dataset_dir,
+             key="text",
+             max_length=4096):
         """
-        Load dataset from JSONL file.
+        Load datasets from a directory with JSONL files.
         Args:
             tokenizer: Tokenizer to use.
             dataset_dir: Directory with dataset files.
@@ -99,3 +102,41 @@ class Dataset:
             logging.info(f"Loaded {name} dataset with {len(dataset)} entries from {dataset_path}")
 
         return datasets
+    
+class DPODataset(Dataset):
+    """
+    DPO dataset wrapper.
+    """
+    def __init__(self,
+                 tokenizer,
+                 dataset_path,
+                 prompt_key: str = "prompt",
+                 chosen_key: str = "chosen",
+                 rejected_key: str = "rejected",
+                 max_length: int = 4096
+                 ):
+        """
+        Args:
+            tokenizer: Tokenizer to use.
+            dataset_path: Path to dataset file.
+            key: Key to use for text.
+            max_length: Max token length per training entry.
+        """
+        self._keys = {
+            "prompt": prompt_key,
+            "chosen": chosen_key,
+            "rejected": rejected_key
+        }
+        self._data = []
+
+        if pathlib.Path(dataset_path).exists():
+            with open(dataset_path, "r") as f:
+                for line in f:
+                    entry = json.loads(line)
+
+                    # TODO fix conversation format
+                    tokens_chosen = tokenizer.encode(entry[chosen_key], eos=True)
+                    tokens_rejected = tokenizer.encode(entry[rejected_key], eos=True)
+
+                    if len(tokens_chosen) < max_length and len(tokens_rejected) < max_length:
+                        self._data.append((tokens_chosen, tokens_rejected))

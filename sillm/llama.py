@@ -72,7 +72,7 @@ class Attention(nn.Module):
                  mask: Optional[mx.array] = None,
                  cache: Optional[Tuple[mx.array, mx.array]] = None,
     ) -> mx.array:
-        B, L, D = x.shape
+        B, L, _ = x.shape
 
         queries, keys, values = self.wq(x), self.wk(x), self.wv(x)
 
@@ -80,11 +80,6 @@ class Attention(nn.Module):
         queries = queries.reshape(B, L, self.n_heads, -1).transpose(0, 2, 1, 3)
         keys = keys.reshape(B, L, self.n_kv_heads, -1).transpose(0, 2, 1, 3)
         values = values.reshape(B, L, self.n_kv_heads, -1).transpose(0, 2, 1, 3)
-
-        def repeat(a):
-            a = mx.concatenate([mx.expand_dims(a, 2)] * self.repeats, axis=2)
-
-            return a.reshape([B, self.n_heads, L, -1])
 
         if self.repeats > 1:
             keys = mx.repeat(keys, self.repeats, axis=1)
@@ -194,6 +189,7 @@ class Model(BaseModel):
             args: Model arguments.
         """
         super().__init__(args)
+        self.args = args
 
         self.n_layers = args.n_layers
         self.vocab_size = args.vocab_size
@@ -205,7 +201,7 @@ class Model(BaseModel):
 
     def __call__(self,
                  inputs: mx.array,
-                 cache=None
+                 cache = None
                  ):
         """
         Args:

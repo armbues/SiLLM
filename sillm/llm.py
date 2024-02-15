@@ -32,6 +32,7 @@ class LLM():
             self.model = mixtral.Model(args)
         else:
             raise NotImplementedError(f"Model type {args.model_type} is not supported")
+        self.model.train(mode=False)
         self._update_names()
 
         self.tokenizer = tokenizer
@@ -174,7 +175,7 @@ class LLM():
         start = time.perf_counter()
 
         # Tokenize prompt
-        prompt = mx.array(self.tokenizer.encode(prompt))
+        inputs = mx.array(self.tokenizer.encode(prompt))
 
         # Initialize metadata
         metadata = {
@@ -182,7 +183,7 @@ class LLM():
             "eval_time": 0.0,
             "tokenizer_time": time.perf_counter() - start,
             "num_tokens": 0,
-            "num_input": len(prompt)
+            "num_input": len(inputs)
         }
 
         def generate_step():
@@ -192,7 +193,7 @@ class LLM():
                 else:
                     return mx.argmax(logits, axis=-1)
 
-            y = prompt
+            y = inputs
             cache = None
             while True:
                 logits, cache = self.model(y[None], cache=cache)
