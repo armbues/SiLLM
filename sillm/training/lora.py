@@ -85,9 +85,10 @@ class LoRALinear(nn.Module):
         bound = 1 / math.sqrt(input_dims)
         input_shape = (input_dims, rank)
         output_shape = (rank, output_dims)
-
         self.lora_a = mx.random.uniform(low=-bound, high=bound, shape=input_shape)
         self.lora_b = mx.zeros(shape=output_shape)
+
+        self.enabled = True
 
     @property
     def lora_size(self):
@@ -104,10 +105,16 @@ class LoRALinear(nn.Module):
         Returns:
             Output tensor.
         """
+        # Use linear layer if LoRA is disabled
+        if not self.enabled:
+            return self.linear(x)
+
+        # Determine dtype
         dtype = self.linear.weight.dtype
         if isinstance(self.linear, nn.QuantizedLinear):
             dtype = self.linear.scales.dtype
 
+        # Apply linear layer and LoRA
         y = self.linear(x.astype(dtype))
         z = (self.lora_dropout(x) @ self.lora_a) @ self.lora_b
 
@@ -181,6 +188,13 @@ class TrainableLoRA(LLM):
 
         self._lora = None
         self._lora_modules = {}
+
+    def toggle_lora(self, enabled: bool):
+        """
+        Toggle LoRA modules on or off.
+        """
+        for module in self._lora_modules.values():
+            module.enabled = enabled
 
     def init_lora(self,
                   num_layers: int = -1,
@@ -334,6 +348,12 @@ class TrainableLoRA(LLM):
             num_tokens += toks.item()
 
         return np.sum(all_losses) / num_tokens
+    
+    def loss(self, *args, **kwargs):
+        """
+        Default loss function from model.
+        """
+        return self.model.loss(*args, **kwargs)
 
     ########
     # Based on mlx-examples:
@@ -376,7 +396,7 @@ class TrainableLoRA(LLM):
         optimizer = optim.Adam(learning_rate=learning_rate)
 
         # Create value and gradient function for loss
-        loss_value_and_grad = nn.value_and_grad(self.model, self.model.loss)
+        loss_value_and_grad = nn.value_and_grad(self.model, self.loss)
 
         losses = []
         num_tokens = 0

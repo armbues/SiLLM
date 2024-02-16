@@ -35,23 +35,36 @@ class TrainableDPO(TrainableLoRA):
             args: Model arguments.
         """
         super().__init__(model, tokenizer, args)
-    
-    def train(self, 
-              dataset_training: Dataset,
-              dataset_validation: Dataset,
-              batch_size: int = 4,
-              learning_rate: float = 1e-5,
-              epochs: int = 1,
-              iterations: int = 0,
-              report_steps: int = 10,
-              eval_steps: int = 100,
-              eval_callback: callable = None,
-              validation_batches: int = 25):
+
+    ########
+    # References:
+    # https://github.com/lucidrains/self-rewarding-lm-pytorch/blob/ec8b9112d4ced084ae7cacfe776e1ec01fa1f950/self_rewarding_lm_pytorch/dpo.py#L282
+    ########
+    def loss(self,
+            chosen: mx.array,
+            rejected: mx.array,
+            lengths: mx.array):
         """
-        Train model.
+        Calculate loss for inputs.
         Args:
-            dataset_training: Training dataset.
+            inputs: Input tokens.
+            targets: Target tokens.
+            lengths: Lengths of inputs.
+        Returns:
+            Loss value.
         """
-        # prompt = mx.array(self.model.tokenizer.encode("Hello World!"))
-        # logits, _ = self.model.model(prompt)
-        # probs = mx.log(mx.softmax(logits, axis=-1))
+        def log_prob(prompt):
+            logits, _ = self.model(prompt)
+            prob = mx.softmax(logits, axis=-1)
+
+            return mx.log(prob)
+        
+        # Calculate log probabilities for reference model
+        self.model.toggle_lora(False)
+        reference_chosen_logprobs = mx.stop_gradient(log_prob(chosen))
+        reference_rejected_logprobs = mx.stop_gradient(log_prob(rejected))
+        self.model.toggle_lora(True)
+
+        # Calculate log probabilities for policy model
+        policy_chosen_logprobs = log_prob(chosen)
+        policy_rejected_logprobs = log_prob(rejected)
