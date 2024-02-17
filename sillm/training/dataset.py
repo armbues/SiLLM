@@ -103,14 +103,13 @@ class Dataset:
 
         return datasets
     
-class DPODataset(Dataset):
+class DatasetDPO(Dataset):
     """
     DPO dataset wrapper.
     """
     def __init__(self,
                  tokenizer,
                  dataset_path,
-                 prompt_key: str = "prompt",
                  chosen_key: str = "chosen",
                  rejected_key: str = "rejected",
                  max_length: int = 4096
@@ -123,7 +122,6 @@ class DPODataset(Dataset):
             max_length: Max token length per training entry.
         """
         self._keys = {
-            "prompt": prompt_key,
             "chosen": chosen_key,
             "rejected": rejected_key
         }
@@ -134,9 +132,59 @@ class DPODataset(Dataset):
                 for line in f:
                     entry = json.loads(line)
 
-                    # TODO fix conversation format
                     tokens_chosen = tokenizer.encode(entry[chosen_key], eos=True)
                     tokens_rejected = tokenizer.encode(entry[rejected_key], eos=True)
 
                     if len(tokens_chosen) < max_length and len(tokens_rejected) < max_length:
                         self._data.append((tokens_chosen, tokens_rejected))
+
+    def iterate_batches(self,
+                        batch_size: int,
+                        train: bool = False):
+        """
+        Iterate over batches.
+        Args:
+            batch_size: Batch size (unused).
+            train: Whether to train.
+        """
+        # Shuffle indices
+        while True:
+            indices = np.arange(len(self._data))
+            if train:
+                indices = np.random.permutation(indices)
+
+            # Collect data pairs from dataset
+            for i in range(0, len(indices)):
+                chosen, rejected = self._data[indices[i]]
+                lengths = [len(x) for x in (chosen, rejected)]
+
+                yield mx.array([chosen]), mx.array([rejected]), mx.array(lengths)
+
+            if not train:
+                break
+
+    @staticmethod
+    def load(tokenizer,
+             dataset_dir,
+             chosen_key: str = "chosen",
+             rejected_key: str = "rejected",
+             max_length=4096):
+        """
+        Load datasets from a directory with JSONL files.
+        Args:
+            tokenizer: Tokenizer to use.
+            dataset_dir: Directory with dataset files.
+            key: Key to use for text.
+            max_length: Max token length of text.
+        Returns:
+            Training, validation, and test datasets.
+        """
+        datasets = []
+        for name in ("train", "valid", "test"):
+            dataset_path = pathlib.Path(dataset_dir) / f"{name}.jsonl"
+            dataset = DatasetDPO(tokenizer, dataset_path, chosen_key, rejected_key, max_length)
+            datasets.append(dataset)
+
+            logging.info(f"Loaded {name} dataset with {len(dataset)} entries from {dataset_path}")
+
+        return datasets

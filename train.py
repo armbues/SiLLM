@@ -16,6 +16,7 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--save_checkpoints", default=None, type=str, help="Save model checkpoints to directory")
     parser.add_argument("-m", "--save_merge", default=None, type=str, help="Save merged model weights to file (.safetensors or .npz)")
     parser.add_argument("-d", "--data", default=None, type=str, help="Train the model with training dataset in the file/directory")
+    parser.add_argument("--dpo", default=False, action="store_true", help="Use Direct Preference Optimization (DPO) during training")
     parser.add_argument("--layers", default=-1, type=int, help="Layers to use for LoRA (default: -1 for all layers)")
     parser.add_argument("--rank", default=8, type=int, help="Rank to use for LoRA (default: 8)")
     parser.add_argument("--epochs", default=1, type=int, help="Number of epochs (default: 1)")
@@ -45,8 +46,14 @@ if __name__ == "__main__":
     elif args.q8 is True:
         model.quantize(bits=8)
 
+    # Initialize trainable model
+    if args.dpo:
+        model = sillm.TrainableDPO.from_model(model)
+        args.batch_size = 1
+    else:
+        model = sillm.TrainableLoRA.from_model(model)
+    
     # Initialize LoRA layers
-    model = sillm.TrainableLoRA.from_model(model)
     model.init_lora(num_layers=args.layers, rank=args.rank)
 
     # Log memory usage
@@ -58,7 +65,8 @@ if __name__ == "__main__":
 
     if args.data:
         # Load training dataset
-        dataset_training, dataset_validation, dataset_test = sillm.Dataset.load(model.tokenizer, args.data)
+        dataset_class = sillm.DatasetDPO if args.dpo else sillm.Dataset
+        dataset_training, dataset_validation, dataset_test = dataset_class.load(model.tokenizer, args.data)
 
         def eval_callback(i, val_loss):
             if args.save_checkpoints is not None:

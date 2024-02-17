@@ -88,8 +88,6 @@ class LoRALinear(nn.Module):
         self.lora_a = mx.random.uniform(low=-bound, high=bound, shape=input_shape)
         self.lora_b = mx.zeros(shape=output_shape)
 
-        self.enabled = True
-
     @property
     def lora_size(self):
         """
@@ -105,10 +103,6 @@ class LoRALinear(nn.Module):
         Returns:
             Output tensor.
         """
-        # Use linear layer if LoRA is disabled
-        if not self.enabled:
-            return self.linear(x)
-
         # Determine dtype
         dtype = self.linear.weight.dtype
         if isinstance(self.linear, nn.QuantizedLinear):
@@ -188,13 +182,6 @@ class TrainableLoRA(LLM):
 
         self._lora = None
         self._lora_modules = {}
-
-    def toggle_lora(self, enabled: bool):
-        """
-        Toggle LoRA modules on or off.
-        """
-        for module in self._lora_modules.values():
-            module.enabled = enabled
 
     def init_lora(self,
                   num_layers: int = -1,
@@ -343,7 +330,7 @@ class TrainableLoRA(LLM):
             range(num_batches),
             dataset.iterate_batches(batch_size),
         ):
-            losses, toks = self.model.loss(*batch)
+            losses, toks = self.loss(*batch)
             all_losses.append((losses * toks).item())
             num_tokens += toks.item()
 
@@ -440,8 +427,6 @@ class TrainableLoRA(LLM):
 
                 # Report validation loss if needed
                 if i == 0 or (i + 1) % eval_steps == 0:
-                    pbar_epochs.write(f"#{i + 1}:\tEvaluating loss")
-
                     stop = time.perf_counter()
                     val_loss = self.evaluate(dataset_validation, batch_size, validation_batches)
                     start = time.perf_counter()

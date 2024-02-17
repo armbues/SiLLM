@@ -1,3 +1,5 @@
+import logging
+
 import mlx.core as mx
 
 from sillm.llm import LLM
@@ -12,7 +14,7 @@ class TrainableDPO(TrainableLoRA):
     @staticmethod
     def from_model(llm: LLM):
         """
-        Convert LLM to trainable LLM.
+        Convert LLM to trainable DPO LLM.
         Args:
             llm: LLM to convert.
             args: Model arguments.
@@ -27,18 +29,31 @@ class TrainableDPO(TrainableLoRA):
     def __init__(self,
                  model,
                  tokenizer,
-                 args: ModelArgs
+                 args: ModelArgs,
+                 beta: float = 0.1
                  ):
         """
         Args:
             tokenizer: Tokenizer instance.
             args: Model arguments.
+            beta: Beta parameter.
         """
         super().__init__(model, tokenizer, args)
 
+        self.beta = beta
+
+        model_class = model.__class__
+        self.reference = model_class(args)
+        weights = self.model.parameters()
+        self.reference.update(weights)
+        self.reference.freeze()
+
+        logging.info(f"Initialized DPO with additional reference model")
+
     ########
     # References:
-    # https://github.com/lucidrains/self-rewarding-lm-pytorch/blob/ec8b9112d4ced084ae7cacfe776e1ec01fa1f950/self_rewarding_lm_pytorch/dpo.py#L282
+    # https://github.com/huggingface/trl/blob/1bfe0b8fcb02d91d842cdc64e8810871d2d5fd91/trl/trainer/dpo_trainer.py#L840
+    # https://github.com/lucidrains/self-rewarding-lm-pytorch/blob/81fc3df92e3bff77b737a3428f49ff7de4dd0057/self_rewarding_lm_pytorch/dpo.py#L282
     ########
     def loss(self,
             chosen: mx.array,
@@ -53,18 +68,34 @@ class TrainableDPO(TrainableLoRA):
         Returns:
             Loss value.
         """
-        def log_prob(prompt):
-            logits, _ = self.model(prompt)
-            prob = mx.softmax(logits, axis=-1)
+        def log_prob(model, inputs):
+            logits, _ = model(inputs[:, :-1])
 
-            return mx.log(prob)
-        
+            # prob = mx.softmax(logits, axis=-1)
+            x_shifted = logits - mx.max(logits)
+            log_sum_exp = mx.log(mx.sum(mx.exp(x_shifted)))
+            prob = x_shifted - log_sum_exp
+
+            targets = inputs[0][1:]
+            targets = targets.reshape(targets.shape[0], 1)
+
+            return mx.take_along_axis(prob[0], targets, axis=-1).flatten()
+
         # Calculate log probabilities for reference model
-        self.model.toggle_lora(False)
-        reference_chosen_logprobs = mx.stop_gradient(log_prob(chosen))
-        reference_rejected_logprobs = mx.stop_gradient(log_prob(rejected))
-        self.model.toggle_lora(True)
+        reference_chosen_logprobs = mx.stop_gradient(log_prob(self.reference, chosen))
+        reference_rejected_logprobs = mx.stop_gradient(log_prob(self.reference, rejected))
+        reference_chosen_logprob = mx.mean(reference_chosen_logprobs, axis=-1)
+        reference_rejected_logprob = mx.mean(reference_rejected_logprobs, axis=-1)
 
         # Calculate log probabilities for policy model
-        policy_chosen_logprobs = log_prob(chosen)
-        policy_rejected_logprobs = log_prob(rejected)
+        policy_chosen_logprobs = log_prob(self.model, chosen)
+        policy_rejected_logprobs = log_prob(self.model, rejected)
+        policy_chosen_logprob = mx.mean(policy_chosen_logprobs, axis=-1)
+        policy_rejected_logprob = mx.mean(policy_rejected_logprobs, axis=-1)
+
+        reference_logratios = reference_chosen_logprob - reference_rejected_logprob
+        policy_logratios = policy_chosen_logprob - policy_rejected_logprob
+
+        losses = -mx.log(mx.sigmoid(self.beta * (policy_logratios - reference_logratios)))
+
+        return mx.mean(losses), lengths.sum()

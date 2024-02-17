@@ -62,6 +62,7 @@ class Attention(nn.Module):
             rope_scale = 1 / args.rope_scaling["factor"]
         else:
             raise NotImplementedError(f"Unknown scaling type {args.rope_scaling['type']}")
+        
         self.rope = nn.RoPE(args.head_dim,
                             traditional=args.rope_traditional,
                             base=args.rope_theta,
@@ -71,7 +72,7 @@ class Attention(nn.Module):
                  x: mx.array,
                  mask: Optional[mx.array] = None,
                  cache: Optional[Tuple[mx.array, mx.array]] = None,
-    ) -> mx.array:
+                 ) -> mx.array:
         B, L, _ = x.shape
 
         queries, keys, values = self.wq(x), self.wk(x), self.wv(x)

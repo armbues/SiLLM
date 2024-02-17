@@ -96,6 +96,7 @@ class MixtralArgs(ModelArgs):
     """
     rope_theta: float = 1000000.0
     rope_traditional: bool = True
+    rope_scaling: dict = None
     router_aux_loss_coef: float = 0.001
     moe: dict = None
 
