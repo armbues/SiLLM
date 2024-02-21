@@ -13,7 +13,7 @@ class RMSNorm(nn.Module):
                  dims: int,
                  eps: float = 1e-6):
         super().__init__()
-        self.weight = mx.zeros((dims,))
+        self.weight = mx.ones((dims,))
         self.eps = eps
 
     def _norm(self, x):
@@ -23,23 +23,10 @@ class RMSNorm(nn.Module):
         output = self._norm(x.astype(mx.float32)).astype(x.dtype)
         return output * (1 + self.weight)
     
-class FeedForward(nn.Module):
+class FeedForward(llama.FeedForward):
     """
     Feed-forward module.
     """
-    def __init__(self, args: ModelArgs):
-        """
-        Args:
-            args: Model arguments.
-        """
-        super().__init__()
-
-        self.w1 = nn.Linear(args.dim, args.hidden_dim, bias=False)
-        self.w2 = nn.Linear(args.hidden_dim, args.dim, bias=False)
-        self.w3 = nn.Linear(args.dim, args.hidden_dim, bias=False)
-        
-        self.act = getattr(nn, args.hidden_act, "gelu")
-
     def __call__(self, x) -> mx.array:
         """
         Args:
@@ -47,7 +34,7 @@ class FeedForward(nn.Module):
         Returns:
             Output tensor.
         """
-        return self.w2(self.act(self.w1(x)) * self.w3(x))
+        return self.w2(nn.gelu(self.w1(x)) * self.w3(x))
     
 class TransformerBlock(llama.TransformerBlock):
     """
@@ -58,8 +45,6 @@ class TransformerBlock(llama.TransformerBlock):
         Args:
             args: Model arguments.
         """
-        super().__init__()
-        
         self.n_heads = args.n_heads
         self.dim = args.dim
         self.attention = llama.Attention(args)
@@ -81,15 +66,40 @@ class Model(llama.Model):
         Args:
             args: Model arguments.
         """
-        raise NotImplementedError("Gemma model is not fully implemented yet")
-
-        super().__init__(args)
         self.args = args
 
         self.n_layers = args.n_layers
         self.vocab_size = args.vocab_size
         
         self.tok_embeddings = nn.Embedding(args.vocab_size, args.dim)
-        self.layers = [llama.TransformerBlock(args=args) for _ in range(args.n_layers)]
+        self.layers = [TransformerBlock(args=args) for _ in range(args.n_layers)]
         self.norm = RMSNorm(args.dim, eps=args.norm_eps)
-        self.output = nn.Linear(args.dim, args.vocab_size, bias=False)
+
+    def __call__(self,
+                 inputs: mx.array,
+                 cache = None
+                 ):
+        """
+        Args:
+            inputs: Input tokens.
+            cache: Cache from previous forward pass.
+        Returns:
+            Output logits and cache.
+        """
+        h = self.tok_embeddings(inputs)
+        h = h * (self.args.dim**0.5)
+
+        mask = None
+        if h.shape[1] > 1:
+            mask = nn.MultiHeadAttention.create_additive_causal_mask(h.shape[1])
+            mask = mask.astype(h.dtype)
+
+        if cache is None:
+            cache = [None] * len(self.layers)
+
+        for e, layer in enumerate(self.layers):
+            h, cache[e] = layer(h, mask, cache[e])
+
+        out = self.norm(h) @ self.tok_embeddings.weight.T
+
+        return out, cache
