@@ -44,6 +44,8 @@ if __name__ == "__main__":
 
     if args.template:
         conversation = sillm.Conversation(template=args.template, system=args.system)
+    else:
+        conversation = None
 
     # Input loop
     while True:
