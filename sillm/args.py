@@ -96,6 +96,7 @@ class GemmaArgs(ModelArgs):
     """
     Llama model arguments.
     """
+    rope_scaling: dict = None
     hidden_act: str = None
 
 @dataclasses.dataclass
