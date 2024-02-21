@@ -156,4 +156,13 @@ class TrainableDPO(TrainableLoRA):
         else:
             raise ValueError(f"Unknown loss type: {self.loss_type}")
 
+        # print("policy_chosen_score", policy_chosen_score)
+        # print("reference_chosen_score", reference_chosen_score)
+        # print("policy_rejected_score", policy_rejected_score)
+        # print("reference_rejected_score", reference_rejected_score)
+        # print("policy_score", policy_score)
+        # print("reference_score", reference_score)
+        # print("ratios", ratios)
+        # print("loss", mx.mean(losses))
+
         return mx.mean(losses), num_toks

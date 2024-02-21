@@ -50,8 +50,10 @@ class ModelArgs:
     def load_config(config):
         ArgsClass = None
         if "model_type" in config:
-            if config["model_type"] in ("llama", "mistral", "gemma"):
+            if config["model_type"] in ("llama", "mistral"):
                 ArgsClass = LlamaArgs
+            elif config["model_type"] == "gemma":
+                ArgsClass = GemmaArgs
             elif config["model_type"] == "mixtral":
                 ArgsClass = MixtralArgs
         if ArgsClass is None:
@@ -88,6 +90,13 @@ class LlamaArgs(ModelArgs):
     Llama model arguments.
     """
     rope_scaling: dict = None
+
+@dataclasses.dataclass
+class GemmaArgs(ModelArgs):
+    """
+    Llama model arguments.
+    """
+    hidden_act: str = None
 
 @dataclasses.dataclass
 class MixtralArgs(ModelArgs):

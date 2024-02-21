@@ -8,6 +8,7 @@ from mlx.utils import tree_flatten, tree_unflatten
 import sillm.tokenizer
 import sillm.args
 import sillm.llama as llama
+import sillm.gemma as gemma
 import sillm.mixtral as mixtral
 
 class LLM():
@@ -26,8 +27,10 @@ class LLM():
         self.args = args
         self._quantization = None
 
-        if args.model_type in ("llama", "mistral", "gemma"):
+        if args.model_type in ("llama", "mistral"):
             self.model = llama.Model(args)
+        elif args.model_type == "gemma":
+            self.model = gemma.Model(args)
         elif args.model_type == "mixtral":
             self.model = mixtral.Model(args)
         else:
