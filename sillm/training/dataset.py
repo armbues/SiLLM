@@ -36,6 +36,8 @@ class Dataset:
                     if len(tokens) < max_length:
                         self._data.append(tokens)
                     # TODO warning if text is too long
+        else:
+            raise FileNotFoundError(f"Dataset file not found: {dataset_path}")
 
     def __getitem__(self, idx: int):
         return self._data[idx]
@@ -110,6 +112,7 @@ class DatasetDPO(Dataset):
     def __init__(self,
                  tokenizer,
                  dataset_path,
+                 prompt_key: str = "prompt",
                  chosen_key: str = "chosen",
                  rejected_key: str = "rejected",
                  max_length: int = 4096
@@ -132,11 +135,17 @@ class DatasetDPO(Dataset):
                 for line in f:
                     entry = json.loads(line)
 
-                    tokens_chosen = tokenizer.encode(entry[chosen_key], eos=True)
-                    tokens_rejected = tokenizer.encode(entry[rejected_key], eos=True)
+                    tokens_prompt = tokenizer.encode(entry[prompt_key])
+                    tokens_chosen = tokens_prompt + tokenizer.encode(entry[chosen_key], bos=False, eos=True)
+                    tokens_rejected = tokens_prompt + tokenizer.encode(entry[rejected_key], bos=False, eos=True)
 
                     if len(tokens_chosen) < max_length and len(tokens_rejected) < max_length:
-                        self._data.append((tokens_chosen, tokens_rejected))
+                        self._data.append((tokens_prompt, tokens_chosen, tokens_rejected))
+                    # TODO warning if text is too long
+        else:
+            raise FileNotFoundError(f"Dataset file not found: {dataset_path}")
+
+        self.pad_id = tokenizer.pad_id if tokenizer.pad_id >= 0 else tokenizer.eos_id
 
     def iterate_batches(self,
                         batch_size: int,
@@ -153,12 +162,21 @@ class DatasetDPO(Dataset):
             if train:
                 indices = np.random.permutation(indices)
 
-            # Collect data pairs from dataset
-            for i in range(0, len(indices)):
-                chosen, rejected = self._data[indices[i]]
-                lengths = [len(x) for x in (chosen, rejected)]
+            # Collect batches from dataset
+            for i in range(0, len(indices) - batch_size + 1, batch_size):
+                batch = [self._data[indices[i+j]] for j in range(batch_size)]
+                prompt_lengths = [len(x[0]) for x in batch]
+                chosen_lengths = [len(x[1]) for x in batch]
+                rejected_lengths = [len(x[2]) for x in batch]
 
-                yield mx.array([chosen]), mx.array([rejected]), mx.array(lengths)
+                # Pad to the max length
+                chosen_arr = np.full((batch_size, max(chosen_lengths)), self.pad_id, np.int32)
+                rejected_arr = np.full((batch_size, max(rejected_lengths)), self.pad_id, np.int32)
+                for j in range(batch_size):
+                    chosen_arr[j, : chosen_lengths[j]] = batch[j][1]
+                    rejected_arr[j, : rejected_lengths[j]] = batch[j][2]
+                
+                yield mx.array(chosen_arr), mx.array(rejected_arr), mx.array(prompt_lengths), mx.array(chosen_lengths), mx.array(rejected_lengths)
 
             if not train:
                 break
@@ -166,6 +184,7 @@ class DatasetDPO(Dataset):
     @staticmethod
     def load(tokenizer,
              dataset_dir,
+             prompt_key: str = "prompt",
              chosen_key: str = "chosen",
              rejected_key: str = "rejected",
              max_length=4096):
@@ -182,7 +201,7 @@ class DatasetDPO(Dataset):
         datasets = []
         for name in ("train", "valid", "test"):
             dataset_path = pathlib.Path(dataset_dir) / f"{name}.jsonl"
-            dataset = DatasetDPO(tokenizer, dataset_path, chosen_key, rejected_key, max_length)
+            dataset = DatasetDPO(tokenizer, dataset_path, prompt_key, chosen_key, rejected_key, max_length)
             datasets.append(dataset)
 
             logging.info(f"Loaded {name} dataset with {len(dataset)} entries from {dataset_path}")

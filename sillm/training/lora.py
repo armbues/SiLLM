@@ -357,7 +357,7 @@ class TrainableLoRA(LLM):
               eval_steps: int = 100,
               eval_callback: callable = None,
               validation_batches: int = 25,
-              debug: bool = True):
+              debug: bool = False):
         """
         Train model.
         Args:
@@ -391,12 +391,11 @@ class TrainableLoRA(LLM):
         # Main training loop
         start = time.perf_counter()
         pbar_epochs = tqdm.tqdm(range(epochs), desc="Epoch")
-        pbar_iterations = tqdm.tqdm(range(iterations), desc="Iter.")
         for _ in pbar_epochs:
-            for i, batch in zip(
-                pbar_iterations,
-                dataset_training.iterate_batches(batch_size, train=True)
-            ):
+            pbar_iterations = tqdm.tqdm(range(iterations), desc="Iter.")
+            for i in pbar_iterations:
+                batch = next(dataset_training.iterate_batches(batch_size, train=True))
+
                 # Forward and backward pass
                 (loss_value, toks), grad = loss_value_and_grad(*batch)
 

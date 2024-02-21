@@ -1,8 +1,8 @@
 TEMPLATES = {
     "llama-2": {
         "system":       "[INST] <<SYS>>\n{0}\n<</SYS>>\n\n",
-        "user":         "[INST]{0}[/INST]\n",
-        "initial":      "{0}[/INST]\n",
+        "user":         "[INST]{0}[/INST] ",
+        "initial":      "{0}[/INST] ",
         "assistant":    ""
     },
     "chatml": {
@@ -14,6 +14,16 @@ TEMPLATES = {
         "system":       "### System Prompt\n{0}\n\n",
         "user":         "### User Message\n{0}\n\n",
         "assistant":    "### Assistant\n"
+    },
+    "vicuna": {
+        "system":       "{0}\n",
+        "user":         "USER: {0}\n",
+        "assistant":    "ASSISTANT: "
+    },
+    "gemma": {
+        "system":       "",
+        "user":         "<start_of_turn>user\n{0}<end_of_turn>\n",
+        "assistant":    "<start_of_turn>model\n"
     }
 }
 
