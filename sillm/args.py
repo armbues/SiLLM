@@ -50,7 +50,7 @@ class ModelArgs:
     def load_config(config):
         ArgsClass = None
         if "model_type" in config:
-            if config["model_type"] in ("llama", "mistral"):
+            if config["model_type"] in ("llama", "mistral", "gemma"):
                 ArgsClass = LlamaArgs
             elif config["model_type"] == "mixtral":
                 ArgsClass = MixtralArgs

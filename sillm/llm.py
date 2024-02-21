@@ -26,7 +26,7 @@ class LLM():
         self.args = args
         self._quantization = None
 
-        if args.model_type in ("llama", "mistral"):
+        if args.model_type in ("llama", "mistral", "gemma"):
             self.model = llama.Model(args)
         elif args.model_type == "mixtral":
             self.model = mixtral.Model(args)
@@ -161,7 +161,8 @@ class LLM():
                  prompt: str,
                  temp: float = 0.0,
                  num_tokens: int = 256,
-                 flush: int = 5):
+                 flush: int = 5
+                 ):
         """
         Iterator for generating tokens.
         Args:
@@ -172,62 +173,81 @@ class LLM():
         Yields:
             Tuple of generated text and metadata.
         """
-        start = time.perf_counter()
+        yield from generate(self.model, self.tokenizer, prompt, temp, num_tokens, flush)
 
-        # Tokenize prompt
-        inputs = mx.array(self.tokenizer.encode(prompt))
+def generate(model,
+             tokenizer: sillm.tokenizer.Tokenizer,
+             prompt: str,
+             temp: float = 0.0,
+             num_tokens: int = 256,
+             flush: int = 5
+             ):
+    """
+    Iterator for generating tokens.
+    Args:
+        prompt: Prompt to start generation.
+        temp: Sampling temperature.
+        num_tokens: Max number of tokens to generate.
+        flush: Flush every `flush` tokens.
+    Yields:
+        Tuple of generated text and metadata.
+    """
+    start = time.perf_counter()
 
-        # Initialize metadata
-        metadata = {
-            "runtime": 0.0,
-            "eval_time": 0.0,
-            "tokenizer_time": time.perf_counter() - start,
-            "num_tokens": 0,
-            "num_input": len(inputs)
-        }
+    # Tokenize prompt
+    inputs = mx.array(tokenizer.encode(prompt))
 
-        def generate_step():
-            def sample(logits):
-                if temp > 0:
-                    return mx.random.categorical(logits * (1 / temp))
-                else:
-                    return mx.argmax(logits, axis=-1)
+    # Initialize metadata
+    metadata = {
+        "runtime": 0.0,
+        "eval_time": 0.0,
+        "tokenizer_time": time.perf_counter() - start,
+        "num_tokens": 0,
+        "num_input": len(inputs)
+    }
 
-            y = inputs
-            cache = None
-            while True:
-                logits, cache = self.model(y[None], cache=cache)
-                logits = logits[:, -1, :]
-                y = sample(logits)
+    def generate_step():
+        def sample(logits):
+            if temp > 0:
+                return mx.random.categorical(logits * (1 / temp))
+            else:
+                return mx.argmax(logits, axis=-1)
 
-                yield y
+        y = inputs
+        cache = None
+        while True:
+            logits, cache = model(y[None], cache=cache)
+            logits = logits[:, -1, :]
+            y = sample(logits)
 
-        tokens = []
-        for token, i in zip(generate_step(), range(num_tokens)):
-            if i == 0:
-                mx.eval(token)
+            yield y
 
-                metadata["eval_time"] = time.perf_counter() - start
+    tokens = []
+    for token, i in zip(generate_step(), range(num_tokens)):
+        if i == 0:
+            mx.eval(token)
 
-            if token[0] == self.tokenizer.eos_id:
-                break
+            metadata["eval_time"] = time.perf_counter() - start
 
-            tokens.append(token.item())
+        if token[0] == tokenizer.eos_id:
+            break
 
-            if (len(tokens) % flush) == 0:
-                mx.eval(token)
-                s = self.tokenizer.decode(tokens)
-                tokens = []
+        tokens.append(token.item())
 
-                metadata["num_tokens"] = i+1
-                metadata["runtime"] = time.perf_counter() - start
+        if (len(tokens) % flush) == 0:
+            mx.eval(token)
+            s = tokenizer.decode(tokens)
+            tokens = []
 
-                yield s, metadata
+            metadata["num_tokens"] = i+1
+            metadata["runtime"] = time.perf_counter() - start
 
-        mx.eval(token)
-        s = self.tokenizer.decode(tokens)
+            yield s, metadata
 
-        metadata["num_tokens"] = i+1
-        metadata["runtime"] = time.perf_counter() - start
+    mx.eval(token)
+    s = tokenizer.decode(tokens)
 
-        yield s, metadata
+    metadata["num_tokens"] = i+1
+    metadata["runtime"] = time.perf_counter() - start
+
+    yield s, metadata
