@@ -31,6 +31,7 @@ class TrainableDPO(TrainableLoRA):
                  model,
                  tokenizer,
                  args: ModelArgs,
+                 reference_free: bool = False,
                  loss_type: str = "ipo",
                  loss_beta: float = 0.1,
                  label_smoothing: float = 0.0
@@ -44,6 +45,7 @@ class TrainableDPO(TrainableLoRA):
         """
         super().__init__(model, tokenizer, args)
 
+        self.reference_free = reference_free
         self.loss_type = loss_type
         self.beta = loss_beta
         self.label_smoothing = label_smoothing
@@ -131,16 +133,18 @@ class TrainableDPO(TrainableLoRA):
         policy_score = policy_chosen_score - policy_rejected_score
 
         # Calculate log probabilities for reference model
-        reference_chosen_scores = mx.stop_gradient(forward(self.reference, chosen)) * chosen_mask
-        reference_rejected_scores = mx.stop_gradient(forward(self.reference, rejected)) * rejected_mask
-        reference_chosen_score = reference_chosen_scores.sum(-1)
-        reference_rejected_score = reference_rejected_scores.sum(-1)
-        if self.loss_type == "ipo":
-            # ipo uses average log probabilities
-            reference_chosen_score /= chosen_mask.sum(-1)
-            reference_rejected_score /= rejected_mask.sum(-1)
-        reference_score = reference_chosen_score - reference_rejected_score
-        # reference_score = mx.zeros_like(policy_score)
+        if self.reference_free:
+            reference_score = mx.zeros_like(policy_score)
+        else:
+            reference_chosen_scores = mx.stop_gradient(forward(self.reference, chosen)) * chosen_mask
+            reference_rejected_scores = mx.stop_gradient(forward(self.reference, rejected)) * rejected_mask
+            reference_chosen_score = reference_chosen_scores.sum(-1)
+            reference_rejected_score = reference_rejected_scores.sum(-1)
+            if self.loss_type == "ipo":
+                # ipo uses average log probabilities
+                reference_chosen_score /= chosen_mask.sum(-1)
+                reference_rejected_score /= rejected_mask.sum(-1)
+            reference_score = reference_chosen_score - reference_rejected_score
         
         ratios = policy_score - reference_score
 
@@ -155,14 +159,5 @@ class TrainableDPO(TrainableLoRA):
             losses = (ratios - 1 / (2 * self.beta)) ** 2
         else:
             raise ValueError(f"Unknown loss type: {self.loss_type}")
-
-        # print("policy_chosen_score", policy_chosen_score)
-        # print("reference_chosen_score", reference_chosen_score)
-        # print("policy_rejected_score", policy_rejected_score)
-        # print("reference_rejected_score", reference_rejected_score)
-        # print("policy_score", policy_score)
-        # print("reference_score", reference_score)
-        # print("ratios", ratios)
-        # print("loss", mx.mean(losses))
 
         return mx.mean(losses), num_toks

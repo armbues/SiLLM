@@ -17,12 +17,11 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--save_merge", default=None, type=str, help="Save merged model weights to file (.safetensors or .npz)")
     parser.add_argument("-d", "--data", default=None, type=str, help="Train the model with training dataset in the file/directory")
     parser.add_argument("--max_length", default=1024, type=int, help="Max token length per training dataset entry (default: 1024)")
-    parser.add_argument("--dpo", default=False, action="store_true", help="Use Direct Preference Optimization (DPO) during training")
     parser.add_argument("--layers", default=-1, type=int, help="Layers to use for LoRA (default: -1 for all layers)")
     parser.add_argument("--rank", default=8, type=int, help="Rank to use for LoRA (default: 8)")
     parser.add_argument("--epochs", default=1, type=int, help="Number of epochs (default: 1)")
     parser.add_argument("--iterations", default=0, type=int, help="Number of iterations per epoch (default: dataset size)")
-    parser.add_argument("--learning_rate", default=1e-5, type=float, help="Learning rate (default: 1e-5)")
+    parser.add_argument("--learning_rate", default=1e-6, type=float, help="Learning rate (default: 1e-6)")
     parser.add_argument("--batch_size", default=4, type=int, help="Size of training batches (default: 4)")
     parser.add_argument("--seed", default=0, type=int, help="Seed for randomization (default: 0)")
     parser.add_argument("-q4", default=False, action="store_true", help="Quantize the model to 4 bits")
@@ -48,10 +47,7 @@ if __name__ == "__main__":
         model.quantize(bits=8)
 
     # Initialize trainable model
-    if args.dpo:
-        model = sillm.TrainableDPO.from_model(model)
-    else:
-        model = sillm.TrainableLoRA.from_model(model)
+    model = sillm.TrainableDPO.from_model(model)
     
     # Initialize LoRA layers
     model.init_lora(num_layers=args.layers,
