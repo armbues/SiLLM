@@ -11,9 +11,9 @@ if __name__ == "__main__":
     # Parse commandline arguments
     parser = argparse.ArgumentParser(description="Interface for training SiLLM models with LoRA/QLoRA.")
     parser.add_argument("model", type=str, help="The directory or file for the base model (MLX, Torch, GGUF)")
-    parser.add_argument("-i", "--load_adapters", default=None, type=str, help="Load adapter weights from file (.safetensors or .npz)")
-    parser.add_argument("-o", "--save_adapters", default=None, type=str, help="Save adapter weights to file (.safetensors or .npz)")
-    parser.add_argument("-c", "--save_checkpoints", default=None, type=str, help="Save model checkpoints to directory")
+    parser.add_argument("-a", "--input_adapters", default=None, type=str, help="Load adapter weights from file (.safetensors or .npz)")
+    parser.add_argument("-o", "--output_dir", default=None, type=str, help="Output directory for adapter weights")
+    parser.add_argument("-c", "--save_checkpoints", default=False, action="store_true", help="Save model checkpoints to output directory")
     parser.add_argument("-m", "--save_merge", default=None, type=str, help="Save merged model weights to file (.safetensors or .npz)")
     parser.add_argument("-d", "--data", default=None, type=str, help="Train the model with training dataset in the file/directory")
     parser.add_argument("--max_length", default=1024, type=int, help="Max token length per training dataset entry (default: 1024)")
@@ -57,17 +57,19 @@ if __name__ == "__main__":
     # Log memory usage
     utils.log_memory_usage()
 
-    if args.load_adapters is not None:
+    if args.input_adapters is not None:
         # Load adapter file
-        model.load_adapters(args.load_adapters)
+        model.load_adapters(args.input_adapters)
 
     if args.data:
         # Load training dataset
         dataset_training, dataset_validation, dataset_test = sillm.Dataset.load(model.tokenizer, args.data)
 
         def eval_callback(i, val_loss):
-            if args.save_checkpoints is not None:
-                model.save_checkpoint(args.save_checkpoints, i)
+            if args.save_checkpoints and args.output_dir is not None:
+                fpath_ckpt = model.save_checkpoint(args.output_dir, i)
+
+                return f"Saved checkpoint to {fpath_ckpt}"
 
         # Start training
         model.train(dataset_training,
@@ -79,8 +81,8 @@ if __name__ == "__main__":
                     eval_callback=eval_callback)
 
     if args.save_adapters:
-        # Save adapter file
-        model.save_adapters(args.save_adapters)
+        # Save final adapter file
+        model.save_checkpoint(args.output_dir)
 
     if args.save_merge:
         # Merge LoRA layers back into model

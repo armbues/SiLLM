@@ -45,6 +45,8 @@ class TransformerBlock(llama.TransformerBlock):
         Args:
             args: Model arguments.
         """
+        nn.Module.__init__(self)
+
         self.n_heads = args.n_heads
         self.dim = args.dim
         self.attention = llama.Attention(args)
@@ -66,6 +68,7 @@ class Model(llama.Model):
         Args:
             args: Model arguments.
         """
+        BaseModel.__init__(self, args)
         self.args = args
 
         self.n_layers = args.n_layers

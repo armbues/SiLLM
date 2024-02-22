@@ -270,27 +270,28 @@ class TrainableLoRA(LLM):
         state = dict(tree_flatten(self.model.trainable_parameters()))
         mx.savez(adapter_path, **state)
 
-        logging.info(f"Saved adapter weights to {adapter_path}")
-
     def save_checkpoint(self,
                         checkpoint_path: str,
-                        steps: int
+                        steps: int = -1
                         ):
         """
         Save model checkpoint.
         Args:
-            checkpoint_path: Director to save checkpoints to.
+            checkpoint_path: Directory to save checkpoints to.
             steps: Number of steps.
         """
         assert self._lora is not None
 
         checkpoint_path = pathlib.Path(checkpoint_path)
-        adapter_path = checkpoint_path / f"ckpt-{steps}.safetensors"
+        if steps >= 0:
+            adapter_path = checkpoint_path / f"ckpt-{steps}.safetensors"
+        else:
+            adapter_path = checkpoint_path / f"ckpt-final.safetensors"
 
         state = dict(tree_flatten(self.model.trainable_parameters()))
-        mx.savez(adapter_path, **state)
+        mx.save(adapter_path, **state)
 
-        logging.info(f"Saved adapter checkpoint to {checkpoint_path}")
+        return str(adapter_path)
 
     def load_adapters(self,
                       adapter_path: str
@@ -302,6 +303,8 @@ class TrainableLoRA(LLM):
         """
         assert pathlib.Path(adapter_path).exists(), adapter_path
 
+        weights = mx.load(adapter_path)
+        print(weights)
         self.model.load_weights(adapter_path)
 
         logging.info(f"Loaded adapter weights from {adapter_path}")
@@ -391,8 +394,8 @@ class TrainableLoRA(LLM):
         # Main training loop
         start = time.perf_counter()
         pbar_epochs = tqdm.tqdm(range(epochs), desc="Epoch")
-        for _ in pbar_epochs:
-            pbar_iterations = tqdm.tqdm(range(iterations), desc="Iter.")
+        for epoch in pbar_epochs:
+            pbar_iterations = tqdm.tqdm(range(iterations), desc="Iter.", leave=False)
             for i in pbar_iterations:
                 batch = next(dataset_training.iterate_batches(batch_size, train=True))
 
@@ -433,4 +436,7 @@ class TrainableLoRA(LLM):
                     pbar_epochs.write(f"#{i + 1}:\tValidation loss {val_loss:.3f}\t{(start - stop):.3f} sec")
 
                     # Eval callback
-                    eval_callback(i, val_loss)
+                    total_iterations = epoch * iterations + i + 1
+                    msg = eval_callback(total_iterations, val_loss)
+                    if msg:
+                        pbar_epochs.write(msg)
