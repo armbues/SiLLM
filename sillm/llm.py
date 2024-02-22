@@ -178,6 +178,22 @@ class LLM():
         """
         yield from generate(self.model, self.tokenizer, prompt, temp, num_tokens, flush)
 
+    def completion(self,
+                   prompt: str,
+                   temp: float = 0.0,
+                   num_tokens: int = 256
+                   ) -> str:
+        """
+        Generate a completion and wait for all tokens.
+        Args:
+            prompt: Prompt to start generation.
+            temp: Sampling temperature.
+            num_tokens: Max number of tokens to generate.
+        Returns:
+            Generated completion.
+        """
+        return ''.join([t[0] for t in generate(self.model, self.tokenizer, prompt, temp, num_tokens)])
+
 def generate(model,
              tokenizer: sillm.tokenizer.Tokenizer,
              prompt: str,

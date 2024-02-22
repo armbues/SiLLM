@@ -6,7 +6,6 @@ import mlx.nn as nn
 from sillm.llm import LLM, generate
 from sillm.args import ModelArgs
 from sillm.training.lora import TrainableLoRA
-from sillm.training.dataset import Dataset
 
 class TrainableDPO(TrainableLoRA):
     """
