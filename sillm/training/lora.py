@@ -268,7 +268,7 @@ class TrainableLoRA(LLM):
         assert self._lora is not None
 
         state = dict(tree_flatten(self.model.trainable_parameters()))
-        mx.savez(adapter_path, **state)
+        mx.save_safetensors(adapter_path, **state)
 
     def save_checkpoint(self,
                         checkpoint_path: str,
@@ -289,7 +289,7 @@ class TrainableLoRA(LLM):
             adapter_path = checkpoint_path / f"ckpt-final.safetensors"
 
         state = dict(tree_flatten(self.model.trainable_parameters()))
-        mx.save(adapter_path, **state)
+        mx.save_safetensors(adapter_path, **state)
 
         return str(adapter_path)
 
@@ -303,8 +303,6 @@ class TrainableLoRA(LLM):
         """
         assert pathlib.Path(adapter_path).exists(), adapter_path
 
-        weights = mx.load(adapter_path)
-        print(weights)
         self.model.load_weights(adapter_path)
 
         logging.info(f"Loaded adapter weights from {adapter_path}")
