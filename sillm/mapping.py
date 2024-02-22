@@ -91,6 +91,7 @@ def map_config(config):
         "rope_scaling",
         "bos_token_id",
         "eos_token_id",
+        "pad_token_id",
         "moe"
     ]
     for key in mlx_keys:

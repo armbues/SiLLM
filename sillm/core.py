@@ -78,6 +78,10 @@ def load_gguf_file(model_path: str) -> LLM:
     logging.debug(f"Loading GGUF file {model_path}")
     gguf_weights, metadata = mx.load(model_path, return_metadata=True)
 
+    # Map metadata to configuration
+    config = map_config(metadata)
+    model_args = sillm.ModelArgs.load_config(config)
+
     # Map weights keys
     weights = {}
     for gguf_key, value in gguf_weights.items():
@@ -87,10 +91,6 @@ def load_gguf_file(model_path: str) -> LLM:
             logging.warn(f"Unknown key: {gguf_key}")
         else:
             weights[mlx_key] = value
-
-    # Map metadata and load configuration
-    config = map_config(metadata)
-    model_args = sillm.ModelArgs.load_config(config)
 
     # Map quantization configuration
     gguf_file_type = metadata["general.file_type"].item()
@@ -153,6 +153,19 @@ def load_model_dir(model_path: str) -> LLM:
     """
     model_path = pathlib.Path(model_path)
 
+    # Load configuration
+    model_args = None
+    for config_file in ("config.json", "params.json"):
+        config_path = model_path / config_file
+        if config_path.exists():
+            model_args = sillm.ModelArgs.load_file(config_path)
+            break
+        else:
+            logging.debug(f"No config file {config_path} not found")
+    if model_args is None:
+        raise ValueError(f"Configuration could not be loaded from {model_path}")
+    logging.info(f"Loaded model config from {config_path}")
+
     # Load weights
     weights_files_npz = sorted(list(model_path.glob("weights*.npz")))
     weights_files_safetensors = sorted(list(model_path.glob("*.safetensors")))
@@ -169,19 +182,6 @@ def load_model_dir(model_path: str) -> LLM:
        weights, model_format = load_torch_weights(weights_files_bin)
     else:
         raise ValueError("No weights files found")
-
-    # Load configuration
-    model_args = None
-    for config_file in ("config.json", "params.json"):
-        config_path = model_path / config_file
-        if config_path.exists():
-            model_args = sillm.ModelArgs.load_file(config_path)
-            break
-        else:
-            logging.debug(f"No config file {config_path} not found")
-    if model_args is None:
-        raise ValueError(f"Configuration could not be loaded from {model_path}")
-    logging.info(f"Loaded model config from {config_path}")
 
     if model_format == ModelFormat.HUGGINGFACE:
         logging.debug("Permuting HuggingFace weights")

@@ -134,7 +134,10 @@ class TransformerTokenizer(Tokenizer):
             self.eos_id = self._model.eos_token_id
         else:
             self.eos_id = args.eos_token_id
-        self.pad_id = self._model.pad_token_id
+        if args.pad_token_id is None:
+            self.pad_id = self._model.pad_token_id
+        else:
+            self.pad_id = args.pad_token_id
 
     def encode(self,
                s: str,

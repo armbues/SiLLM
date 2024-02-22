@@ -24,6 +24,7 @@ class ModelArgs:
     max_position_embeddings: int = 0
     bos_token_id: int = None
     eos_token_id: int = None
+    pad_token_id: int = None
     quantization: dict = None
 
     def __repr__(self):
