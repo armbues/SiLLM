@@ -227,7 +227,7 @@ class TrainableLoRA(LLM):
             self.model.update_modules(tree_unflatten(self._lora_modules))
 
             logging.info(f"Initialized LoRA with rank {rank} for {num_layers} layers")
-            logging.debug(f"LoRA target modules: {', '.join(target_modules)}")
+            logging.debug(f"LoRA target modules: {target_modules}")
             logging.debug(f"LoRA parameters: Alpha {alpha}, Dropout {dropout}, Scale {scale}")
 
             trainable_params = 0
