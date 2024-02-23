@@ -214,7 +214,7 @@ class TrainableLoRA(LLM):
                 self._lora_modules = [
                     (key, LoRALinear.from_linear(module, rank=rank, alpha=alpha, dropout=dropout, scale=scale))
                     for key, module in self.model.named_modules()
-                    if isinstance(module, nn.Linear)
+                    if isinstance(module, nn.Linear) or isinstance(module, nn.QuantizedLinear)
                 ]
             elif target_modules == "query_value":
                 self._lora_modules = [
