@@ -2,6 +2,7 @@ import pathlib
 import time
 import logging
 import math
+import re
 
 import tqdm
 import numpy as np
@@ -9,7 +10,7 @@ import numpy as np
 import mlx.core as mx
 import mlx.nn as nn
 import mlx.optimizers as optim
-from mlx.utils import tree_flatten
+from mlx.utils import tree_flatten, tree_unflatten
 
 from sillm.llm import LLM
 from sillm.args import ModelArgs
@@ -156,7 +157,6 @@ class TrainableLoRA(LLM):
         Convert LLM to trainable LLM.
         Args:
             llm: LLM to convert.
-            args: Model arguments.
         Returns:
             Trainable LLM.
         """
@@ -181,11 +181,11 @@ class TrainableLoRA(LLM):
         self.args = args
 
         self._lora = None
-        self._lora_modules = {}
+        self._lora_modules = []
 
     def init_lora(self,
                   num_layers: int = -1,
-                  target_modules: list = ["attention.wq", "attention.wv"],
+                  target_modules: str = "query_value",
                   rank: int = 8,
                   alpha: float = 16,
                   dropout: float = 0.05,
@@ -210,30 +210,28 @@ class TrainableLoRA(LLM):
                 "rank": rank
             }
 
-            # Add LoRA for MoE gates
-            if self.args.model_type == "mixtral":
-                target_modules.append("feed_forward.gate")
-            
-            # Freeze all existing parameters
-            self.model.freeze()
-
-            self._lora["modules"] = {}
-            for layer in self.model.layers[-num_layers:]:
-                for target in target_modules:
-                    sub, mod = target.split(".")
-                    if sub in layer and mod in layer[sub]:
-                        module = LoRALinear.from_linear(layer[sub][mod], rank=rank, alpha=alpha, dropout=dropout, scale=scale)
-                        layer[sub][mod] = module
-                        self._lora_modules[module.name] = module
-                    
-                    # TODO Add expert modules for MoE
+            if target_modules == "all_linear":
+                self._lora_modules = [
+                    (key, LoRALinear.from_linear(module, rank=rank, alpha=alpha, dropout=dropout, scale=scale))
+                    for key, module in self.model.named_modules()
+                    if isinstance(module, nn.Linear)
+                ]
+            elif target_modules == "query_value":
+                self._lora_modules = [
+                    (key, LoRALinear.from_linear(module, rank=rank, alpha=alpha, dropout=dropout, scale=scale))
+                    for key, module in self.model.named_modules()
+                    if re.search(r"\.attention\.(wq|wv)$", key)
+                ]
+            if len(self._lora_modules) == 0:
+                logging.error(f"No target modules found for LoRA: {target_modules}")
+            self.model.update_modules(tree_unflatten(self._lora_modules))
 
             logging.info(f"Initialized LoRA with rank {rank} for {num_layers} layers")
             logging.debug(f"LoRA target modules: {', '.join(target_modules)}")
             logging.debug(f"LoRA parameters: Alpha {alpha}, Dropout {dropout}, Scale {scale}")
 
             trainable_params = 0
-            for module in self._lora_modules.values():
+            for _, module in self._lora_modules:
                 trainable_params += module.lora_size
             logging.debug(f"LoRA trainable parameters: {trainable_params/ 10**6:.2f}M")
 
@@ -242,20 +240,16 @@ class TrainableLoRA(LLM):
         Merge LoRA layers back into model.
         """
         if self._lora is not None:
-            num_layers = self._lora["num_layers"]
-            target_modules = self._lora["target_modules"]
-
-            for layer in self.model.layers[-num_layers:]:
-                for target in target_modules:
-                    sub, mod = target.split(".")
-
-                    if isinstance(layer[sub][mod], LoRALinear):
-                        layer[sub][mod] = layer[sub][mod].merge()
+            merged_modules = [
+                (key, module.merge())
+                for key, module in self._lora_modules
+            ]
+            self.model.update_modules(tree_unflatten(merged_modules))
 
             logging.info(f"Merged LoRA layers back into model")
 
         self._lora = None
-        self._lora_modules = {}
+        self._lora_modules = []
 
     def save_adapters(self,
                       adapter_path: str,
@@ -289,7 +283,13 @@ class TrainableLoRA(LLM):
             adapter_path = checkpoint_path / f"ckpt-final.safetensors"
 
         state = dict(tree_flatten(self.model.trainable_parameters()))
-        mx.save_safetensors(adapter_path, **state)
+
+        if adapter_path.suffix == ".safetensors":
+            mx.save_safetensors(str(adapter_path), state)
+        elif adapter_path.suffix == ".npz":
+            mx.savez(str(adapter_path), **state)
+        else:
+            raise ValueError(f"Unknown file extension {adapter_path.suffix}")
 
         return str(adapter_path)
 
@@ -303,7 +303,7 @@ class TrainableLoRA(LLM):
         """
         assert pathlib.Path(adapter_path).exists(), adapter_path
 
-        self.model.load_weights(adapter_path)
+        self.model.load_weights(adapter_path, strict=False)
 
         logging.info(f"Loaded adapter weights from {adapter_path}")
 
@@ -394,17 +394,18 @@ class TrainableLoRA(LLM):
         pbar_epochs = tqdm.tqdm(range(epochs), desc="Epoch")
         for epoch in pbar_epochs:
             pbar_iterations = tqdm.tqdm(range(iterations), desc="Iter.", leave=False)
-            for i in pbar_iterations:
+            for iter in pbar_iterations:
+                n = epoch * iterations + iter
                 batch = next(dataset_training.iterate_batches(batch_size, train=True))
 
                 # Forward and backward pass
                 (loss_value, toks), grad = loss_value_and_grad(*batch)
 
-                if debug and i > 0:
+                if debug and n > 0:
                     # Check for zero gradients
                     for module_name, module_grad in tree_flatten(grad):
                         if not mx.any(module_grad):
-                            logging.debug(f"Gradient for module {module_name} is zero in iteration {i}")
+                            logging.debug(f"Gradient for module {module_name} is zero in iteration {n}")
 
                 # Model update
                 optimizer.update(self.model, grad)
@@ -415,26 +416,25 @@ class TrainableLoRA(LLM):
                 num_tokens += toks.item()
 
                 # Report training loss if needed
-                if (i + 1) % report_steps == 0:
+                if (n + 1) % report_steps == 0:
                     train_loss = np.mean(losses)
                     stop = time.perf_counter()
 
-                    pbar_epochs.write(f"#{i + 1}:\tTraining loss   {train_loss:.3f}\t{float(num_tokens) / (stop - start):.3f} tok/sec")
+                    pbar_epochs.write(f"#{n + 1}:\tTraining loss   {train_loss:.3f}\t{float(num_tokens) / (stop - start):.3f} tok/sec")
                     
                     losses = []
                     num_tokens = 0
                     start = time.perf_counter()
 
                 # Report validation loss if needed
-                if i == 0 or (i + 1) % eval_steps == 0:
+                if n == 0 or (n + 1) % eval_steps == 0:
                     stop = time.perf_counter()
                     val_loss = self.evaluate(dataset_validation, batch_size, validation_batches)
                     start = time.perf_counter()
 
-                    pbar_epochs.write(f"#{i + 1}:\tValidation loss {val_loss:.3f}\t{(start - stop):.3f} sec")
+                    pbar_epochs.write(f"#{n + 1}:\tValidation loss {val_loss:.3f}\t{(start - stop):.3f} sec")
 
                     # Eval callback
-                    total_iterations = epoch * iterations + i + 1
-                    msg = eval_callback(total_iterations, val_loss)
+                    msg = eval_callback(n, val_loss)
                     if msg:
-                        pbar_epochs.write(msg)
+                        pbar_epochs.write(f"{n + 1}:" + msg)
