@@ -43,11 +43,9 @@ class FeedForward(nn.Module):
         gate_logits = self.gate(x)
         
         expert_indices = mx.stop_gradient(mx.argpartition(-gate_logits, kth=top_k, axis=-1)[:, :top_k])
-        expert_scores = mx.softmax(mx.take_along_axis(gate_logits, expert_indices, axis=-1).astype(mx.float32), axis=-1)
+        expert_scores = mx.softmax(mx.take_along_axis(gate_logits, expert_indices, axis=-1).astype(mx.float32), axis=-1).astype(gate_logits.dtype)
         
         if self.training:
-            mx.eval(expert_indices)
-
             y = mx.zeros((x.shape[0], self.num_experts_per_tok, x.shape[-1]))
             for e, expert in enumerate(self.experts):
                 idx1, idx2 = map(mx.array, np.where(expert_indices == e))
@@ -83,10 +81,10 @@ class FeedForward(nn.Module):
             # Calculate expert loss and total router loss
             expert_losses = tokens_per_expert * router_prob_per_expert
             router_loss = expert_losses.sum()
+        else:
+            router_loss = 0.0
 
-            return y.reshape(orig_shape), router_loss
-
-        return y.reshape(orig_shape), 0.0
+        return y.reshape(orig_shape), router_loss
     
 ########
 # Based on mlx-examples:

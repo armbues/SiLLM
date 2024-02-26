@@ -202,7 +202,7 @@ def load_model_dir(model_path: str) -> LLM:
         if tokenizer_path.exists():
             tokenizer = sillm.tokenizer.TransformerTokenizer(str(model_path), model_args)
     if tokenizer is None:
-        pass
+        logging.error(f"No tokenizer found in {model_path}")
     logging.info(f"Loaded tokenizer from {tokenizer_path}")
 
     # Initialize model

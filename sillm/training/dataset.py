@@ -10,6 +10,19 @@ class Dataset:
     """
     Dataset wrapper.
     """
+    def __init__(self):
+        raise NotImplementedError("Class Dataset is used for inheritance only")
+                 
+    def __getitem__(self, idx: int):
+        return self._data[idx]
+
+    def __len__(self):
+        return len(self._data)
+    
+class DatasetCompletion(Dataset):
+    """
+    Completion dataset wrapper.
+    """
     def __init__(self,
                  tokenizer,
                  dataset_path,
@@ -25,6 +38,7 @@ class Dataset:
         """
         self._key = key
         self._data = []
+        self.pad_id = tokenizer.pad_id if tokenizer.pad_id >= 0 else tokenizer.eos_id
 
         if pathlib.Path(dataset_path).exists():
             with open(dataset_path, "r") as f:
@@ -38,12 +52,6 @@ class Dataset:
                     # TODO warning if text is too long
         else:
             raise FileNotFoundError(f"Dataset file not found: {dataset_path}")
-
-    def __getitem__(self, idx: int):
-        return self._data[idx]
-
-    def __len__(self):
-        return len(self._data)
     
     ########
     # Based on mlx-examples:
@@ -70,7 +78,7 @@ class Dataset:
                 lengths = [len(x) for x in batch]
 
                 # Pad to the max length
-                batch_arr = np.zeros((batch_size, max(lengths)), np.int32)
+                batch_arr = np.full((batch_size, max(lengths)), self.pad_id, np.int32)
                 for j in range(batch_size):
                     batch_arr[j, : lengths[j]] = batch[j]
                 batch = mx.array(batch_arr)
@@ -98,7 +106,7 @@ class Dataset:
         datasets = []
         for name in ("train", "valid", "test"):
             dataset_path = pathlib.Path(dataset_dir) / f"{name}.jsonl"
-            dataset = Dataset(tokenizer, dataset_path, key, max_length)
+            dataset = DatasetCompletion(tokenizer, dataset_path, key, max_length)
             datasets.append(dataset)
 
             logging.info(f"Loaded {name} dataset with {len(dataset)} entries from {dataset_path}")
@@ -129,6 +137,7 @@ class DatasetDPO(Dataset):
             "rejected": rejected_key
         }
         self._data = []
+        self.pad_id = tokenizer.pad_id if tokenizer.pad_id >= 0 else tokenizer.eos_id
 
         if pathlib.Path(dataset_path).exists():
             with open(dataset_path, "r") as f:
@@ -144,8 +153,6 @@ class DatasetDPO(Dataset):
                     # TODO warning if text is too long
         else:
             raise FileNotFoundError(f"Dataset file not found: {dataset_path}")
-
-        self.pad_id = tokenizer.pad_id if tokenizer.pad_id >= 0 else tokenizer.eos_id
 
     def iterate_batches(self,
                         batch_size: int,

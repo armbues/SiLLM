@@ -12,16 +12,15 @@ class TrainableDPO(TrainableLoRA):
     Trainable DPO model wrapper.
     """
     @staticmethod
-    def from_model(llm: LLM):
+    def from_model(llm: LLM, **kwargs):
         """
         Convert LLM to trainable DPO LLM.
         Args:
             llm: LLM to convert.
-            args: Model arguments.
         Returns:
             Trainable LLM.
         """
-        model = TrainableDPO(llm.model, llm.tokenizer, llm.args)
+        model = TrainableDPO(llm.model, llm.tokenizer, llm.args, **kwargs)
         model._quantization = llm._quantization
 
         return model
@@ -31,7 +30,7 @@ class TrainableDPO(TrainableLoRA):
                  tokenizer,
                  args: ModelArgs,
                  reference_free: bool = False,
-                 loss_type: str = "ipo",
+                 loss_type: str = "sigmoid",
                  loss_beta: float = 0.1,
                  label_smoothing: float = 0.0
                  ):
@@ -49,11 +48,14 @@ class TrainableDPO(TrainableLoRA):
         self.beta = loss_beta
         self.label_smoothing = label_smoothing
 
-        model_class = model.__class__
-        self.reference = model_class(args)
-        weights = self.model.parameters()
-        self.reference.update(weights)
-        self.reference.freeze()
+        if reference_free:
+            self.reference = None
+        else:
+            model_class = model.__class__
+            self.reference = model_class(args)
+            weights = self.model.parameters()
+            self.reference.update(weights)
+            self.reference.freeze()
 
         logging.info(f"Initialized DPO with reference model")
 
@@ -102,11 +104,9 @@ class TrainableDPO(TrainableLoRA):
             logits = logits.astype(mx.float32)
             targets = x[:, 1:]
 
-            # Calculate log softmax
-            score = mx.take_along_axis(logits, targets[..., None], axis=-1).squeeze(-1)
-            logsumexp_logits = mx.logsumexp(logits, axis=-1)
+            logits = nn.log_softmax(logits, axis=-1)
 
-            return score - logsumexp_logits
+            return mx.take_along_axis(logits, targets[..., None], axis=-1).squeeze(-1)
 
         num_toks = chosen_lengths.sum() + rejected_lengths.sum()
 
@@ -123,40 +123,62 @@ class TrainableDPO(TrainableLoRA):
         # Calculate log probabilities for policy model
         policy_chosen_scores = forward(self.model, chosen) * chosen_mask
         policy_rejected_scores = forward(self.model, rejected) * rejected_mask
-        policy_chosen_score = policy_chosen_scores.sum(-1)
-        policy_rejected_score = policy_rejected_scores.sum(-1)
         if self.loss_type == "ipo":
             # ipo uses average log probabilities
-            policy_chosen_score /= chosen_mask.sum(-1)
-            policy_rejected_score /= rejected_mask.sum(-1)
+            policy_chosen_score = policy_chosen_scores.sum(-1) / chosen_mask.sum(-1)
+            policy_rejected_score = policy_rejected_scores.sum(-1) / rejected_mask.sum(-1)
+        else:
+            policy_chosen_score = policy_chosen_scores.sum(-1)
+            policy_rejected_score = policy_rejected_scores.sum(-1)
         policy_score = policy_chosen_score - policy_rejected_score
 
         # Calculate log probabilities for reference model
         if self.reference_free:
+            reference_chosen_score = mx.zeros_like(policy_chosen_score)
+            reference_rejected_score = mx.zeros_like(policy_rejected_score)
             reference_score = mx.zeros_like(policy_score)
         else:
             reference_chosen_scores = mx.stop_gradient(forward(self.reference, chosen)) * chosen_mask
             reference_rejected_scores = mx.stop_gradient(forward(self.reference, rejected)) * rejected_mask
-            reference_chosen_score = reference_chosen_scores.sum(-1)
-            reference_rejected_score = reference_rejected_scores.sum(-1)
             if self.loss_type == "ipo":
                 # ipo uses average log probabilities
-                reference_chosen_score /= chosen_mask.sum(-1)
-                reference_rejected_score /= rejected_mask.sum(-1)
+                reference_chosen_score = reference_chosen_scores.sum(-1) / chosen_mask.sum(-1)
+                reference_rejected_score = reference_rejected_scores.sum(-1) / rejected_mask.sum(-1)
+            else:
+                reference_chosen_score = reference_chosen_scores.sum(-1)
+                reference_rejected_score = reference_rejected_scores.sum(-1)
             reference_score = reference_chosen_score - reference_rejected_score
         
         ratios = policy_score - reference_score
 
         if self.loss_type == "sigmoid":
-            # https://arxiv.org/pdf/2305.18290.pdf
-            losses = -mx.log(mx.sigmoid(self.beta * (ratios)))
+            # https://arxiv.org/abs/2305.18290
+            losses = -nn.log_sigmoid(self.beta * ratios)
         elif self.loss_type == "hinge":
             # https://arxiv.org/abs/2309.06657
             losses = nn.relu(1 - self.beta * ratios)
         elif self.loss_type == "ipo":
             # https://arxiv.org/abs/2310.12036
             losses = (ratios - 1 / (2 * self.beta)) ** 2
+        elif self.loss_type == "dpop":
+            # https://arxiv.org/abs/2402.13228v1
+            self.delta = 50
+            penalty = mx.maximum(mx.zeros_like(policy_chosen_score), reference_chosen_score - policy_chosen_score)
+            losses = -nn.log_sigmoid(self.beta * ratios - self.delta * penalty)
         else:
             raise ValueError(f"Unknown loss type: {self.loss_type}")
+        
+        loss = mx.mean(losses)
+        
+        print("policy_chosen_score", policy_chosen_score)
+        print("policy_rejected_score", policy_rejected_score)
+        print("policy_score", policy_score)
+        if self.reference_free is False:
+            print("reference_chosen_score", reference_chosen_score)
+            print("reference_rejected_score", reference_rejected_score)
+            print("reference_score", reference_score)
+        print("ratios", ratios)
+        print("penalty", penalty)
+        print("losses", mx.mean(losses))
 
-        return mx.mean(losses), num_toks
+        return loss, num_toks

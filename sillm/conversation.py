@@ -1,6 +1,6 @@
 TEMPLATES = {
     "llama-2": {
-        "system":       "[INST] <<SYS>>\n{0}\n<</SYS>>\n\n",
+        "system":       "[INST] <<SYS>>\n{0}\n<</SYS>>\n",
         "user":         "[INST]{0}[/INST] ",
         "initial":      "{0}[/INST] ",
         "assistant":    ""
@@ -21,7 +21,7 @@ TEMPLATES = {
         "assistant":    "ASSISTANT: "
     },
     "gemma": {
-        "system":       "",
+        "system":       None,
         "user":         "<start_of_turn>user\n{0}<end_of_turn>\n",
         "assistant":    "<start_of_turn>model\n"
     }

@@ -231,6 +231,7 @@ def generate(model,
                 return mx.random.categorical(logits * (1 / temp))
             else:
                 return mx.argmax(logits, axis=-1)
+            # TODO add top-p sampling
 
         y = inputs
         cache = None

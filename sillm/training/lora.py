@@ -62,7 +62,8 @@ class LoRALinear(nn.Module):
                  alpha: float = 16,
                  dropout: float = 0.05,
                  scale : float = 10.0,
-                 bias: bool = False):
+                 bias: bool = False
+                 ):
         """
         Args:
             input_dims: Input dimensions.
@@ -189,7 +190,8 @@ class TrainableLoRA(LLM):
                   rank: int = 8,
                   alpha: float = 16,
                   dropout: float = 0.05,
-                  scale : float = 10.0):
+                  scale : float = 10.0
+                  ):
         """
         Initialize LoRA for model.
         Args:
@@ -201,6 +203,8 @@ class TrainableLoRA(LLM):
             scale: Scale to use for LoRA.
         """
         if self._lora is None:
+            self.model.freeze()
+
             if num_layers < 0:
                 num_layers = len(self.model.layers)
 
@@ -357,8 +361,9 @@ class TrainableLoRA(LLM):
               report_steps: int = 10,
               eval_steps: int = 100,
               eval_callback: callable = None,
-              validation_batches: int = 25,
-              debug: bool = False):
+              validation_samples: int = 20,
+              debug: bool = False
+              ):
         """
         Train model.
         Args:
@@ -371,12 +376,15 @@ class TrainableLoRA(LLM):
             report_steps: Report every `report_steps` iterations.
             eval_steps: Evaluate every `eval_steps` iterations.
             eval_callback: Callback after eval.
-            validation_batches: Number of batches to evaluate on.
+            validation_batches: Number of batches to evaluate on divided by batch_size.
             debug: Whether to enable debug mode.
         """
         # Calculate number of iterations
         if iterations == 0:
             iterations = len(dataset_training) // batch_size
+        
+        # Calculate number of validation batches
+        validation_batches = validation_samples // batch_size
         
         logging.info(f"Training the model for {epochs} epochs of {iterations} batch iterations with batch size {batch_size}")
         logging.debug(f"Training learning rate: {learning_rate}")
@@ -421,6 +429,7 @@ class TrainableLoRA(LLM):
                     stop = time.perf_counter()
 
                     pbar_epochs.write(f"#{n + 1}:\tTraining loss   {train_loss:.3f}\t{float(num_tokens) / (stop - start):.3f} tok/sec")
+                    pbar_epochs.refresh()
                     
                     losses = []
                     num_tokens = 0
@@ -431,10 +440,11 @@ class TrainableLoRA(LLM):
                     stop = time.perf_counter()
                     val_loss = self.evaluate(dataset_validation, batch_size, validation_batches)
                     start = time.perf_counter()
-
                     pbar_epochs.write(f"#{n + 1}:\tValidation loss {val_loss:.3f}\t{(start - stop):.3f} sec")
 
                     # Eval callback
-                    msg = eval_callback(n, val_loss)
+                    msg = eval_callback(n + 1, val_loss)
                     if msg:
-                        pbar_epochs.write(f"{n + 1}:" + msg)
+                        pbar_epochs.write(f"#{n + 1}:\t" + msg)
+
+                    start = time.perf_counter()
