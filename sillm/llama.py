@@ -228,7 +228,7 @@ class Model(BaseModel):
     def loss(self,
             inputs: mx.array,
             targets: mx.array,
-            lengths: mx.array):
+            loss_masks: mx.array):
         """
         Calculate loss for inputs.
         Args:
@@ -242,12 +242,9 @@ class Model(BaseModel):
         logits, _ = self.__call__(inputs)
         logits = logits.astype(mx.float32)
 
-        # Mask padding tokens
-        length_mask = mx.arange(inputs.shape[1])[None, :] < lengths[:, None]
-
         # Calculate the loss
-        cross_entropy_loss = nn.losses.cross_entropy(logits, targets) * length_mask
-        num_tokens = length_mask.sum()
+        cross_entropy_loss = nn.losses.cross_entropy(logits, targets) * loss_masks
+        num_tokens = loss_masks.sum()
         loss_value = cross_entropy_loss.sum() / num_tokens
 
         return loss_value, num_tokens

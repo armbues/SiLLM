@@ -81,14 +81,13 @@ class TrainableDPO(TrainableLoRA):
     # References:
     # https://github.com/eric-mitchell/direct-preference-optimization
     # https://huggingface.co/docs/trl/main/en/dpo_trainer
-    # https://github.com/huggingface/trl/blob/1bfe0b8fcb02d91d842cdc64e8810871d2d5fd91/trl/trainer/dpo_trainer.py#L840
     ########
     def loss(self,
             chosen: mx.array,
             rejected: mx.array,
-            prompt_lengths: mx.array,
-            chosen_lengths: mx.array,
-            rejected_lengths: mx.array):
+            chosen_masks: mx.array,
+            rejected_masks: mx.array,
+            ):
         """
         Calculate loss for inputs.
         Args:
@@ -100,74 +99,62 @@ class TrainableDPO(TrainableLoRA):
         """
         def forward(model, x):
             inputs = x[:, :-1]
+            targets = x[:, 1:]
+            
             logits, _ = model(inputs)
             logits = logits.astype(mx.float32)
-            targets = x[:, 1:]
 
-            logits = nn.log_softmax(logits, axis=-1)
+            return -nn.losses.cross_entropy(logits, targets)
 
-            return mx.take_along_axis(logits, targets[..., None], axis=-1).squeeze(-1)
-
-        num_toks = chosen_lengths.sum() + rejected_lengths.sum()
-
-        # Mask prompt and padding tokens
-        chosen_mask = mx.logical_and(
-            mx.arange(chosen.shape[1] - 1)[None, :] < (chosen_lengths[:, None] - 1),
-            mx.arange(chosen.shape[1] - 1)[None, :] > (prompt_lengths[:, None] - 1)
-        )
-        rejected_mask = mx.logical_and(
-            mx.arange(rejected.shape[1] - 1)[None, :] < (rejected_lengths[:, None] - 1),
-            mx.arange(rejected.shape[1] - 1)[None, :] > (prompt_lengths[:, None] - 1)
-        )
+        num_chosen_tokens = chosen_masks.sum(-1)
+        num_rejected_tokens = rejected_masks.sum(-1)
 
         # Calculate log probabilities for policy model
-        policy_chosen_scores = forward(self.model, chosen) * chosen_mask
-        policy_rejected_scores = forward(self.model, rejected) * rejected_mask
+        policy_chosen_scores = forward(self.model, chosen) * chosen_masks
+        policy_rejected_scores = forward(self.model, rejected) * rejected_masks
         if self.loss_type == "ipo":
             # ipo uses average log probabilities
-            policy_chosen_score = policy_chosen_scores.sum(-1) / chosen_mask.sum(-1)
-            policy_rejected_score = policy_rejected_scores.sum(-1) / rejected_mask.sum(-1)
+            policy_chosen_score = policy_chosen_scores.sum(-1) / num_chosen_tokens
+            policy_rejected_score = policy_rejected_scores.sum(-1) / num_rejected_tokens
         else:
             policy_chosen_score = policy_chosen_scores.sum(-1)
             policy_rejected_score = policy_rejected_scores.sum(-1)
-        policy_score = policy_chosen_score - policy_rejected_score
 
         # Calculate log probabilities for reference model
         if self.reference_free:
             reference_chosen_score = mx.zeros_like(policy_chosen_score)
             reference_rejected_score = mx.zeros_like(policy_rejected_score)
-            reference_score = mx.zeros_like(policy_score)
         else:
-            reference_chosen_scores = mx.stop_gradient(forward(self.reference, chosen)) * chosen_mask
-            reference_rejected_scores = mx.stop_gradient(forward(self.reference, rejected)) * rejected_mask
+            reference_chosen_scores = mx.stop_gradient(forward(self.reference, chosen)) * chosen_masks
+            reference_rejected_scores = mx.stop_gradient(forward(self.reference, rejected)) * rejected_masks
             if self.loss_type == "ipo":
                 # ipo uses average log probabilities
-                reference_chosen_score = reference_chosen_scores.sum(-1) / chosen_mask.sum(-1)
-                reference_rejected_score = reference_rejected_scores.sum(-1) / rejected_mask.sum(-1)
+                reference_chosen_score = reference_chosen_scores.sum(-1) / num_chosen_tokens
+                reference_rejected_score = reference_rejected_scores.sum(-1) / num_rejected_tokens
             else:
                 reference_chosen_score = reference_chosen_scores.sum(-1)
                 reference_rejected_score = reference_rejected_scores.sum(-1)
-            reference_score = reference_chosen_score - reference_rejected_score
         
-        ratios = policy_score - reference_score
+        logits = (policy_chosen_score - policy_rejected_score) - (reference_chosen_score - reference_rejected_score)
 
         if self.loss_type == "sigmoid":
             # https://arxiv.org/abs/2305.18290
-            losses = -nn.log_sigmoid(self.beta * ratios)
+            losses = -nn.log_sigmoid(self.beta * logits)
         elif self.loss_type == "hinge":
             # https://arxiv.org/abs/2309.06657
-            losses = nn.relu(1 - self.beta * ratios)
+            losses = nn.relu(1 - self.beta * logits)
         elif self.loss_type == "ipo":
             # https://arxiv.org/abs/2310.12036
-            losses = (ratios - 1 / (2 * self.beta)) ** 2
+            losses = (logits - 1 / (2 * self.beta)) ** 2
         elif self.loss_type == "dpop":
             # https://arxiv.org/abs/2402.13228v1
             self.delta = 50
             penalty = mx.maximum(mx.zeros_like(policy_chosen_score), reference_chosen_score - policy_chosen_score)
-            losses = -nn.log_sigmoid(self.beta * ratios - self.delta * penalty)
+            losses = -(nn.log_sigmoid(self.beta * logits) - self.delta * penalty)
         else:
             raise ValueError(f"Unknown loss type: {self.loss_type}")
         
         loss = mx.mean(losses)
+        num_tokens = (num_chosen_tokens + num_rejected_tokens).sum()
 
-        return loss, num_toks
+        return loss, num_tokens

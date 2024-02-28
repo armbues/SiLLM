@@ -16,6 +16,7 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--save_checkpoints", default=False, action="store_true", help="Save model checkpoints to output directory")
     parser.add_argument("-m", "--save_merge", default=None, type=str, help="Save merged model weights to .safetensors file")
     parser.add_argument("-d", "--data", default=None, type=str, help="Train the model with training dataset in the file/directory")
+    parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama-2, alpaca, etc.)")
     parser.add_argument("--max_length", default=1024, type=int, help="Max token length per training dataset entry (default: 1024)")
     parser.add_argument("--layers", default=-1, type=int, help="Layers to use for LoRA (default: -1 for all layers)")
     parser.add_argument("--target_modules", default="query_value", type=str, help="Target modules to use for LoRA: query_value, all_linear")
@@ -26,7 +27,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", default=4, type=int, help="Size of training batches (default: 4)")
     parser.add_argument("--report_steps", default=10, type=int, help="Number of iterations per training report (default: 10)")
     parser.add_argument("--eval_steps", default=100, type=int, help="Number of iterations per evaluation (default: 100)")
-    parser.add_argument("--validation_samples", default=20, type=int, help="Number of validation_samples (default: 20)")
+    parser.add_argument("--validation_samples", default=40, type=int, help="Number of validation_samples (default: 40)")
     parser.add_argument("--seed", default=0, type=int, help="Seed for randomization (default: 0)")
     parser.add_argument("-q4", default=False, action="store_true", help="Quantize the model to 4 bits")
     parser.add_argument("-q8", default=False, action="store_true", help="Quantize the model to 8 bits")
@@ -70,7 +71,11 @@ if __name__ == "__main__":
 
     if args.data:
         # Load training dataset
-        dataset_training, dataset_validation, dataset_test = sillm.DatasetCompletion.load(model.tokenizer, args.data)
+        dataset_config = {
+            "template": args.template,
+            "max_length": args.max_length
+        }
+        dataset_training, dataset_validation, dataset_test = sillm.load_dataset(model.tokenizer, args.data, **dataset_config)
 
         def eval_callback(i, val_loss):
             if i > 1 and args.save_checkpoints and args.output_dir is not None:

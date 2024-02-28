@@ -177,7 +177,6 @@ class TrainableLoRA(LLM):
             args: Model arguments.
         """
         self.model = model
-        self.model.train(mode=True)
         self.tokenizer = tokenizer
         self.args = args
 
@@ -230,6 +229,9 @@ class TrainableLoRA(LLM):
                 logging.error(f"No target modules found for LoRA: {target_modules}")
             self.model.update_modules(tree_unflatten(self._lora_modules))
 
+            # Enable training mode
+            self.model.train(mode=True)
+
             logging.info(f"Initialized LoRA with rank {rank} for {num_layers} layers")
             logging.debug(f"LoRA target modules: {target_modules}")
             logging.debug(f"LoRA parameters: Alpha {alpha}, Dropout {dropout}, Scale {scale}")
@@ -254,6 +256,9 @@ class TrainableLoRA(LLM):
 
         self._lora = None
         self._lora_modules = []
+
+        # Disable training mode
+        self.model.train(mode=False)
 
     def save_adapters(self,
                       adapter_path: str,
@@ -361,7 +366,7 @@ class TrainableLoRA(LLM):
               report_steps: int = 10,
               eval_steps: int = 100,
               eval_callback: callable = None,
-              validation_samples: int = 20,
+              validation_samples: int = 40,
               debug: bool = False
               ):
         """

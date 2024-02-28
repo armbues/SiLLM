@@ -1,31 +1,64 @@
+from typing import Union
+
 TEMPLATES = {
     "llama-2": {
-        "system":       "[INST] <<SYS>>\n{0}\n<</SYS>>\n",
-        "user":         "[INST]{0}[/INST] ",
-        "initial":      "{0}[/INST] ",
-        "assistant":    ""
+        "system":       "[INST] <<SYS>>\n{}\n<</SYS>>\n{}[/INST] ",
+        "user":         "[INST]{}[/INST] ",
+        "assistant":    "{}\n",
+        "stop":         ["[INST]"]
     },
     "chatml": {
-        "system":       "<|im_start|>system\n{0}<|im_end|>\n",
-        "user":         "<|im_start|>user\n{0}<|im_end|>\n",
-        "assistant":    "<|im_start|>assistant\n"
+        "system":       "<|im_start|>system\n{}<|im_end|>\n",
+        "user":         "<|im_start|>user\n{}<|im_end|>\n",
+        "assistant":    "<|im_start|>assistant\n{}<|im_end|>\n",
+        "stop":         ["<|im_start|>"]
     },
     "alpaca": {
-        "system":       "### System Prompt\n{0}\n\n",
-        "user":         "### User Message\n{0}\n\n",
-        "assistant":    "### Assistant\n"
+        "system":       "### System Prompt\n{}\n\n### User Message\n{}\n\n",
+        "user":         "### User Message\n{}\n\n",
+        "assistant":    "### Assistant\n{}\n\n",
+        "stop":         ["###"]
     },
     "vicuna": {
-        "system":       "{0}\n",
-        "user":         "USER: {0}\n",
-        "assistant":    "ASSISTANT: "
+        "system":       "{}\nUSER: {}\n",
+        "user":         "USER: {}\n",
+        "assistant":    "ASSISTANT: {}\n",
+        "stop":         ["USER:"]
     },
     "gemma": {
-        "system":       None,
-        "user":         "<start_of_turn>user\n{0}<end_of_turn>\n",
-        "assistant":    "<start_of_turn>model\n"
+        "system":       "<start_of_turn>user\n{}<end_of_turn>\n", # See https://ai.google.dev/gemma/docs/formatting#system-instructions
+        "user":         "<start_of_turn>user\n{}<end_of_turn>\n",
+        "assistant":    "<start_of_turn>model\n{}<end_of_turn>\n",
+        "stop":         ["<start_of_turn>"]
     }
 }
+
+def format_message(content: Union[str, list],
+                   template: Union[str, dict] = "llama-2",
+                   role: str = "user",
+                   strip: bool = False
+                   ):
+    """
+    Format message using conversation template.
+    """
+    if isinstance(template, str) and template in TEMPLATES:
+        template = TEMPLATES[template]
+    elif not isinstance(template, dict):
+        raise ValueError(f"Template could not be loaded")
+    
+    if role in template:
+        template_format = template[role]
+    else:
+        raise ValueError(f"Role {role} not found in template")
+    
+    if role == "system":
+        result = template_format.format(*content)
+    else:
+        result = template_format.format(content)
+
+    if strip:
+        return result.rstrip()
+    return result
 
 class Conversation(object):
     """
@@ -33,7 +66,7 @@ class Conversation(object):
     """
     def __init__(self,
                 template: str = "llama-2",
-                system: str = None):
+                system_prompt: str = None):
         if type(template) == dict:
             self.template = template
         elif type(template) == str and template in TEMPLATES:
@@ -42,8 +75,10 @@ class Conversation(object):
             raise ValueError(f"Template could not be loaded")
 
         self.messages = []
-        self.system = system
+        self.system_prompt = system_prompt
         self._text = ""
+
+        self.trigger = self.template["assistant"].split("{}")[0]
 
     def __str__(self):
         """
@@ -52,25 +87,33 @@ class Conversation(object):
             Formatted conversation string.
         """
         return self._text
-
+    
     def format(self,
-               msg: dict
+               content: Union[str, list],
+               role: str = "user"
                ):
-        """
-        Format chat message using conversation template.
-        Args:
-            msg: Chat message.
-        Returns:
-            Formatted message string.
-        """
-        role = msg["role"]
-        template_format = self.template[role]
-        
-        return template_format.format(msg["content"])
+            """
+            Format message using conversation template.
+            Args:
+                content: Message content.
+                role: Message role.
+            Returns:
+                Formatted conversation string.
+            """
+            if role in self.template:
+                template_format = self.template[role]
+            else:
+                raise ValueError(f"Role {role} not found in template")
+
+            if role == "system":
+                return template_format.format(*content)
+
+            return template_format.format(content)
 
     def add_prompt(self,
-            content: str
-            ):
+                   content: str,
+                   trigger: bool = True
+                   ):
         """
         Add user message to the conversation.
         Args:
@@ -78,44 +121,37 @@ class Conversation(object):
         Returns:
             Formatted conversation string.
         """
-        role = "user"
-
-        if len(self.messages) == 0:
+        if len(self.messages) == 0 and self.system_prompt is not None:
             # Add system message
-            if self.system is not None:
-                msg_system = {
-                    "role": "system",
-                    "content": self.system
-                }
-                self._text += self.format(msg_system)
-                self.messages.append(msg_system)
+            msg_system = {
+                "role": "system",
+                "content": self.system_prompt
+            }
+            self.messages.append(msg_system)
 
-                if "initial" in self.template:
-                    role = "initial"
+            msg_user = {
+                "role": "user",
+                "content": content
+            }
+            self.messages.append(msg_user)
+
+            self._text += self.format((self.system_prompt, content), role="system")
         else:
-            # Check for consecutive user messages
-            if self.messages[-1]["role"] == "user":
-                raise ValueError(f"Consecutive user messages")
+            # Add user message
+            msg = {
+                "role": "user",
+                "content": content
+            }
+            self.messages.append(msg)
 
-        # Add user message
-        msg = {
-            "role": role,
-            "content": content
-        }
-        self._text += self.format(msg)
-        if role == "initial":
-            msg["role"] = "user"
-        self.messages.append(msg)
+            self._text += self.format(content, role="user")
 
-        # Add prefix for assistant
-        self._text += self.template["assistant"]
-
-        return self._text
+        if trigger:
+            return self._text + self.trigger
     
     def add_response(self,
-                 content: str,
-                 newline: bool = True
-                 ):
+                     content: str
+                     ):
         """
         Add assistant message to the conversation.
         Args:
@@ -123,16 +159,13 @@ class Conversation(object):
         Returns:
             Formatted conversation string.
         """
-        # Add newline
-        if not content.endswith("\n") and newline:
-            content += "\n"
-
         msg = {
             "role": "assistant",
             "content": content
         }
         self.messages.append(msg)
-        self._text += content
+
+        self._text += self.format(content, role="assistant")
 
         return self._text
     
