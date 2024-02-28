@@ -23,11 +23,12 @@ if __name__ == "__main__":
     parser.add_argument("--rank", default=8, type=int, help="Rank to use for LoRA (default: 8)")
     parser.add_argument("--learning_rate", default=1e-5, type=float, help="Learning rate (default: 1e-5)")
     parser.add_argument("--loss_type", default="sigmoid", type=str, help="Loss type for DPO (default: sigmoid)")
+    parser.add_argument("--loss_beta", default=0.1, type=float, help="Beta parameter for loss function (default: 0.1)")
     parser.add_argument("--epochs", default=1, type=int, help="Number of epochs (default: 1)")
     parser.add_argument("--iterations", default=0, type=int, help="Number of iterations per epoch (default: dataset size)")
     parser.add_argument("--batch_size", default=4, type=int, help="Size of training batches (default: 4)")
-    parser.add_argument("--report_steps", default=10, type=int, help="Number of iterations per training report (default: 10)")
-    parser.add_argument("--eval_steps", default=100, type=int, help="Number of iterations per evaluation (default: 100)")
+    parser.add_argument("--report_steps", default=10, type=int, help="Number of batch iterations per training report (default: 10)")
+    parser.add_argument("--eval_steps", default=100, type=int, help="Number of batch iterations per evaluation (default: 100)")
     parser.add_argument("--validation_samples", default=20, type=int, help="Number of validation_samples (default: 20)")
     parser.add_argument("--seed", default=0, type=int, help="Seed for randomization (default: 0)")
     parser.add_argument("-q4", default=False, action="store_true", help="Quantize the model to 4 bits")
@@ -55,7 +56,8 @@ if __name__ == "__main__":
     # Initialize trainable model
     dpo_config = {
         # "reference_free":   args.input_adapters is None,
-        "loss_type":        args.loss_type
+        "loss_type":        args.loss_type,
+        "loss_beta":        args.loss_beta
     }
     model = sillm.TrainableDPO.from_model(model, **dpo_config)
     
@@ -83,7 +85,7 @@ if __name__ == "__main__":
         dataset_training, dataset_validation, dataset_test = sillm.load_dataset(model.tokenizer, args.data, **dataset_config)
 
         def eval_callback(i, val_loss):
-            if args.save_checkpoints and args.output_dir is not None:
+            if i > 1 and args.save_checkpoints and args.output_dir is not None:
                 fpath_ckpt = model.save_checkpoint(args.output_dir, i)
                 
                 return f"Saved checkpoint to {fpath_ckpt}"

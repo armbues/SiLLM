@@ -202,4 +202,4 @@ class Model(BaseModel):
 
         overall_loss = loss_value + aux_loss * self.router_aux_loss_coef
 
-        return overall_loss, num_tokens
+        return overall_loss, None, num_tokens

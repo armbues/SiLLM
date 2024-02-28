@@ -11,7 +11,7 @@ import sillm.llama as llama
 def rms_norm(x, weight, eps):
     x = x.astype(mx.float32)
     x = x * mx.rsqrt(x.square().mean(-1, keepdims=True) + eps)
-    
+
     return (1.0 + weight) * x.astype(weight.dtype)
 
 class RMSNorm(nn.Module):

@@ -340,7 +340,7 @@ class TrainableLoRA(LLM):
             range(num_batches),
             dataset.iterate_batches(batch_size),
         ):
-            losses, toks = self.loss(*batch)
+            losses, _, toks = self.loss(*batch)
             all_losses.append((losses * toks).item())
             num_tokens += toks.item()
 
@@ -381,7 +381,7 @@ class TrainableLoRA(LLM):
             report_steps: Report every `report_steps` iterations.
             eval_steps: Evaluate every `eval_steps` iterations.
             eval_callback: Callback after eval.
-            validation_batches: Number of batches to evaluate on divided by batch_size.
+            validation_samples: Number of validation samples.
             debug: Whether to enable debug mode.
         """
         # Calculate number of iterations
@@ -400,6 +400,7 @@ class TrainableLoRA(LLM):
         loss_value_and_grad = nn.value_and_grad(self.model, self.loss)
 
         losses = []
+        rewards = None
         num_tokens = 0
 
         # Main training loop
@@ -412,7 +413,7 @@ class TrainableLoRA(LLM):
                 batch = next(dataset_training.iterate_batches(batch_size, train=True))
 
                 # Forward and backward pass
-                (loss_value, toks), grad = loss_value_and_grad(*batch)
+                (loss_value, reward, toks), grad = loss_value_and_grad(*batch)
 
                 if debug and n > 0:
                     # Check for zero gradients
@@ -424,16 +425,26 @@ class TrainableLoRA(LLM):
                 optimizer.update(self.model, grad)
                 mx.eval(self.model.parameters(), optimizer.state, loss_value)
 
-                # Record loss
+                # Record loss and number of tokens
                 losses.append(loss_value.item())
                 num_tokens += toks.item()
+
+                # Record rewards
+                if reward is not None:
+                    if rewards is None:
+                        rewards = reward
+                    else:
+                        rewards = np.vstack([rewards, reward])
 
                 # Report training loss if needed
                 if (n + 1) % report_steps == 0:
                     train_loss = np.mean(losses)
                     stop = time.perf_counter()
 
-                    pbar_epochs.write(f"#{n + 1}:\tTraining loss   {train_loss:.3f}\t{float(num_tokens) / (stop - start):.3f} tok/sec")
+                    pbar_epochs.write(f"#{n + 1}:\tTraining loss    {train_loss:.3f}\t{float(num_tokens) / (stop - start):.3f} tok/sec")
+                    if rewards is not None:
+                        pbar_epochs.write(f"#{n + 1}:\tTraining rewards {str(np.mean(rewards, axis=0))}")
+                        rewards = None
                     pbar_epochs.refresh()
                     
                     losses = []
@@ -445,7 +456,7 @@ class TrainableLoRA(LLM):
                     stop = time.perf_counter()
                     val_loss = self.evaluate(dataset_validation, batch_size, validation_batches)
                     start = time.perf_counter()
-                    pbar_epochs.write(f"#{n + 1}:\tValidation loss {val_loss:.3f}\t{(start - stop):.3f} sec")
+                    pbar_epochs.write(f"#{n + 1}:\tValidation loss  {val_loss:.3f}\t{(start - stop):.3f} sec")
 
                     # Eval callback
                     msg = eval_callback(n + 1, val_loss)

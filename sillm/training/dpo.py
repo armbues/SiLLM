@@ -157,4 +157,21 @@ class TrainableDPO(TrainableLoRA):
         loss = mx.mean(losses)
         num_tokens = (num_chosen_tokens + num_rejected_tokens).sum()
 
-        return loss, num_tokens
+        chosen_reward = self.beta * mx.mean(policy_chosen_score - reference_chosen_score)
+        rejected_reward = self.beta * mx.mean(policy_rejected_score - reference_rejected_score)
+        reward = mx.stack([chosen_reward, rejected_reward])
+        
+        # print("policy_chosen_score", policy_chosen_score)
+        # print("policy_rejected_score", policy_rejected_score)
+        # if self.reference_free is False:
+        #     print("reference_chosen_score", reference_chosen_score)
+        #     print("reference_rejected_score", reference_rejected_score)
+        # print("chosen_rewards", policy_chosen_score - reference_chosen_score)
+        # print("rejected_rewards", policy_rejected_score - reference_rejected_score)
+        # print("logits", logits)
+        # if self.loss_type == "dpop":
+        #     print("penalty", penalty)
+        # print("losses", losses)
+        # print("loss", loss)
+
+        return loss, reward, num_tokens

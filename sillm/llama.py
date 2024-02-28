@@ -247,4 +247,4 @@ class Model(BaseModel):
         num_tokens = loss_masks.sum()
         loss_value = cross_entropy_loss.sum() / num_tokens
 
-        return loss_value, num_tokens
+        return loss_value, None, num_tokens
