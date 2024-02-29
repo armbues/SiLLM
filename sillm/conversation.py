@@ -1,5 +1,9 @@
 from typing import Union
 
+########
+# Reference:
+# https://github.com/huggingface/chat-ui/blob/main/PROMPTS.md
+########
 TEMPLATES = {
     "llama-2": {
         "system":       "[INST] <<SYS>>\n{}\n<</SYS>>\n{}[/INST] ",
