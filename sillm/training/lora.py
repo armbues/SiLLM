@@ -366,8 +366,7 @@ class TrainableLoRA(LLM):
               report_steps: int = 10,
               eval_steps: int = 100,
               eval_callback: callable = None,
-              validation_samples: int = 40,
-              debug: bool = False
+              validation_samples: int = 40
               ):
         """
         Train model.
@@ -414,12 +413,6 @@ class TrainableLoRA(LLM):
 
                 # Forward and backward pass
                 (loss_value, reward, toks), grad = loss_value_and_grad(*batch)
-
-                if debug and n > 0:
-                    # Check for zero gradients
-                    for module_name, module_grad in tree_flatten(grad):
-                        if not mx.any(module_grad):
-                            logging.debug(f"Gradient for module {module_name} is zero in iteration {n}")
 
                 # Model update
                 optimizer.update(self.model, grad)
