@@ -90,14 +90,18 @@ class LLM():
         return result
 
     def save_weights(self,
-                 weights_path: str
-                 ):
+                     weights_path: str
+                     ):
         """
         Save model weights.
         Args:
             weights_path: Path to weights file.
         """
-        self.model.save_weights(weights_path)
+        state = dict(tree_flatten(self.parameters()))
+        metadata = {
+            "format": "mlx"
+        }
+        mx.save_safetensors(weights_path, state, metadata=metadata)
 
         logging.info(f"Saved model weights to {weights_path}")
 
