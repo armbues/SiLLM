@@ -97,21 +97,21 @@ class TrainableDPO(TrainableLoRA):
         Returns:
             Loss value.
         """
-        def forward(model, x):
+        def forward(model, x, mask):
             inputs = x[:, :-1]
             targets = x[:, 1:]
             
             logits, _ = model(inputs)
             logits = logits.astype(mx.float32)
 
-            return -nn.losses.cross_entropy(logits, targets)
+            return -nn.losses.cross_entropy(logits, targets) * mask
 
         num_chosen_tokens = chosen_masks.sum(-1)
         num_rejected_tokens = rejected_masks.sum(-1)
 
         # Calculate log probabilities for policy model
-        policy_chosen_scores = forward(self.model, chosen) * chosen_masks
-        policy_rejected_scores = forward(self.model, rejected) * rejected_masks
+        policy_chosen_scores = forward(self.model, chosen, chosen_masks)
+        policy_rejected_scores = forward(self.model, rejected, rejected_masks)
         if self.loss_type == "ipo":
             # ipo uses average log probabilities
             policy_chosen_score = policy_chosen_scores.sum(-1) / num_chosen_tokens
@@ -125,8 +125,8 @@ class TrainableDPO(TrainableLoRA):
             reference_chosen_score = mx.zeros_like(policy_chosen_score)
             reference_rejected_score = mx.zeros_like(policy_rejected_score)
         else:
-            reference_chosen_scores = mx.stop_gradient(forward(self.reference, chosen)) * chosen_masks
-            reference_rejected_scores = mx.stop_gradient(forward(self.reference, rejected)) * rejected_masks
+            reference_chosen_scores = mx.stop_gradient(forward(self.reference, chosen, chosen_masks))
+            reference_rejected_scores = mx.stop_gradient(forward(self.reference, rejected, rejected_masks))
             if self.loss_type == "ipo":
                 # ipo uses average log probabilities
                 reference_chosen_score = reference_chosen_scores.sum(-1) / num_chosen_tokens
@@ -160,18 +160,5 @@ class TrainableDPO(TrainableLoRA):
         chosen_reward = self.beta * mx.mean(policy_chosen_score - reference_chosen_score)
         rejected_reward = self.beta * mx.mean(policy_rejected_score - reference_rejected_score)
         reward = mx.stack([chosen_reward, rejected_reward])
-        
-        # print("policy_chosen_score", policy_chosen_score)
-        # print("policy_rejected_score", policy_rejected_score)
-        # if self.reference_free is False:
-        #     print("reference_chosen_score", reference_chosen_score)
-        #     print("reference_rejected_score", reference_rejected_score)
-        # print("chosen_rewards", policy_chosen_score - reference_chosen_score)
-        # print("rejected_rewards", policy_rejected_score - reference_rejected_score)
-        # print("logits", logits)
-        # if self.loss_type == "dpop":
-        #     print("penalty", penalty)
-        # print("losses", losses)
-        # print("loss", loss)
 
         return loss, reward, num_tokens

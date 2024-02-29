@@ -11,7 +11,7 @@ TEMPLATES = {
         "system":       "<|im_start|>system\n{}<|im_end|>\n",
         "user":         "<|im_start|>user\n{}<|im_end|>\n",
         "assistant":    "<|im_start|>assistant\n{}<|im_end|>\n",
-        "stop":         ["<|im_start|>"]
+        "stop":         ["<|im_end|>", "<|im_start|>"]
     },
     "alpaca": {
         "system":       "### System Prompt\n{}\n\n### User Message\n{}\n\n",
@@ -29,7 +29,7 @@ TEMPLATES = {
         "system":       "<start_of_turn>user\n{}<end_of_turn>\n", # See https://ai.google.dev/gemma/docs/formatting#system-instructions
         "user":         "<start_of_turn>user\n{}<end_of_turn>\n",
         "assistant":    "<start_of_turn>model\n{}<end_of_turn>\n",
-        "stop":         ["<start_of_turn>"]
+        "stop":         ["<end_of_turn>", "<start_of_turn>"]
     }
 }
 
@@ -79,6 +79,7 @@ class Conversation(object):
         self._text = ""
 
         self.trigger = self.template["assistant"].split("{}")[0]
+        self.stop_words = self.template["stop"]
 
     def __str__(self):
         """

@@ -210,7 +210,10 @@ class TrainableLoRA(LLM):
             self._lora = {
                 "num_layers": num_layers,
                 "target_modules": target_modules,
-                "rank": rank
+                "rank": rank,
+                "alpha": alpha,
+                "dropout": dropout,
+                "scale": scale
             }
 
             if target_modules == "all_linear":
@@ -271,7 +274,10 @@ class TrainableLoRA(LLM):
         assert self._lora is not None
 
         state = dict(tree_flatten(self.model.trainable_parameters()))
-        mx.save_safetensors(adapter_path, **state)
+        metadata = {
+            "format": "mlx"
+        }
+        mx.save_safetensors(adapter_path, state, metadata=metadata)
 
     def save_checkpoint(self,
                         checkpoint_path: str,
@@ -283,23 +289,14 @@ class TrainableLoRA(LLM):
             checkpoint_path: Directory to save checkpoints to.
             steps: Number of steps.
         """
-        assert self._lora is not None
-
         checkpoint_path = pathlib.Path(checkpoint_path)
         if steps >= 0:
             adapter_path = checkpoint_path / f"ckpt-{steps}.safetensors"
         else:
             adapter_path = checkpoint_path / f"ckpt-final.safetensors"
 
-        state = dict(tree_flatten(self.model.trainable_parameters()))
-
-        if adapter_path.suffix == ".safetensors":
-            mx.save_safetensors(str(adapter_path), state)
-        elif adapter_path.suffix == ".npz":
-            mx.savez(str(adapter_path), **state)
-        else:
-            raise ValueError(f"Unknown file extension {adapter_path.suffix}")
-
+        self.save_adapters(str(adapter_path))
+        
         return str(adapter_path)
 
     def load_adapters(self,
@@ -312,9 +309,12 @@ class TrainableLoRA(LLM):
         """
         assert pathlib.Path(adapter_path).exists(), adapter_path
 
-        self.model.load_weights(adapter_path, strict=False)
-
-        logging.info(f"Loaded adapter weights from {adapter_path}")
+        if self._lora is not None:
+            self.model.load_weights(adapter_path, strict=False)
+        
+            logging.info(f"Loaded adapter weights from {adapter_path}")
+        else:
+            logging.error(f"LoRA not initialized, cannot load adapter weights")
 
     ########
     # Based on mlx-examples:

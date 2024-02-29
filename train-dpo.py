@@ -69,12 +69,12 @@ if __name__ == "__main__":
     }
     model.init_lora(**lora_config)
 
-    # Log memory usage
-    utils.log_memory_usage()
-
     if args.input_adapters is not None:
         # Load adapter file
         model.load_adapters(args.input_adapters)
+    
+    # Log memory usage
+    utils.log_memory_usage()
 
     if args.data:
         # Load training dataset
@@ -85,7 +85,7 @@ if __name__ == "__main__":
         dataset_training, dataset_validation, dataset_test = sillm.load_dataset(model.tokenizer, args.data, **dataset_config)
 
         def eval_callback(i, val_loss):
-            if i > 1 and args.save_checkpoints and args.output_dir is not None:
+            if args.save_checkpoints and args.output_dir is not None:
                 fpath_ckpt = model.save_checkpoint(args.output_dir, i)
                 
                 return f"Saved checkpoint to {fpath_ckpt}"

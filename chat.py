@@ -15,7 +15,7 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--seed", type=int, default=-1, help="Seed for randomization")
     parser.add_argument("-t", "--temp", type=float, default=0.7, help="Sampling temperature")
     parser.add_argument("-f", "--flush", type=int, default=5, help="Flush output every n tokens")
-    parser.add_argument("-n", "--num_tokens", type=int, default=512, help="Max. number of tokens to generate")
+    parser.add_argument("-n", "--num_tokens", type=int, default=1024, help="Max. number of tokens to generate")
     parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama-2, alpaca, etc.)")
     parser.add_argument("--system_prompt", type=str, default=None, help="System prompt for chat template")
     parser.add_argument("-q4", default=False, action="store_true", help="Quantize the model to 4 bits")
@@ -34,25 +34,36 @@ if __name__ == "__main__":
     # Load model
     model = sillm.load(args.model)
 
-    if args.input_adapters is not None:
-        # Convert model to trainable
-        model = sillm.TrainableLoRA.from_model(model)
-
-        # Load and merge adapter file
-        model.load_adapters(args.input_adapters)
-        model.merge_and_unload_lora()
-
     # Quantize model
     if args.q4 is True:
         model.quantize(bits=4)
     elif args.q8 is True:
         model.quantize(bits=8)
 
+    if args.input_adapters is not None:
+        # Convert model to trainable
+        model = sillm.TrainableLoRA.from_model(model)
+
+        # Initialize LoRA layers
+        model.init_lora()
+        # TODO load/save LoRA config
+
+        # Load and merge adapter file
+        model.load_adapters(args.input_adapters)
+        model.merge_and_unload_lora()
+
     # Log memory usage
     utils.log_memory_usage()
 
+    generate_args = {
+        "temp": args.temp,
+        "num_tokens": args.num_tokens,
+        "flush": args.flush
+    }
+
     if args.template:
         conversation = sillm.Conversation(template=args.template, system_prompt=args.system_prompt)
+        generate_args["stop_words"] = conversation.stop_words
     else:
         conversation = None
 
@@ -73,7 +84,7 @@ if __name__ == "__main__":
         logging.debug(f"Generating {args.num_tokens} tokens with temperature {args.temp}")
 
         response = ""
-        for s, metadata in model.generate(prompt, temp=args.temp, num_tokens=args.num_tokens, flush=args.flush):
+        for s, metadata in model.generate(prompt, **generate_args):
             print(s, end="", flush=True)
             response += s
         print()

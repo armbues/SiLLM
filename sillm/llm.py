@@ -163,8 +163,9 @@ class LLM():
     def generate(self,
                  prompt: str,
                  temp: float = 0.0,
-                 num_tokens: int = 256,
-                 flush: int = 5
+                 num_tokens: int = 1024,
+                 flush: int = 5,
+                 stop_words: str = ""
                  ):
         """
         Iterator for generating tokens.
@@ -176,12 +177,13 @@ class LLM():
         Yields:
             Tuple of generated text and metadata.
         """
-        yield from generate(self.model, self.tokenizer, prompt, temp, num_tokens, flush)
+        yield from generate(self.model, self.tokenizer, prompt=prompt, temp=temp, num_tokens=num_tokens, flush=flush, stop_words=stop_words)
 
     def completion(self,
                    prompt: str,
                    temp: float = 0.0,
-                   num_tokens: int = 256
+                   num_tokens: int = 1024,
+                   stop_words: str = None
                    ) -> str:
         """
         Generate a completion and wait for all tokens.
@@ -192,14 +194,15 @@ class LLM():
         Returns:
             Generated completion.
         """
-        return ''.join([t[0] for t in generate(self.model, self.tokenizer, prompt, temp, num_tokens)])
+        return ''.join([t[0] for t in generate(self.model, self.tokenizer, prompt=prompt, temp=temp, num_tokens=num_tokens, stop_words=stop_words)])
 
 def generate(model,
              tokenizer: sillm.tokenizer.Tokenizer,
              prompt: str,
              temp: float = 0.0,
-             num_tokens: int = 256,
-             flush: int = 5
+             num_tokens: int = 1024,
+             flush: int = 5,
+             stop_words: list[str] = None
              ):
     """
     Iterator for generating tokens.
@@ -215,6 +218,12 @@ def generate(model,
 
     # Tokenize prompt
     inputs = mx.array(tokenizer.encode(prompt))
+
+    # Define stop tokens
+    stop_tokens = [tokenizer.eos_id, tokenizer.bos_id]
+    if stop_tokens is not None:
+        for s in stop_words:
+            stop_tokens += tokenizer.encode(s, bos=False)
 
     # Initialize metadata
     metadata = {
@@ -249,7 +258,7 @@ def generate(model,
 
             metadata["eval_time"] = time.perf_counter() - start
 
-        if token[0] == tokenizer.eos_id:
+        if token[0] in stop_tokens:
             break
 
         tokens.append(token.item())
