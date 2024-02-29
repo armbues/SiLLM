@@ -72,6 +72,7 @@ if __name__ == "__main__":
     if args.input_adapters is not None:
         # Load adapter file
         model.load_adapters(args.input_adapters)
+        # TODO load/save LoRA config
     
     # Log memory usage
     utils.log_memory_usage()

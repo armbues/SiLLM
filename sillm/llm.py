@@ -225,7 +225,7 @@ def generate(model,
 
     # Define stop tokens
     stop_tokens = [tokenizer.eos_id, tokenizer.bos_id]
-    if stop_tokens is not None:
+    if stop_words is not None:
         for s in stop_words:
             stop_tokens += tokenizer.encode(s, bos=False)
 

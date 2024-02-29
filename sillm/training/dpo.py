@@ -62,7 +62,7 @@ class TrainableDPO(TrainableLoRA):
     def comparison(self,
                    prompt: str,
                    temp: float = 0.0,
-                   num_tokens: int = 256
+                   num_tokens: int = 1024
                    ):
         """
         Generate comparison between policy and reference model completions.
