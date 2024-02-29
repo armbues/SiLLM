@@ -30,7 +30,7 @@ TEMPLATES = {
         "stop":         ["USER:"]
     },
     "gemma": {
-        "system":       "<start_of_turn>user\n{}<end_of_turn>\n", # See https://ai.google.dev/gemma/docs/formatting#system-instructions
+        "system":       "<start_of_turn>user\n{}\n{}<end_of_turn>\n", # See https://ai.google.dev/gemma/docs/formatting#system-instructions
         "user":         "<start_of_turn>user\n{}<end_of_turn>\n",
         "assistant":    "<start_of_turn>model\n{}<end_of_turn>\n",
         "stop":         ["<end_of_turn>", "<start_of_turn>"]
@@ -39,7 +39,7 @@ TEMPLATES = {
         "system":       "{}\nInstruct: {}\n",
         "user":         "Instruct: {}\n",
         "assistant":    "Output: {}\n",
-        "stop":         []
+        "stop":         ["Instruct:"]
     }
 }
 

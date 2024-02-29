@@ -230,7 +230,7 @@ def generate(model,
     stop_tokens = [tokenizer.eos_id, tokenizer.bos_id]
     if stop_words is not None:
         for s in stop_words:
-            stop_tokens += tokenizer.encode(s, bos=False)
+            stop_tokens += tokenizer.encode(s, bos=False)[:1]
 
     # Initialize metadata
     metadata = {
