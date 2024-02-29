@@ -55,6 +55,8 @@ class ModelArgs:
                 ArgsClass = LlamaArgs
             elif config["model_type"] == "mixtral":
                 ArgsClass = MixtralArgs
+            elif config["model_type"] == "phi":
+                ArgsClass = PhiArgs
         if ArgsClass is None:
             config["model_type"] = "llama"
             ArgsClass = LlamaArgs
@@ -96,7 +98,6 @@ class MixtralArgs(ModelArgs):
     Mixtral model arguments.
     """
     rope_theta: float = 1000000.0
-    rope_traditional: bool = True
     rope_scaling: dict = None
     router_aux_loss_coef: float = 0.001
     moe: dict = None
@@ -107,3 +108,12 @@ class MixtralArgs(ModelArgs):
                 "num_experts": 8,
                 "num_experts_per_tok": 2
             }
+
+@dataclasses.dataclass
+class PhiArgs(ModelArgs):
+    """
+    Phi model arguments.
+    """
+    rope_traditional: bool = False
+    rope_scaling: dict = None
+    partial_rotary_factor: float = 0.4

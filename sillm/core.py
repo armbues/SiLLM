@@ -6,7 +6,7 @@ import mlx.core as mx
 
 import sillm
 from sillm.llm import LLM
-from sillm.args import ModelArgs
+from sillm.models.args import ModelArgs
 from sillm.mapping import map_key, map_config
 
 class ModelFormat(enum.Enum):
@@ -184,9 +184,10 @@ def load_model_dir(model_path: str) -> LLM:
         raise ValueError("No weights files found")
 
     if model_format == ModelFormat.HUGGINGFACE:
-        logging.debug("Permuting HuggingFace weights")
+        if model_args.model_type != "phi":
+            logging.debug("Permuting HuggingFace weights")
 
-        permute_hf_weights(weights, model_args)
+            permute_hf_weights(weights, model_args)
 
     # Fix configuration
     model_args.fix_config(weights)

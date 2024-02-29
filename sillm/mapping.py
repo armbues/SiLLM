@@ -18,6 +18,8 @@ def map_key(k):
         return re.sub(r"^model\.embed_tokens\.", "tok_embeddings.", k)
     elif k.startswith("model.norm."):
         return re.sub(r"^model\.norm\.", "norm.", k)
+    elif k.startswith("model.final_layernorm."):
+        return re.sub(r"^model\.final_layernorm\.", "norm.", k)
     elif k.startswith("lm_head."):
         return re.sub(r"^lm_head\.", "output.", k)
     elif k.startswith("model.layers."):
@@ -25,15 +27,18 @@ def map_key(k):
         
         k = re.sub(r"^model\.layers\.", "layers.", k)
 
-        if k.endswith(".input_layernorm.weight"):
-            return f"layers.{layer}.attention_norm.weight"
-        elif k.endswith(".post_attention_layernorm.weight"):
-            return f"layers.{layer}.ffn_norm.weight"
+        k = re.sub(r"\.input_layernorm\.", ".attention_norm.", k)
+        k = re.sub(r"\.post_attention_layernorm\.", ".ffn_norm.", k)
 
         k = re.sub(r"\.self_attn\.(q|k|v|o)_proj\.", r".attention.w\1.", k)
         k = re.sub(r"\.mlp\.gate_proj\.", ".feed_forward.w1.", k)
         k = re.sub(r"\.mlp\.down_proj\.", ".feed_forward.w2.", k)
         k = re.sub(r"\.mlp\.up_proj\.", ".feed_forward.w3.", k)
+
+        # Phi mapping
+        k = re.sub(r"\.self_attn\.dense\.", ".attention.wo.", k)
+        k = re.sub(r"\.mlp\.fc1\.", ".feed_forward.w1.", k)
+        k = re.sub(r"\.mlp\.fc2\.", ".feed_forward.w2.", k)
 
         return k
     # GGUF keys
@@ -106,8 +111,8 @@ def map_config(config):
         "num_key_value_heads": "n_kv_heads",
         "n_heads": "n_kv_heads",
         "rms_norm_eps": "norm_eps",
-        # GGUF metadata
-        # https://github.com/ggerganov/ggml/blob/master/docs/gguf.md
+        "layer_norm_eps": "norm_eps",
+        # GGUF metadata: https://github.com/ggerganov/ggml/blob/master/docs/gguf.md
         "llama.embedding_length": "dim",
         "llama.block_count": "n_layers",
         "llama.attention.head_count": "n_heads",
@@ -141,7 +146,7 @@ def map_config(config):
             "num_experts_per_tok": config["llama.expert_used_count"].item()
         }
 
-    # Calculate head_dim if not given
+    # Calculate head_dim if not provided
     if "head_dim" not in result:
         if "dim" in result and "n_heads" in result:
             result["head_dim"] = result["dim"] // result["n_heads"]

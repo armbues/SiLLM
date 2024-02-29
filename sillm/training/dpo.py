@@ -4,7 +4,7 @@ import mlx.core as mx
 import mlx.nn as nn
 
 from sillm.llm import LLM, generate
-from sillm.args import ModelArgs
+from sillm.models.args import ModelArgs
 from sillm.training.lora import TrainableLoRA
 
 class TrainableDPO(TrainableLoRA):

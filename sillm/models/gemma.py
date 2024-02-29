@@ -3,9 +3,9 @@ from functools import partial
 import mlx.core as mx
 import mlx.nn as nn
 
-from sillm.model import BaseModel
-from sillm.args import ModelArgs
-import sillm.llama as llama
+from sillm.models.base import BaseModel
+from sillm.models.args import ModelArgs
+import sillm.models.llama as llama
 
 @partial(mx.compile, shapeless=True)
 def rms_norm(x, weight, eps):
@@ -22,6 +22,7 @@ class RMSNorm(nn.Module):
                  dims: int,
                  eps: float = 1e-6):
         super().__init__()
+
         self.weight = mx.ones((dims,))
         self.eps = eps
 
@@ -51,14 +52,15 @@ class TransformerBlock(llama.TransformerBlock):
             args: Model arguments.
         """
         nn.Module.__init__(self)
+        self.args = args
 
         self.n_heads = args.n_heads
         self.dim = args.dim
+        
         self.attention = llama.Attention(args)
         self.feed_forward = FeedForward(args=args)
         self.attention_norm = RMSNorm(args.dim, eps=args.norm_eps)
         self.ffn_norm = RMSNorm(args.dim, eps=args.norm_eps)
-        self.args = args
 
 ########
 # References:

@@ -6,10 +6,11 @@ import mlx.nn as nn
 from mlx.utils import tree_flatten, tree_unflatten
 
 import sillm.tokenizer
-import sillm.args
-import sillm.llama as llama
-import sillm.gemma as gemma
-import sillm.mixtral as mixtral
+import sillm.models.args as args
+import sillm.models.llama as llama
+import sillm.models.gemma as gemma
+import sillm.models.mixtral as mixtral
+import sillm.models.phi as phi
 
 class LLM():
     """
@@ -17,7 +18,7 @@ class LLM():
     """
     def __init__(self,
                  tokenizer: sillm.tokenizer.Tokenizer,
-                 args: sillm.args.ModelArgs
+                 args: args.ModelArgs
                  ):
         """
         Args:
@@ -33,6 +34,8 @@ class LLM():
             self.model = gemma.Model(args)
         elif args.model_type == "mixtral":
             self.model = mixtral.Model(args)
+        elif args.model_type == "phi":
+            self.model = phi.Model(args)
         else:
             raise NotImplementedError(f"Model type {args.model_type} is not supported")
         self.model.train(mode=False)

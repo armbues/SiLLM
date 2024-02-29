@@ -2,7 +2,7 @@ import pathlib
 
 from typing import List
 
-import sillm.args
+import sillm.models.args as args
 
 class Tokenizer():
     def encode(self,
@@ -31,7 +31,7 @@ class SentencePieceTokenizer(Tokenizer):
     """
     def __init__(self,
                  tokenizer_path: str,
-                 args: sillm.args.ModelArgs
+                 args: args.ModelArgs
                  ):
         """
         Args:
@@ -111,7 +111,7 @@ class TransformerTokenizer(Tokenizer):
     """
     def __init__(self,
                  tokenizer_dir: str,
-                 args: sillm.args.ModelArgs
+                 args: args.ModelArgs
                  ):
         """
         Args:

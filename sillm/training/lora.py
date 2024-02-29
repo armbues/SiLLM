@@ -13,7 +13,7 @@ import mlx.optimizers as optim
 from mlx.utils import tree_flatten, tree_unflatten
 
 from sillm.llm import LLM
-from sillm.args import ModelArgs
+from sillm.models.args import ModelArgs
 from sillm.training.dataset import Dataset
 
 ########

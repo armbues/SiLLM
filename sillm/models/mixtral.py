@@ -5,9 +5,9 @@ import numpy as np
 import mlx.core as mx
 import mlx.nn as nn
 
-from sillm.model import BaseModel
-from sillm.args import ModelArgs
-import sillm.llama as llama
+from sillm.models.base import BaseModel
+from sillm.models.args import ModelArgs
+import sillm.models.llama as llama
 
 ########
 # Based on mlx-examples:
@@ -93,6 +93,7 @@ class FeedForward(nn.Module):
 class TransformerBlock(nn.Module):
     def __init__(self, args: ModelArgs):
         super().__init__()
+
         self.n_heads = args.n_heads
         self.dim = args.dim
         self.attention = llama.Attention(args=args)

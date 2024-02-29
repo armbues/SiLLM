@@ -4,24 +4,9 @@ from typing import Optional, Tuple
 import mlx.core as mx
 import mlx.nn as nn
 
-from sillm.model import BaseModel
-from sillm.args import ModelArgs
-
-@partial(mx.compile, shapeless=True)
-def rms_norm(x, weight, eps):
-    x = x.astype(mx.float32)
-    x = x * mx.rsqrt(x.square().mean(-1, keepdims=True) + eps)
-
-    return weight * x.astype(weight.dtype)
-
-class RMSNorm(nn.Module):
-    def __init__(self, dims: int, eps: float = 1e-5):
-        super().__init__()
-        self.weight = mx.ones((dims,))
-        self.eps = eps
-
-    def __call__(self, x):
-        return rms_norm(x, self.weight, self.eps)
+from sillm.models.base import BaseModel
+from sillm.models.args import ModelArgs
+from sillm.models.base import RMSNorm
 
 ########
 # Based on mlx-examples:
@@ -43,7 +28,6 @@ class Attention(nn.Module):
         self.n_kv_heads: int = args.n_kv_heads
 
         self.repeats = self.n_heads // self.n_kv_heads
-
         self.scale = self.args.head_dim ** -0.5
 
         self.wq = nn.Linear(args.dim, args.n_heads * args.head_dim, bias=False)
@@ -144,6 +128,7 @@ class TransformerBlock(nn.Module):
         
         self.n_heads = args.n_heads
         self.dim = args.dim
+        
         self.attention = Attention(args)
         self.feed_forward = FeedForward(args=args)
         self.attention_norm = RMSNorm(args.dim, eps=args.norm_eps)
@@ -155,7 +140,7 @@ class TransformerBlock(nn.Module):
             x: mx.array,
             mask: Optional[mx.array] = None,
             cache: Optional[Tuple[mx.array, mx.array]] = None,
-    ) -> mx.array:
+            ) -> mx.array:
         """
         Args:
             x: Input tensor.
@@ -228,7 +213,8 @@ class Model(BaseModel):
     def loss(self,
             inputs: mx.array,
             targets: mx.array,
-            loss_masks: mx.array):
+            loss_masks: mx.array
+            ):
         """
         Calculate loss for inputs.
         Args:
