@@ -8,3 +8,4 @@ SiLLM simplifies the process of training and running Large Language Models (LLMs
 - Qwen support
 - Repetition penalty
 - Learning rate schedulers
+- Model merges
