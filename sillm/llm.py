@@ -11,6 +11,16 @@ import sillm.models.llama as llama
 import sillm.models.gemma as gemma
 import sillm.models.mixtral as mixtral
 import sillm.models.phi as phi
+import sillm.models.starcoder2 as starcoder2
+
+model_map = {
+    "llama": llama.Model,
+    "mistral": llama.Model,
+    "gemma": gemma.Model,
+    "mixtral": mixtral.Model,   
+    "phi": phi.Model,
+    "starcoder2": starcoder2.Model
+}
 
 class LLM():
     """
@@ -28,14 +38,9 @@ class LLM():
         self.args = args
         self._quantization = None
 
-        if args.model_type in ("llama", "mistral"):
-            self.model = llama.Model(args)
-        elif args.model_type == "gemma":
-            self.model = gemma.Model(args)
-        elif args.model_type == "mixtral":
-            self.model = mixtral.Model(args)
-        elif args.model_type == "phi":
-            self.model = phi.Model(args)
+        if args.model_type in model_map:
+            model_class = model_map[args.model_type]
+            self.model = model_class(args)
         else:
             raise NotImplementedError(f"Model type {args.model_type} is not supported")
         self.model.train(mode=False)

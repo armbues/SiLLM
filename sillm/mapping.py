@@ -40,6 +40,10 @@ def map_key(k):
         k = re.sub(r"\.mlp\.fc1\.", ".feed_forward.w1.", k)
         k = re.sub(r"\.mlp\.fc2\.", ".feed_forward.w2.", k)
 
+        # Starcoder2 mapping
+        k = re.sub(r"\.mlp\.c_fc\.", ".feed_forward.w1.", k)
+        k = re.sub(r"\.mlp\.c_proj\.", ".feed_forward.w2.", k)
+
         return k
     # GGUF keys
     elif k.startswith("output_norm."):
@@ -112,6 +116,7 @@ def map_config(config):
         "n_heads": "n_kv_heads",
         "rms_norm_eps": "norm_eps",
         "layer_norm_eps": "norm_eps",
+        "norm_epsilon": "norm_eps",
         # GGUF metadata: https://github.com/ggerganov/ggml/blob/master/docs/gguf.md
         "llama.embedding_length": "dim",
         "llama.block_count": "n_layers",

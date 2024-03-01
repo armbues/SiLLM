@@ -57,10 +57,11 @@ class ModelArgs:
                 ArgsClass = MixtralArgs
             elif config["model_type"] == "phi":
                 ArgsClass = PhiArgs
+            else:
+                ArgsClass = LlamaArgs
         if ArgsClass is None:
-            config["model_type"] = "llama"
             ArgsClass = LlamaArgs
-            logging.warn(f"No model type specified - falling back to default model type `llama`")
+            logging.warn(f"No model type specified - falling back to `llama` config")
 
         fields = ModelArgs.__annotations__
         fields.update(ArgsClass.__annotations__)

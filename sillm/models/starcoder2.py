@@ -1,47 +1,66 @@
-from functools import partial
+from typing import Optional, Tuple
 
 import mlx.core as mx
 import mlx.nn as nn
 
 from sillm.models.base import BaseModel
 from sillm.models.args import ModelArgs
+from sillm.models.base import LayerNorm
 import sillm.models.llama as llama
 
-@partial(mx.compile, shapeless=True)
-def rms_norm(x, weight, eps):
-    x = x.astype(mx.float32)
-    x = x * mx.rsqrt(x.square().mean(-1, keepdims=True) + eps)
-
-    return (1.0 + weight) * x.astype(weight.dtype)
-
-class RMSNorm(nn.Module):
+class Attention(llama.Attention):
     """
-    Root Mean Square Normalization module.
+    Multi-head attention module.
     """
-    def __init__(self,
-                 dims: int,
-                 eps: float = 1e-6):
-        super().__init__()
+    def __init__(self, args: ModelArgs):
+        """
+        Args:
+            args: Model arguments.
+        """
+        nn.Module.__init__(self)
+        self.args = args
 
-        self.weight = mx.ones((dims,))
-        self.eps = eps
+        self.n_heads: int = args.n_heads
+        self.n_kv_heads: int = args.n_kv_heads
 
-    def __call__(self, x):
-        return rms_norm(x, self.weight, self.eps)
-    
-class FeedForward(llama.FeedForward):
+        self.repeats = self.n_heads // self.n_kv_heads
+        self.scale = self.args.head_dim ** -0.5
+
+        self.wq = nn.Linear(args.dim, args.n_heads * args.head_dim, bias=True)
+        self.wk = nn.Linear(args.dim, args.n_kv_heads * args.head_dim, bias=True)
+        self.wv = nn.Linear(args.dim, args.n_kv_heads * args.head_dim, bias=True)
+        self.wo = nn.Linear(args.n_heads * args.head_dim, args.dim, bias=True)
+
+        self.rope = nn.RoPE(args.head_dim,
+                            traditional=args.rope_traditional,
+                            base=args.rope_theta
+                            )
+
+class FeedForward(nn.Module):
     """
     Feed-forward module.
     """
-    def __call__(self, x) -> mx.array:
+    def __init__(self, args: ModelArgs):
+        """
+        Args:
+            args: Model arguments.
+        """
+        super().__init__()
+
+        self.w1 = nn.Linear(args.dim, args.hidden_dim, bias=True)
+        self.w2 = nn.Linear(args.hidden_dim, args.dim, bias=True)
+
+    def __call__(self,
+                 x: mx.array
+                 ) -> mx.array:
         """
         Args:
             x: Input tensor.
         Returns:
             Output tensor.
         """
-        return self.w2(nn.gelu(self.w1(x)) * self.w3(x))
-    
+        return self.w2(nn.gelu(self.w1(x)))
+
 class TransformerBlock(llama.TransformerBlock):
     """
     Transformer block.
@@ -57,18 +76,18 @@ class TransformerBlock(llama.TransformerBlock):
         self.n_heads = args.n_heads
         self.dim = args.dim
         
-        self.attention = llama.Attention(args=args)
+        self.attention = Attention(args=args)
         self.feed_forward = FeedForward(args=args)
-        self.attention_norm = RMSNorm(args.dim, eps=args.norm_eps)
-        self.ffn_norm = RMSNorm(args.dim, eps=args.norm_eps)
+        self.attention_norm = LayerNorm(args.dim, eps=args.norm_eps)
+        self.ffn_norm = LayerNorm(args.dim, eps=args.norm_eps)
 
 ########
 # References:
-# https://github.com/huggingface/transformers/blob/main/src/transformers/models/gemma/modeling_gemma.py
+# https://github.com/huggingface/transformers/blob/main/src/transformers/models/starcoder2/modeling_starcoder2.py
 ########
 class Model(llama.Model):
     """
-    Gemma model wrapper.
+    Starcoder2 model wrapper.
     """
     def __init__(self, args: ModelArgs):
         """
@@ -83,7 +102,7 @@ class Model(llama.Model):
         
         self.tok_embeddings = nn.Embedding(args.vocab_size, args.dim)
         self.layers = [TransformerBlock(args=args) for _ in range(args.n_layers)]
-        self.norm = RMSNorm(args.dim, eps=args.norm_eps)
+        self.norm = LayerNorm(args.dim, eps=args.norm_eps)
 
     def __call__(self,
                  inputs: mx.array,
@@ -97,7 +116,6 @@ class Model(llama.Model):
             Output logits and cache.
         """
         h = self.tok_embeddings(inputs)
-        h = h * (self.args.dim**0.5)
 
         mask = None
         if h.shape[1] > 1:
@@ -110,6 +128,4 @@ class Model(llama.Model):
         for e, layer in enumerate(self.layers):
             h, cache[e] = layer(h, mask, cache[e])
 
-        out = self.norm(h) @ self.tok_embeddings.weight.T
-
-        return out, cache
+        return self.norm(h), cache

@@ -91,7 +91,7 @@ class FeedForward(nn.Module):
     
     def __call__(self,
                  x: mx.array
-    ) -> mx.array:
+                 ) -> mx.array:
         """
         Args:
             x: Input tensor.
@@ -115,7 +115,7 @@ class TransformerBlock(nn.Module):
         self.n_heads = args.n_heads
         self.dim = args.dim
 
-        self.attention = Attention(args)
+        self.attention = Attention(args=args)
         self.attention_norm = LayerNorm(args.dim, eps=args.norm_eps)
         self.feed_forward = FeedForward(args=args)
 

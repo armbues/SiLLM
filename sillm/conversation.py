@@ -4,7 +4,7 @@ from typing import Union
 # Reference:
 # https://github.com/huggingface/chat-ui/blob/main/PROMPTS.md
 ########
-TEMPLATES = {
+default_templates = {
     "llama-2": {
         "system":       "[INST] <<SYS>>\n{}\n<</SYS>>\n{}[/INST] ",
         "user":         "[INST]{}[/INST] ",
@@ -39,7 +39,7 @@ TEMPLATES = {
         "system":       "{}\nInstruct: {}\n",
         "user":         "Instruct: {}\n",
         "assistant":    "Output: {}\n",
-        "stop":         ["Instruct:"]
+        "stop":         []
     }
 }
 
@@ -51,8 +51,8 @@ def format_message(content: Union[str, list],
     """
     Format message using conversation template.
     """
-    if isinstance(template, str) and template in TEMPLATES:
-        template = TEMPLATES[template]
+    if isinstance(template, str) and template in default_templates:
+        template = default_templates[template]
     elif not isinstance(template, dict):
         raise ValueError(f"Template could not be loaded")
     
@@ -79,8 +79,8 @@ class Conversation(object):
                 system_prompt: str = None):
         if type(template) == dict:
             self.template = template
-        elif type(template) == str and template in TEMPLATES:
-            self.template = TEMPLATES[template]
+        elif type(template) == str and template in default_templates:
+            self.template = default_templates[template]
         else:
             raise ValueError(f"Template could not be loaded")
 
@@ -159,6 +159,7 @@ class Conversation(object):
 
         if trigger:
             return self._text + self.trigger
+        return self._text
     
     def add_response(self,
                      content: str

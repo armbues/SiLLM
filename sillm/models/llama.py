@@ -125,15 +125,15 @@ class TransformerBlock(nn.Module):
             args: Model arguments.
         """
         super().__init__()
+        self.args = args
         
         self.n_heads = args.n_heads
         self.dim = args.dim
         
-        self.attention = Attention(args)
+        self.attention = Attention(args=args)
         self.feed_forward = FeedForward(args=args)
         self.attention_norm = RMSNorm(args.dim, eps=args.norm_eps)
         self.ffn_norm = RMSNorm(args.dim, eps=args.norm_eps)
-        self.args = args
 
     def __call__(
             self,
