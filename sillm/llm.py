@@ -5,21 +5,18 @@ import mlx.core as mx
 import mlx.nn as nn
 from mlx.utils import tree_flatten, tree_unflatten
 
-import sillm.tokenizer
+from sillm.tokenizer import Tokenizer
+import sillm.models as models
 import sillm.models.args as args
-import sillm.models.llama as llama
-import sillm.models.gemma as gemma
-import sillm.models.mixtral as mixtral
-import sillm.models.phi as phi
-import sillm.models.starcoder2 as starcoder2
 
 model_map = {
-    "llama": llama.Model,
-    "mistral": llama.Model,
-    "gemma": gemma.Model,
-    "mixtral": mixtral.Model,   
-    "phi": phi.Model,
-    "starcoder2": starcoder2.Model
+    "llama":        models.llama.Model,
+    "mistral":      models.llama.Model,
+    "gemma":        models.gemma.Model,
+    "mixtral":      models.mixtral.Model,   
+    "phi":          models.phi.Model,
+    "starcoder2":   models.starcoder2.Model,
+    "qwen2":        models.qwen2.Model
 }
 
 class LLM():
@@ -27,7 +24,7 @@ class LLM():
     LLM model wrapper.
     """
     def __init__(self,
-                 tokenizer: sillm.tokenizer.Tokenizer,
+                 tokenizer: Tokenizer,
                  args: args.ModelArgs
                  ):
         """
@@ -209,7 +206,7 @@ class LLM():
         return ''.join([t[0] for t in generate(self.model, self.tokenizer, prompt=prompt, temp=temp, num_tokens=num_tokens, stop_words=stop_words)])
 
 def generate(model,
-             tokenizer: sillm.tokenizer.Tokenizer,
+             tokenizer: Tokenizer,
              prompt: str,
              temp: float = 0.0,
              num_tokens: int = 1024,

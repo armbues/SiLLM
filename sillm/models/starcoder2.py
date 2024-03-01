@@ -35,6 +35,45 @@ class Attention(llama.Attention):
                             traditional=args.rope_traditional,
                             base=args.rope_theta
                             )
+        
+    def __call__(self,
+                 x: mx.array,
+                 mask: Optional[mx.array] = None,
+                 cache: Optional[Tuple[mx.array, mx.array]] = None,
+                 ) -> mx.array:
+        B, L, _ = x.shape
+
+        queries, keys, values = self.wq(x), self.wk(x), self.wv(x)
+
+        # Prepare the queries, keys and values for the attention computation
+        queries = queries.reshape(B, L, self.n_heads, -1).transpose(0, 2, 1, 3)
+        keys = keys.reshape(B, L, self.n_kv_heads, -1).transpose(0, 2, 1, 3)
+        values = values.reshape(B, L, self.n_kv_heads, -1).transpose(0, 2, 1, 3)
+
+        if self.repeats > 1:
+            keys = mx.repeat(keys, self.repeats, axis=1)
+            values = mx.repeat(values, self.repeats, axis=1)
+
+        if cache is not None:
+            key_cache, value_cache = cache
+            queries = self.rope(queries, offset=key_cache.shape[2])
+            keys = self.rope(keys, offset=key_cache.shape[2])
+            keys = mx.concatenate([key_cache, keys], axis=2)
+            values = mx.concatenate([value_cache, values], axis=2)
+        else:
+            queries = self.rope(queries)
+            keys = self.rope(keys)
+
+        queries = queries.astype(mx.float32)
+        keys = keys.astype(mx.float32)
+
+        scores = (queries * self.scale) @ keys.transpose(0, 1, 3, 2)
+        if mask is not None:
+            scores += mask
+        scores = mx.softmax(scores.astype(mx.float32), axis=-1).astype(scores.dtype)
+        output = (scores @ values).transpose(0, 2, 1, 3).reshape(B, L, -1)
+
+        return self.wo(output), (keys, values)
 
 class FeedForward(nn.Module):
     """
@@ -83,6 +122,7 @@ class TransformerBlock(llama.TransformerBlock):
 
 ########
 # References:
+# https://github.com/bigcode-project/starcoder2/
 # https://github.com/huggingface/transformers/blob/main/src/transformers/models/starcoder2/modeling_starcoder2.py
 ########
 class Model(llama.Model):
