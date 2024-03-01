@@ -129,4 +129,6 @@ class Model(llama.Model):
         for e, layer in enumerate(self.layers):
             h, cache[e] = layer(h, mask, cache[e])
 
-        return self.norm(h), cache
+        out = self.norm(h) @ self.tok_embeddings.weight.T
+
+        return out, cache
