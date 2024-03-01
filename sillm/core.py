@@ -184,10 +184,9 @@ def load_model_dir(model_path: str) -> LLM:
         raise ValueError("No weights files found")
 
     if model_format == ModelFormat.HUGGINGFACE:
-        if model_args.model_type != "phi":
-            logging.debug("Permuting HuggingFace weights")
+        logging.debug("Permuting HuggingFace weights")
 
-            permute_hf_weights(weights, model_args)
+        model_args.rope_traditional = False
 
     # Fix configuration
     model_args.fix_config(weights)
@@ -241,7 +240,7 @@ def load_mlx_weights(weights_files) -> dict:
         # Guess model format according to key names
         if format == ModelFormat.UNKNOWN:
             format = ModelFormat.guess_from_weights(weights_shard)
-            logging.info(f"Guessing model format: {format}")
+            logging.debug(f"Guessing model format: {format}")
 
         for key, value in weights_shard.items():
             mlx_key = map_key(key)
