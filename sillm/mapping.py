@@ -101,7 +101,8 @@ def map_config(config):
         "bos_token_id",
         "eos_token_id",
         "pad_token_id",
-        "moe"
+        "moe",
+        "tie_word_embeddings"
     ]
     for key in mlx_keys:
         if key in config:

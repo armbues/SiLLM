@@ -56,6 +56,7 @@ class TrainableDPO(TrainableLoRA):
             weights = self.model.parameters()
             self.reference.update(weights)
             self.reference.freeze()
+            self.reference.train(mode=True)
 
         logging.info(f"Initialized DPO with reference model")
 

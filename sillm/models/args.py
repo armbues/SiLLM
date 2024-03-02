@@ -57,6 +57,8 @@ class ModelArgs:
                 ArgsClass = MixtralArgs
             elif config["model_type"] == "phi":
                 ArgsClass = PhiArgs
+            elif config["model_type"] == "starcoder2":
+                ArgsClass = Starcoder2Args
             else:
                 ArgsClass = LlamaArgs
         if ArgsClass is None:
@@ -115,6 +117,13 @@ class PhiArgs(ModelArgs):
     """
     Phi model arguments.
     """
-    rope_traditional: bool = False
     rope_scaling: dict = None
     partial_rotary_factor: float = 0.4
+
+@dataclasses.dataclass
+class Starcoder2Args(ModelArgs):
+    """
+    Starcoder2 model arguments.
+    """
+    rope_scaling: dict = None
+    tie_word_embeddings: bool = True

@@ -105,6 +105,11 @@ class Model(llama.Model):
         self.layers = [TransformerBlock(args=args) for _ in range(args.n_layers)]
         self.norm = LayerNorm(args.dim, eps=args.norm_eps)
 
+        if args.tie_word_embeddings:
+            self.output = None
+        else:
+            self.output = nn.Linear(args.dim, args.vocab_size, bias=False)
+
     def __call__(self,
                  inputs: mx.array,
                  cache = None
@@ -129,6 +134,9 @@ class Model(llama.Model):
         for e, layer in enumerate(self.layers):
             h, cache[e] = layer(h, mask, cache[e])
 
-        out = self.norm(h) @ self.tok_embeddings.weight.T
+        if self.output is None:
+            out = self.norm(h) @ self.tok_embeddings.weight.T
+        else:
+            out = self.output(self.norm(h))
 
         return out, cache
