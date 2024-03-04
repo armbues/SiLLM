@@ -6,9 +6,6 @@ from sillm.training.lora import TrainableLoRA
 from sillm.training.dpo import TrainableDPO
 from sillm.training.dataset import DatasetDPO
 from sillm.conversation import Conversation
-
-import sillm.scripts.cli_chat as chat
-import sillm.scripts.cli_lora as lora
-import sillm.scripts.cli_dpo as dpo
+from sillm.models.args import ModelArgs
 
 __version__ = "0.1.0"

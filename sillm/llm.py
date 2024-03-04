@@ -1,5 +1,6 @@
 import logging
 import time
+import pathlib
 
 import mlx.core as mx
 import mlx.nn as nn
@@ -45,6 +46,26 @@ class LLM():
 
         self.tokenizer = tokenizer
 
+    def init_description(self, model_path):
+        """
+        Set model description.
+        Args:
+            description: Model description.
+        """
+        self.path = pathlib.Path(model_path)
+        self.id = self.path.stem
+        self.created = int(self.path.stat().st_ctime)
+    
+    def description(self):
+        if self.id and self.created:
+            return {
+                "id": self.id,
+                "object": "model",
+                "created": self.created
+            }
+        else:
+            raise ValueError("Model is missing an ID or creation time")
+    
     def _update_names(self):
         """
         Update module names.

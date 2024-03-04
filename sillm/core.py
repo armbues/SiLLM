@@ -117,6 +117,7 @@ def load_gguf_file(model_path: str) -> LLM:
 
     # Initialize model
     model = LLM(tokenizer, model_args)
+    model.init_description(model_path)
 
     # Quantize model
     if quantization is not None:
@@ -207,6 +208,7 @@ def load_model_dir(model_path: str) -> LLM:
 
     # Initialize model
     model = LLM(tokenizer, model_args)
+    model.init_description(model_path)
 
     # Quantize model
     if model_args.quantization is not None:
