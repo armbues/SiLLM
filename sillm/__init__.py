@@ -8,4 +8,4 @@ from sillm.tokenizer import Tokenizer
 from sillm.models.args import ModelArgs
 from sillm.conversation import Conversation
 
-__version__ = "0.0.1"
+__version__ = "0.1.0"
