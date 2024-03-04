@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     # Initialize trainable model
     dpo_config = {
-        # "reference_free":   args.input_adapters is None,
+        "reference_free":   args.input_adapters is None,
         "loss_type":        args.loss_type,
         "loss_beta":        args.loss_beta
     }
