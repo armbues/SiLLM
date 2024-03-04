@@ -3,7 +3,7 @@ import json
 import logging
 import dataclasses
 
-from sillm.mapping import map_config
+from sillm.utils.mapping import map_config
 
 @dataclasses.dataclass
 class ModelArgs:

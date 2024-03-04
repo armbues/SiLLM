@@ -4,10 +4,10 @@ import enum
 
 import mlx.core as mx
 
-import sillm
-from sillm.llm import LLM
+from .llm import LLM
+from .tokenizer import GGUFTokenizer, TransformerTokenizer, SentencePieceTokenizer
 from sillm.models.args import ModelArgs
-from sillm.mapping import map_key, map_config
+from sillm.utils.mapping import map_key, map_config
 
 class ModelFormat(enum.Enum):
     """
@@ -80,7 +80,7 @@ def load_gguf_file(model_path: str) -> LLM:
 
     # Map metadata to configuration
     config = map_config(metadata)
-    model_args = sillm.ModelArgs.load_config(config)
+    model_args = ModelArgs.load_config(config)
 
     # Map weights keys
     weights = {}
@@ -112,7 +112,7 @@ def load_gguf_file(model_path: str) -> LLM:
     model_args.log_config()
 
     # Load tokenizer
-    tokenizer = sillm.tokenizer.GGUFTokenizer(metadata)
+    tokenizer = GGUFTokenizer(metadata)
     logging.info("Loaded tokenizer from GGUF metadata")
 
     # Initialize model
@@ -159,7 +159,7 @@ def load_model_dir(model_path: str) -> LLM:
     for config_file in ("config.json", "params.json"):
         config_path = model_path / config_file
         if config_path.exists():
-            model_args = sillm.ModelArgs.load_file(config_path)
+            model_args = ModelArgs.load_file(config_path)
             break
         else:
             logging.debug(f"No config file {config_path} not found")
@@ -197,11 +197,11 @@ def load_model_dir(model_path: str) -> LLM:
     tokenizer = None
     tokenizer_path = model_path / "tokenizer.model"
     if tokenizer_path.exists():
-        tokenizer = sillm.tokenizer.SentencePieceTokenizer(str(tokenizer_path), model_args)
+        tokenizer = SentencePieceTokenizer(str(tokenizer_path), model_args)
     else:
         tokenizer_path = model_path / "tokenizer.json"
         if tokenizer_path.exists():
-            tokenizer = sillm.tokenizer.TransformerTokenizer(str(model_path), model_args)
+            tokenizer = TransformerTokenizer(str(model_path), model_args)
     if tokenizer is None:
         logging.error(f"No tokenizer found in {model_path}")
     logging.info(f"Loaded tokenizer from {tokenizer_path}")

@@ -3,7 +3,7 @@ import logging
 import mlx.core as mx
 import mlx.nn as nn
 
-from sillm.llm import LLM, generate
+from sillm.core.llm import LLM, generate
 from sillm.models.args import ModelArgs
 from sillm.training.lora import TrainableLoRA
 

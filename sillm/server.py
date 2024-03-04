@@ -1,3 +1,4 @@
+import sys
 import argparse
 import logging
 
@@ -38,6 +39,6 @@ if __name__ == "__main__":
     model = sillm.load(args.model)
     app.models = [model]
 
-    logging.warning("Server is not fully implemented yet.")
+    logging.warning("API server is not fully implemented yet.")
 
     uvicorn.run(app, host=args.host, port=args.port)

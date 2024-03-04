@@ -6,7 +6,7 @@ import mlx.core as mx
 import mlx.nn as nn
 from mlx.utils import tree_flatten, tree_unflatten
 
-from sillm.tokenizer import Tokenizer
+from .tokenizer import Tokenizer
 import sillm.models as models
 import sillm.models.args as args
 

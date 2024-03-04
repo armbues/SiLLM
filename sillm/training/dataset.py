@@ -6,7 +6,7 @@ import numpy as np
 
 import mlx.core as mx
 
-from sillm.conversation import format_message
+from sillm.core.conversation import format_message
 
 class Dataset:
     """
