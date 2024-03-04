@@ -21,7 +21,7 @@ SiLLM simplifies the process of training and running Large Language Models (LLMs
 ## Installation
 
 Using pip:
-``` shell
+``` sh
 pip install sillm
 ```
 
@@ -30,15 +30,15 @@ pip install sillm
 ### Command-line interface (CLI) scripts
 
 #### Chat:
-``` shell
+``` sh
 python -m sillm.chat /path/to/model
 ```
 #### LoRA fine-tuning:
-``` shell
+``` sh
 python -m sillm.lora /path/to/model -d /path/to/dataset
 ```
 #### DPO fine-tuning:
-``` shell
+``` sh
 python -m sillm.dpo /path/to/model -d /path/to/dataset
 ```
 Run the CLI scripts with the argument -h to see a print-out of all available arguments.
