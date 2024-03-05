@@ -91,6 +91,9 @@ class FeedForward(nn.Module):
 # https://github.com/ml-explore/mlx-examples/blob/d8680a89f986492dbc27c36af3294034db26458f/llms/mixtral/mixtral.py#L163
 ########
 class TransformerBlock(nn.Module):
+    """
+    Transformer block for Mixtral models.
+    """
     def __init__(self, args: ModelArgs):
         super().__init__()
 
@@ -168,9 +171,10 @@ class Model(BaseModel):
         return self.output(self.norm(h)), cache
 
     def loss(self,
-        inputs: mx.array,
-        targets: mx.array,
-        loss_masks: mx.array):
+             inputs: mx.array,
+             targets: mx.array,
+             loss_masks: mx.array
+             ):
         """
         Calculate loss for inputs.
         Args:

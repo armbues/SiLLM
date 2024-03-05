@@ -205,32 +205,3 @@ class Model(BaseModel):
             h, cache[e] = layer(h, mask, cache[e])
 
         return self.output(self.norm(h)), cache
-    
-    ########
-    # Based on mlx-examples:
-    # https://github.com/ml-explore/mlx-examples/blob/047d4650c4f63d55e5bfbaf8f589c1679cbdd971/lora/lora.py#L151
-    ########
-    def loss(self,
-            inputs: mx.array,
-            targets: mx.array,
-            loss_masks: mx.array
-            ):
-        """
-        Calculate loss for inputs.
-        Args:
-            inputs: Input tokens.
-            targets: Target tokens.
-            lengths: Lengths of inputs.
-        Returns:
-            Cross-entropy loss.
-        """
-        # Run model on inputs
-        logits, _ = self.__call__(inputs)
-        logits = logits.astype(mx.float32)
-
-        # Calculate the loss
-        cross_entropy_loss = nn.losses.cross_entropy(logits, targets) * loss_masks
-        num_tokens = loss_masks.sum()
-        loss_value = cross_entropy_loss.sum() / num_tokens
-
-        return loss_value, None, num_tokens
