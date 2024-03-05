@@ -9,6 +9,7 @@ from mlx.utils import tree_flatten, tree_unflatten
 from .tokenizer import Tokenizer
 import sillm.models as models
 import sillm.models.args as args
+from sillm.training.dataset import Dataset
 
 model_map = {
     "llama":        models.llama.Model,
@@ -190,6 +191,23 @@ class LLM():
 
             logging.info(f"Dequantized model")
 
+    def perplexity(self,
+                   dataset: Dataset,
+                   batch_size: int = 4
+                   ):
+        """
+        Calculate perplexity for an input text.
+        Args:
+            text: Input text.
+        """
+        for _, batch in zip(
+            range(len(dataset)),
+            dataset.iterate_batches(batch_size),
+        ):
+            losses, _, _ = self.model.loss(*batch)
+        
+            yield mx.exp(mx.mean(losses)).item()
+
     def generate(self,
                  prompt: str,
                  temp: float = 0.0,
@@ -235,7 +253,7 @@ def generate(model,
              stop_words: list[str] = None
              ):
     """
-    Iterator for generating tokens.
+    Generic iterator for generating tokens.
     Args:
         prompt: Prompt to start generation.
         temp: Sampling temperature.
