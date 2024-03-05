@@ -49,7 +49,7 @@ Run the CLI scripts with the argument -h to see a print-out of all available arg
 import sillm
 
 model = sillm.load("/path/to/model")
-for s in model.generate("On a beautiful Sunday morning,"):
+for s, _ in model.generate("On a beautiful Sunday morning,"):
     print(s, flush=True, end="")
 ```
 
