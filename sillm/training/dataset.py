@@ -51,7 +51,10 @@ class DatasetCompletion(Dataset):
             max_length: Max token length per training entry.
         """
         self._data = []
-        self.pad_id = tokenizer.pad_id if tokenizer.pad_id >= 0 else tokenizer.eos_id
+        if tokenizer.pad_id is not None and tokenizer.pad_id >= 0:
+            self.pad_id = tokenizer.pad_id
+        else:
+            self.pad_id = tokenizer.eos_id
 
         key = "text"
 
