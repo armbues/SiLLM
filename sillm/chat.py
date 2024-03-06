@@ -5,12 +5,13 @@ import logging
 import mlx.core as mx
 
 import sillm
-import sillm.utils as utils
+from sillm.utils import load_yaml, log_arguments, log_memory_usage
 
 if __name__ == "__main__":
     # Parse commandline arguments
     parser = argparse.ArgumentParser(description="A simple CLI for generating text with SiLLM.")
     parser.add_argument("model", type=str, help="The model directory or file")
+    parser.add_argument("-c", "--config", default=None, type=str, help="Load YAML configuration file for chat")
     parser.add_argument("-a", "--input_adapters", default=None, type=str, help="Load LoRA adapter weights from .safetensors file")
     parser.add_argument("-s", "--seed", type=int, default=-1, help="Seed for randomization")
     parser.add_argument("-t", "--temp", type=float, default=0.7, help="Sampling temperature")
@@ -22,10 +23,18 @@ if __name__ == "__main__":
     parser.add_argument("-q8", default=False, action="store_true", help="Quantize the model to 8 bits")
     parser.add_argument("-v", "--verbose", default=1, action="count", help="Increase output verbosity")
     args = parser.parse_args()
+
+    # Load YAML configuration file
+    if args.config is not None:
+        load_yaml(args.config, args)
     
     # Initialize logging
     log_level = 40 - (10 * args.verbose) if args.verbose > 0 else 0
     logging.basicConfig(level=log_level, stream=sys.stdout, format="%(asctime)s %(levelname)s %(message)s")
+
+    # Log commandline arguments
+    if log_level <= 10:
+        log_arguments(args.__dict__)
 
     # Set random seed
     if args.seed >= 0:

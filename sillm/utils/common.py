@@ -1,6 +1,24 @@
 import logging
 
+import yaml
 import psutil
+
+def load_yaml(fpath, args):
+    with open(fpath, "r") as f:
+        config = yaml.safe_load(f)
+
+        for key, value in config.items():
+            setattr(args, key, value)
+
+def log_arguments(args):
+    """
+    Log arguments.
+    
+    Args:
+        args: The parsed arguments.
+    """
+    for key, value in args.items():
+        logging.debug(f"Argument: {key} = {value}")
     
 def log_memory_usage():
     """

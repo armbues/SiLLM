@@ -5,15 +5,16 @@ import logging
 import mlx.core as mx
 
 import sillm
-import sillm.utils as utils
+from sillm.utils.common import load_yaml, log_arguments, log_memory_usage
 
 if __name__ == "__main__":
     # Parse commandline arguments
     parser = argparse.ArgumentParser(description="Interface for training SiLLM models with LoRA/QLoRA.")
     parser.add_argument("model", type=str, help="The directory or file for the base model (MLX, Torch, GGUF)")
+    parser.add_argument("-c", "--config", default=None, type=str, help="Load YAML configuration file for training")
     parser.add_argument("-a", "--input_adapters", default=None, type=str, help="Load adapter weights from .safetensors file")
     parser.add_argument("-o", "--output_dir", default=None, type=str, help="Output directory for adapter weights")
-    parser.add_argument("-c", "--save_checkpoints", default=False, action="store_true", help="Save model checkpoints to output directory")
+    parser.add_argument("-s", "--save_checkpoints", default=False, action="store_true", help="Save model checkpoints to output directory")
     parser.add_argument("-m", "--save_merge", default=None, type=str, help="Save merged model weights to .safetensors file")
     parser.add_argument("-d", "--data", default=None, type=str, help="Train the model with training dataset in the file/directory")
     parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama-2, alpaca, etc.)")
@@ -33,10 +34,18 @@ if __name__ == "__main__":
     parser.add_argument("-q8", default=False, action="store_true", help="Quantize the model to 8 bits")
     parser.add_argument("-v", "--verbose", default=1, action="count", help="Increase output verbosity")
     args = parser.parse_args()
+
+    # Load YAML configuration file
+    if args.config is not None:
+        load_yaml(args.config, args)
     
     # Initialize logging
     log_level = 40 - (10 * args.verbose) if args.verbose > 0 else 0
     logging.basicConfig(level=log_level, stream=sys.stdout, format="%(asctime)s %(levelname)s %(message)s")
+
+    # Log commandline arguments
+    if log_level <= 10:
+        log_arguments(args.__dict__)
 
     # Load base model
     model = sillm.load(args.model)
@@ -65,10 +74,9 @@ if __name__ == "__main__":
     if args.input_adapters is not None:
         # Load adapter file
         model.load_adapters(args.input_adapters)
-        # TODO load/save LoRA config
 
     # Log memory usage
-    utils.log_memory_usage()
+    log_memory_usage()
 
     if args.data:
         # Load training dataset
