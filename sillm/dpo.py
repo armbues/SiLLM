@@ -6,7 +6,7 @@ import mlx.core as mx
 
 import sillm
 import sillm.utils as utils
-from sillm.utils import load_yaml, log_arguments, log_memory_usage
+from sillm.utils.common import load_yaml, log_arguments, log_memory_usage
 
 if __name__ == "__main__":
     # Parse commandline arguments
