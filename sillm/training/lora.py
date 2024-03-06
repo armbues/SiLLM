@@ -364,6 +364,7 @@ class TrainableLoRA(LLM):
               epochs: int = 1,
               iterations: int = 0,
               report_steps: int = 10,
+              report_callback: callable = None,
               eval_steps: int = 100,
               eval_callback: callable = None,
               validation_samples: int = 40
@@ -439,6 +440,9 @@ class TrainableLoRA(LLM):
                         pbar_epochs.write(f"#{n + 1}:\tTraining rewards {str(np.mean(rewards, axis=0))}")
                         rewards = None
                     pbar_epochs.refresh()
+
+                    if report_callback is not None:
+                        report_callback(n + 1, train_loss)
                     
                     losses = []
                     num_tokens = 0
@@ -452,8 +456,9 @@ class TrainableLoRA(LLM):
                     pbar_epochs.write(f"#{n + 1}:\tValidation loss  {val_loss:.3f}\t{(start - stop):.3f} sec")
 
                     # Eval callback
-                    msg = eval_callback(n + 1, val_loss)
-                    if msg:
-                        pbar_epochs.write(f"#{n + 1}:\t" + msg)
+                    if eval_callback is not None:
+                        msg = eval_callback(n + 1, val_loss)
+                        if msg:
+                            pbar_epochs.write(f"#{n + 1}:\t" + msg)
 
                     start = time.perf_counter()

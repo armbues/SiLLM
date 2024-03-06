@@ -5,6 +5,7 @@ import logging
 import mlx.core as mx
 
 import sillm
+import sillm.utils as utils
 from sillm.utils import load_yaml, log_arguments, log_memory_usage
 
 if __name__ == "__main__":
@@ -32,6 +33,7 @@ if __name__ == "__main__":
     parser.add_argument("--eval_steps", default=100, type=int, help="Number of batch iterations per evaluation (default: 100)")
     parser.add_argument("--validation_samples", default=20, type=int, help="Number of validation_samples (default: 20)")
     parser.add_argument("--seed", default=0, type=int, help="Seed for randomization (default: 0)")
+    parser.add_argument("--plot", default=None, type=str, help="Create a loss plot and save it to the specified file")
     parser.add_argument("-q4", default=False, action="store_true", help="Quantize the model to 4 bits")
     parser.add_argument("-q8", default=False, action="store_true", help="Quantize the model to 8 bits")
     parser.add_argument("-v", "--verbose", default=1, action="count", help="Increase output verbosity")
@@ -81,6 +83,10 @@ if __name__ == "__main__":
     if args.input_adapters is not None:
         # Load adapter file
         model.load_adapters(args.input_adapters)
+
+    # Initialize plot
+    if args.plot is not None:
+        plot = utils.Plot()
     
     # Log memory usage
     log_memory_usage()
@@ -93,11 +99,18 @@ if __name__ == "__main__":
         }
         dataset_training, dataset_validation, dataset_test = sillm.load_dataset(model.tokenizer, args.data, **dataset_config)
 
+        def report_callback(i, loss):
+            if args.plot is not None:
+                plot.add_train_loss(i, loss)
+
         def eval_callback(i, val_loss):
             if args.save_checkpoints and args.output_dir is not None:
                 fpath_ckpt = model.save_checkpoint(args.output_dir, i)
                 
                 return f"Saved checkpoint to {fpath_ckpt}"
+            
+            if args.plot is not None:
+                plot.add_valid_loss(i, val_loss)
 
         # Model training
         training_config = {
@@ -109,7 +122,10 @@ if __name__ == "__main__":
             "eval_steps":           args.eval_steps,
             "validation_samples":   args.validation_samples,
         }
-        model.train(dataset_training, dataset_validation, eval_callback=eval_callback, **training_config)
+        model.train(dataset_training,
+                    dataset_validation,
+                    eval_callback=eval_callback,
+                    **training_config)
 
     if args.save_checkpoints:
         # Save final checkpoint
