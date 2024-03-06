@@ -55,10 +55,16 @@ for s, _ in model.generate("On a beautiful Sunday morning,"):
 
 ## Model Support
 
-SiLLM generally supports loading LLMs of the following types: *Llama 2*, *Mistral*, *Mixtral*, *Gemma*, *Phi*, *Qwen 2*, *Starcoder 2*.
+SiLLM generally supports loading LLMs of the following model architectures/families: *Llama 2*, *Mistral*, *Mixtral*, *Gemma*, *Phi*, *Qwen 2*, *StarCoder2*.
 
 Here is a list of models that were successfully tested with SiLLM:
-[Gemma 7B Instruction](https://huggingface.co/google/gemma-7b-it)
+
+| Model Family | Models/Sizes (HF) | Inference | Training |
+| --- | --- | --- | --- |
+| Gemma | [2b](https://huggingface.co/google/gemma-2b), [2b-it](https://huggingface.co/google/gemma-7b-it), [7b](https://huggingface.co/google/gemma-7b), [7b-it](https://huggingface.co/google/gemma-7b-it) | ✅ | ✅ |
+| Phi-2 | [2.7b](https://huggingface.co/microsoft/phi-2) |  ✅ | ✅ |
+| Qwen 1.5 | [7b-chat](https://huggingface.co/Qwen/Qwen1.5-7B-Chat), [14b-chat](https://huggingface.co/Qwen/Qwen1.5-14B-Chat) | ✅ | ✅ |
+| StarCoder2 | [3b](https://huggingface.co/bigcode/starcoder2-3b), [7b](https://huggingface.co/bigcode/starcoder2-7b), [15b](https://huggingface.co/bigcode/starcoder2-15b) | ✅ | ✅ |
 
 ## License
 
