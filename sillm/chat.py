@@ -62,7 +62,7 @@ if __name__ == "__main__":
         model.merge_and_unload_lora()
 
     # Log memory usage
-    utils.log_memory_usage()
+    log_memory_usage()
 
     generate_args = {
         "temp": args.temp,
