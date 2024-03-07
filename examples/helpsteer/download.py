@@ -8,6 +8,10 @@ import huggingface_hub
 
 logging.basicConfig(level=20, stream=sys.stdout, format="%(asctime)s %(levelname)s %(message)s")
 
+# Create directories
+pathlib.Path('data/').mkdir(exist_ok=True)
+pathlib.Path('model/').mkdir(exist_ok=True)
+
 # Download dataset
 train, valid, test = datasets.load_dataset("nvidia/HelpSteer", split=['train', 'validation[:50%]', 'validation[-50%:]'])
 
