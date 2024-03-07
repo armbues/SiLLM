@@ -1,3 +1,4 @@
+import mlx.core as mx
 import mlx.nn as nn
 
 from sillm.models.base import BaseModel
@@ -75,4 +76,39 @@ class Model(llama.Model):
         self.tok_embeddings = nn.Embedding(args.vocab_size, args.dim)
         self.layers = [TransformerBlock(args=args) for _ in range(args.n_layers)]
         self.norm = RMSNorm(args.dim, eps=args.norm_eps)
-        self.output = nn.Linear(args.dim, args.vocab_size, bias=False)
+
+        if args.tie_word_embeddings:
+            self.output = None
+        else:
+            self.output = nn.Linear(args.dim, args.vocab_size, bias=False)
+
+    def __call__(self,
+                 inputs: mx.array,
+                 cache = None
+                 ):
+        """
+        Args:
+            inputs: Input tokens.
+            cache: Cache from previous forward pass.
+        Returns:
+            Output logits and cache.
+        """
+        h = self.tok_embeddings(inputs)
+
+        mask = None
+        if h.shape[1] > 1:
+            mask = nn.MultiHeadAttention.create_additive_causal_mask(h.shape[1])
+            mask = mask.astype(h.dtype)
+
+        if cache is None:
+            cache = [None] * len(self.layers)
+
+        for e, layer in enumerate(self.layers):
+            h, cache[e] = layer(h, mask, cache[e])
+
+        if self.output is None:
+            out = self.norm(h) @ self.tok_embeddings.weight.T
+        else:
+            out = self.output(self.norm(h))
+
+        return out, cache

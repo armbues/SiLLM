@@ -57,6 +57,8 @@ class ModelArgs:
                 ArgsClass = MixtralArgs
             elif config["model_type"] == "phi":
                 ArgsClass = PhiArgs
+            elif config["model_type"] == "qwen2":
+                ArgsClass = Qwen2Args
             elif config["model_type"] == "starcoder2":
                 ArgsClass = Starcoder2Args
             else:
@@ -119,6 +121,14 @@ class PhiArgs(ModelArgs):
     """
     rope_scaling: dict = None
     partial_rotary_factor: float = 0.4
+
+@dataclasses.dataclass
+class Qwen2Args(ModelArgs):
+    """
+    Starcoder2 model arguments.
+    """
+    rope_scaling: dict = None
+    tie_word_embeddings: bool = False
 
 @dataclasses.dataclass
 class Starcoder2Args(ModelArgs):

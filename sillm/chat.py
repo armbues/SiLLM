@@ -6,7 +6,8 @@ import logging
 import mlx.core as mx
 
 import sillm
-from sillm.utils.common import load_yaml, log_arguments, log_memory_usage
+import sillm.utils as utils
+from sillm.utils.common import seed, load_yaml, log_arguments, log_memory_usage
 
 if __name__ == "__main__":
     # Parse commandline arguments
@@ -44,7 +45,7 @@ if __name__ == "__main__":
 
     # Set random seed
     if args.seed >= 0:
-        mx.random.seed(args.seed)
+        utils.seed(args.seed)
 
     # Load model
     model = sillm.load(args.model)

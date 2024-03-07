@@ -60,7 +60,7 @@ if __name__ == "__main__":
     
     # Set random seed
     if args.seed >= 0:
-        mx.random.seed(args.seed)
+        utils.seed(args.seed)
 
     # Quantize model
     if args.q4 is True:

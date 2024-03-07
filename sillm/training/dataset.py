@@ -293,7 +293,9 @@ def load_dataset(tokenizer,
                  valid_split: float = 0.05,
                  test_split: float = 0.05,
                  template = None,
-                 max_length: int = 4096):
+                 max_length: int = 4096,
+                 shuffle: bool = True
+                 ):
     dataset_path = pathlib.Path(dataset_path)
 
     def load_jsonl(fpath):
@@ -302,6 +304,9 @@ def load_dataset(tokenizer,
             for line in f:
                 entry = json.loads(line)
                 entries.append(entry)
+
+        if shuffle:
+            np.random.shuffle(entries)
 
         return entries
 
