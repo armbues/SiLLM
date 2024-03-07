@@ -1,4 +1,5 @@
 import sys
+import os
 import argparse
 import logging
 
@@ -11,6 +12,7 @@ if __name__ == "__main__":
     # Parse commandline arguments
     parser = argparse.ArgumentParser(description="A simple CLI for generating text with SiLLM.")
     parser.add_argument("model", type=str, help="The model directory or file")
+    parser.add_argument("-d", "--chdir", default=None, type=str, help="Change working directory")
     parser.add_argument("-c", "--config", default=None, type=str, help="Load YAML configuration file for chat")
     parser.add_argument("-a", "--input_adapters", default=None, type=str, help="Load LoRA adapter weights from .safetensors file")
     parser.add_argument("-s", "--seed", type=int, default=-1, help="Seed for randomization")
@@ -23,6 +25,10 @@ if __name__ == "__main__":
     parser.add_argument("-q8", default=False, action="store_true", help="Quantize the model to 8 bits")
     parser.add_argument("-v", "--verbose", default=1, action="count", help="Increase output verbosity")
     args = parser.parse_args()
+
+    # Change working directory
+    if args.chdir is not None:
+        os.chdir(args.chdir)
 
     # Load YAML configuration file
     if args.config is not None:

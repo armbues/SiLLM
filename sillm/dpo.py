@@ -1,4 +1,5 @@
 import sys
+import os
 import argparse
 import logging
 
@@ -12,12 +13,13 @@ if __name__ == "__main__":
     # Parse commandline arguments
     parser = argparse.ArgumentParser(description="Interface for training SiLLM models with LoRA/QLoRA.")
     parser.add_argument("model", type=str, help="The directory or file for the base model (MLX, Torch, GGUF)")
+    parser.add_argument("-d", "--chdir", default=None, type=str, help="Change working directory")
     parser.add_argument("-c", "--config", default=None, type=str, help="Load YAML configuration file for training")
+    parser.add_argument("-t", "--train", default=None, type=str, help="Train the model with training dataset in the file/directory")
     parser.add_argument("-a", "--input_adapters", default=None, type=str, help="Load adapter weights from .safetensors file")
     parser.add_argument("-o", "--output_dir", default=None, type=str, help="Output directory for adapter weights")
     parser.add_argument("-s", "--save_checkpoints", default=False, action="store_true", help="Save model checkpoints to output directory")
     parser.add_argument("-m", "--save_merge", default=None, type=str, help="Save merged model weights to .safetensors file")
-    parser.add_argument("-d", "--data", default=None, type=str, help="Train the model with training dataset in the file/directory")
     parser.add_argument("--max_length", default=1024, type=int, help="Max token length per training dataset entry (default: 1024)")
     parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama-2, alpaca, etc.)")
     parser.add_argument("--layers", default=-1, type=int, help="Layers to use for LoRA (default: -1 for all layers)")
@@ -38,6 +40,10 @@ if __name__ == "__main__":
     parser.add_argument("-q8", default=False, action="store_true", help="Quantize the model to 8 bits")
     parser.add_argument("-v", "--verbose", default=1, action="count", help="Increase output verbosity")
     args = parser.parse_args()
+
+    # Change working directory
+    if args.chdir is not None:
+        os.chdir(args.chdir)
 
     # Load YAML configuration file
     if args.config is not None:
@@ -91,13 +97,13 @@ if __name__ == "__main__":
     # Log memory usage
     log_memory_usage()
 
-    if args.data:
+    if args.train is not None:
         # Load training dataset
         dataset_config = {
             "template": args.template,
             "max_length": args.max_length
         }
-        dataset_training, dataset_validation, dataset_test = sillm.load_dataset(model.tokenizer, args.data, **dataset_config)
+        dataset_training, dataset_validation, dataset_test = sillm.load_dataset(model.tokenizer, args.train, **dataset_config)
 
         def report_callback(i, loss):
             if args.plot is not None:
