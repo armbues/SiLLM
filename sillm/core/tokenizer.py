@@ -17,6 +17,15 @@ class Tokenizer():
                ) -> str:
         raise NotImplementedError("Class tokenizer.Tokenizer is used for inheritance only")
     
+    def has_template(self) -> bool:
+        return False
+    
+    def apply_chat_template(self,
+                            *args,
+                            **kwargs
+                            ):
+        raise NotImplementedError("Tokenizer does not support chat templates - check has_template() first")
+    
     @property
     def vocab_size(self) -> int:
         raise NotImplementedError("Class tokenizer.Tokenizer is used for inheritance only")
@@ -173,6 +182,21 @@ class TransformerTokenizer(Tokenizer):
             Decoded string.
         """
         return self._model.decode(t)
+    
+    def has_chat_template(self) -> bool:
+        """
+        Check if tokenizer has chat template.
+        """
+        return hasattr(self._model, "apply_chat_template")
+    
+    def apply_chat_template(self,
+                            *args,
+                            **kwargs
+                            ):
+        """
+        Apply chat template.
+        """
+        return self._model.apply_chat_template(*args, **kwargs)
 
     @property
     def vocab_size(self) -> int:

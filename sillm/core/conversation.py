@@ -78,11 +78,12 @@ class Conversation(object):
         else:
             raise ValueError(f"Template could not be loaded")
 
-        self.messages = []
         self.system_prompt = system_prompt
+
+        self.messages = []
         self._text = ""
 
-        self.trigger = self.template["assistant"].split("{}")[0]
+        self.generation_prompt = self.template["assistant"].split("{}")[0]
 
     def __str__(self):
         """
@@ -92,7 +93,14 @@ class Conversation(object):
         """
         return self._text
     
-    def format(self,
+    def clear(self):
+        """
+        Clear conversation.
+        """
+        self.messages = []
+        self._text = ""
+    
+    def _format(self,
                content: Union[str, list],
                role: str = "user"
                ):
@@ -116,12 +124,13 @@ class Conversation(object):
 
     def add_prompt(self,
                    content: str,
-                   trigger: bool = True
+                   add_generation_prompt: bool = True
                    ):
         """
         Add user message to the conversation.
         Args:
             content: User prompt.
+            add_generation_prompt: Whether to add generation prompt.
         Returns:
             Formatted conversation string.
         """
@@ -139,7 +148,7 @@ class Conversation(object):
             }
             self.messages.append(msg_user)
 
-            self._text += self.format((self.system_prompt, content), role="system")
+            self._text += self._format((self.system_prompt, content), role="system")
         else:
             # Add user message
             msg = {
@@ -148,10 +157,10 @@ class Conversation(object):
             }
             self.messages.append(msg)
 
-            self._text += self.format(content, role="user")
+            self._text += self._format(content, role="user")
 
-        if trigger:
-            return self._text + self.trigger
+        if add_generation_prompt:
+            return self._text + self.generation_prompt
         return self._text
     
     def add_response(self,
@@ -170,13 +179,69 @@ class Conversation(object):
         }
         self.messages.append(msg)
 
-        self._text += self.format(content, role="assistant")
+        self._text += self._format(content, role="assistant")
 
         return self._text
     
-    def clear(self):
-        """
-        Clear conversation.
-        """
+class AutoConversation(Conversation):
+    """
+    Wrapper for tokenizer chat templates.
+    """
+    def __init__(self,
+                tokenizer,
+                system_prompt: str = None):
+        self.tokenizer = tokenizer
+        
+        self.system_prompt = system_prompt
+        
         self.messages = []
         self._text = ""
+
+    def add_prompt(self,
+                   content: str,
+                   add_generation_prompt: bool = True
+                   ):
+        """
+        Add user message to the conversation.
+        Args:
+            content: User prompt.
+            add_generation_prompt: Whether to add generation prompt.
+        """
+        if len(self.messages) == 0 and self.system_prompt is not None:
+            # Add system message
+            msg_system = {
+                "role": "system",
+                "content": self.system_prompt
+            }
+            self.messages.append(msg_system)
+        msg_user = {
+            "role": "user",
+            "content": content
+        }
+        self.messages.append(msg_user)
+
+        # Apply chat template
+        self._text = self.tokenizer.apply_chat_template(self.messages, tokenize=False, add_generation_prompt=add_generation_prompt)
+
+        return self._text
+    
+    def add_response(self,
+                     content: str
+                     ):
+        """
+        Add assistant message to the conversation.
+        Args:
+            content: Assistant response.
+        Returns:
+            Formatted conversation string.
+        """
+        msg = {
+            "role": "assistant",
+            "content": content
+        }
+        self.messages.append(msg)
+
+        # Apply chat template
+        self._text = self.tokenizer.apply_chat_template(self.messages, tokenize=False)
+
+        return self._text
