@@ -42,6 +42,9 @@ class Plot:
         """
         plt.figure(figsize=(10, 6))
 
+        ticks = list(set(self.train_x + self.valid_x))
+        plt.xticks(ticks=ticks)
+
         plt.plot(self.train_x, self.train_y, label='Training Loss')
         plt.plot(self.valid_x, self.valid_y, label='Validation Loss')
 

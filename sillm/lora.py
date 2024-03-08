@@ -110,6 +110,7 @@ if __name__ == "__main__":
             
             if args.plot is not None:
                 plot.add_valid_loss(i, val_loss)
+                plot.save(args.plot)
 
         # Model training
         training_config = {
@@ -126,6 +127,9 @@ if __name__ == "__main__":
                     report_callback=report_callback,
                     eval_callback=eval_callback,
                     **training_config)
+
+    if args.plot is not None:
+        plot.save(args.plot)
 
     if args.save_checkpoints:
         # Save final checkpoint
