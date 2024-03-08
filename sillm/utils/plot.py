@@ -40,10 +40,9 @@ class Plot:
         """
         Plot the training and validation losses.
         """
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(15, 9))
 
-        ticks = list(set(self.train_x + self.valid_x))
-        plt.xticks(ticks=ticks)
+        plt.xticks(ticks=self.valid_x)
 
         plt.plot(self.train_x, self.train_y, label='Training Loss')
         plt.plot(self.valid_x, self.valid_y, label='Validation Loss')
@@ -61,6 +60,7 @@ class Plot:
         """
         self.plot()
         plt.savefig(fpath)
+        plt.close()
 
     def show(self):
         """
