@@ -32,7 +32,7 @@ class LoRALinear(nn.Module):
         linear: nn.Linear,
         rank: int = 8,
         alpha: float = 16,
-        dropout: float = 0.05,
+        dropout: float = 0.0,
         scale : float = 10.0
         ):
         """
@@ -62,7 +62,7 @@ class LoRALinear(nn.Module):
                  output_dims: int,
                  rank: int = 8,
                  alpha: float = 16,
-                 dropout: float = 0.05,
+                 dropout: float = 0.0,
                  scale : float = 10.0,
                  bias: bool = False
                  ):
@@ -190,7 +190,7 @@ class TrainableLoRA(LLM):
                   target_modules: str = "query_value",
                   rank: int = 8,
                   alpha: float = 16,
-                  dropout: float = 0.05,
+                  dropout: float = 0.0,
                   scale : float = 10.0
                   ):
         """
@@ -398,16 +398,13 @@ class TrainableLoRA(LLM):
         logging.debug(f"Training learning rate: {learning_rate}")
 
         if grad_checkpoint:
-            logging.info(f"Using gradient checkpointing")
+            logging.info(f"Enabled gradient checkpointing")
             
             for layer in self.model.layers:
                 layer.forward = nn.utils.checkpoint(layer, layer.forward)
         
         # Initialize optimizer
         optimizer = optim.Adam(learning_rate=learning_rate)
-
-        # Create value and gradient function for loss
-        loss_value_and_grad = nn.value_and_grad(self.model, self.loss)
 
         state = [self.model.state, optimizer.state]
 
@@ -418,6 +415,9 @@ class TrainableLoRA(LLM):
             optimizer.update(self.model, grad)
 
             return loss_value, reward, num_tokens
+        
+        # Create value and gradient function for loss
+        loss_value_and_grad = nn.value_and_grad(self.model, self.loss)
 
         losses = []
         rewards = None
