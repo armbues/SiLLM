@@ -4,6 +4,8 @@ import logging
 import math
 import re
 
+from functools import partial
+
 import tqdm
 import numpy as np
 
@@ -361,6 +363,7 @@ class TrainableLoRA(LLM):
               dataset_validation: Dataset,
               batch_size: int = 4,
               learning_rate: float = 1e-5,
+              grad_checkpoint: bool = False,
               epochs: int = 1,
               iterations: int = 0,
               report_steps: int = 10,
@@ -393,15 +396,32 @@ class TrainableLoRA(LLM):
         
         logging.info(f"Training the model for {epochs} epochs of {iterations} batch iterations with batch size {batch_size}")
         logging.debug(f"Training learning rate: {learning_rate}")
+
+        if grad_checkpoint:
+            logging.info(f"Using gradient checkpointing")
+            
+            for layer in self.model.layers:
+                layer.forward = nn.utils.checkpoint(layer, layer.forward)
         
+        # Initialize optimizer
         optimizer = optim.Adam(learning_rate=learning_rate)
 
         # Create value and gradient function for loss
         loss_value_and_grad = nn.value_and_grad(self.model, self.loss)
 
+        state = [self.model.state, optimizer.state]
+
+        # Step function for forward and backward pass
+        @partial(mx.compile, inputs=state, outputs=state)
+        def step(batch):
+            (loss_value, reward, num_tokens), grad = loss_value_and_grad(*batch)
+            optimizer.update(self.model, grad)
+
+            return loss_value, reward, num_tokens
+
         losses = []
         rewards = None
-        num_tokens = 0
+        intv_tokens = 0
 
         # Main training loop
         start = time.perf_counter()
@@ -412,16 +432,12 @@ class TrainableLoRA(LLM):
                 n = epoch * iterations + iter
                 batch = next(dataset_training.iterate_batches(batch_size, train=True))
 
-                # Forward and backward pass
-                (loss_value, reward, toks), grad = loss_value_and_grad(*batch)
-
-                # Model update
-                optimizer.update(self.model, grad)
-                mx.eval(self.model.parameters(), optimizer.state, loss_value)
+                loss_value, reward, num_tokens = step(batch)
+                mx.eval(state, loss_value, reward, num_tokens)
 
                 # Record loss and number of tokens
                 losses.append(loss_value.item())
-                num_tokens += toks.item()
+                intv_tokens += num_tokens.item()
 
                 # Record rewards
                 if reward is not None:
@@ -435,9 +451,9 @@ class TrainableLoRA(LLM):
                     train_loss = np.mean(losses)
                     stop = time.perf_counter()
 
-                    pbar_epochs.write(f"#{n + 1}:\tTraining loss    {train_loss:.3f}\t{float(num_tokens) / (stop - start):.3f} tok/sec")
+                    pbar_epochs.write(f"#{n + 1}:\tTraining loss    {train_loss:.3f}\t{float(intv_tokens) / (stop - start):.3f} tok/sec")
                     if rewards is not None:
-                        pbar_epochs.write(f"#{n + 1}:\tTraining rewards {str(np.mean(rewards, axis=0))}")
+                        pbar_epochs.write(f"#{n + 1}:\tTraining reward  {str(np.mean(rewards, axis=0))}")
                         rewards = None
                     pbar_epochs.refresh()
 
@@ -445,7 +461,7 @@ class TrainableLoRA(LLM):
                         report_callback(n + 1, train_loss)
                     
                     losses = []
-                    num_tokens = 0
+                    intv_tokens = 0
                     start = time.perf_counter()
 
                 # Report validation loss if needed

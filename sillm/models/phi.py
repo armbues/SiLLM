@@ -119,12 +119,11 @@ class TransformerBlock(nn.Module):
         self.attention_norm = LayerNorm(args.dim, eps=args.norm_eps)
         self.feed_forward = FeedForward(args=args)
 
-    def __call__(
-            self,
-            x: mx.array,
-            mask: Optional[mx.array] = None,
-            cache: Optional[Tuple[mx.array, mx.array]] = None,
-            ) -> mx.array:
+    def forward(self,
+                x: mx.array,
+                mask: Optional[mx.array] = None,
+                cache: Optional[Tuple[mx.array, mx.array]] = None,
+                ) -> mx.array:
         h = self.attention_norm(x)
         attn_h, cache = self.attention(h, mask, cache)
         ff_h = self.feed_forward(h)

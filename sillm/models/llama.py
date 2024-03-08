@@ -129,7 +129,7 @@ class TransformerBlock(nn.Module):
         self.attention_norm = RMSNorm(args.dim, eps=args.norm_eps)
         self.ffn_norm = RMSNorm(args.dim, eps=args.norm_eps)
 
-    def __call__(
+    def forward(
             self,
             x: mx.array,
             mask: Optional[mx.array] = None,
@@ -196,6 +196,6 @@ class Model(BaseModel):
             cache = [None] * len(self.layers)
 
         for e, layer in enumerate(self.layers):
-            h, cache[e] = layer(h, mask, cache[e])
+            h, cache[e] = layer.forward(h, mask, cache[e])
 
         return self.output(self.norm(h)), cache

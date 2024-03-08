@@ -105,7 +105,7 @@ class TransformerBlock(nn.Module):
         self.ffn_norm = llama.RMSNorm(args.dim, eps=args.norm_eps)
         self.args = args
 
-    def __call__(self,
+    def forward(self,
                  x: mx.array,
                  mask: mx.array = None,
                  cache = None,
@@ -166,7 +166,7 @@ class Model(BaseModel):
             cache = [None] * len(self.layers)
 
         for e, layer in enumerate(self.layers):
-            h, cache[e], _ = layer(h, mask, cache[e])
+            h, cache[e], _ = layer.forward(h, mask, cache[e])
 
         return self.output(self.norm(h)), cache
 

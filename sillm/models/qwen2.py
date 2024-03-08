@@ -103,7 +103,7 @@ class Model(llama.Model):
             cache = [None] * len(self.layers)
 
         for e, layer in enumerate(self.layers):
-            h, cache[e] = layer(h, mask, cache[e])
+            h, cache[e] = layer.forward(h, mask, cache[e])
 
         if self.output is None:
             out = self.norm(h) @ self.tok_embeddings.weight.T

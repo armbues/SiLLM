@@ -20,8 +20,9 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output_dir", default=None, type=str, help="Output directory for adapter weights")
     parser.add_argument("-s", "--save_checkpoints", default=False, action="store_true", help="Save model checkpoints to output directory")
     parser.add_argument("-m", "--save_merge", default=None, type=str, help="Save merged model weights to .safetensors file")
-    parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama-2, alpaca, etc.)")
+    parser.add_argument("-g", "--grad_checkpoint", default=False, action="store_true", help="Use gradient checkpointing")
     parser.add_argument("--max_length", default=1024, type=int, help="Max token length per training dataset entry (default: 1024)")
+    parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama-2, alpaca, etc.)")
     parser.add_argument("--layers", default=-1, type=int, help="Layers to use for LoRA (default: -1 for all layers)")
     parser.add_argument("--target_modules", default="query_value", type=str, help="Target modules to use for LoRA: query_value, all_linear")
     parser.add_argument("--rank", default=8, type=int, help="Rank to use for LoRA (default: 8)")
@@ -114,6 +115,7 @@ if __name__ == "__main__":
 
         # Model training
         training_config = {
+            "grad_checkpoint":      args.grad_checkpoint,
             "batch_size":           args.batch_size,
             "learning_rate":        args.learning_rate,
             "epochs":               args.epochs,
