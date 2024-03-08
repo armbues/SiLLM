@@ -7,7 +7,7 @@ import mlx.core as mx
 
 import sillm
 import sillm.utils as utils
-from sillm.utils.common import load_yaml, log_arguments, log_memory_usage
+from sillm.utils.common import load_yaml, log_arguments
 
 if __name__ == "__main__":
     # Parse commandline arguments
@@ -95,7 +95,7 @@ if __name__ == "__main__":
         plot = utils.Plot()
     
     # Log memory usage
-    log_memory_usage()
+    logging.debug(f"Peak memory usage: {(mx.metal.get_peak_memory() // (1024 ** 2)):,} MB")
 
     if args.train is not None:
         # Load training dataset

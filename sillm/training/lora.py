@@ -454,6 +454,7 @@ class TrainableLoRA(LLM):
                     val_loss = self.evaluate(dataset_validation, batch_size, validation_batches)
                     start = time.perf_counter()
                     pbar_epochs.write(f"#{n + 1}:\tValidation loss  {val_loss:.3f}\t{(start - stop):.3f} sec")
+                    pbar_epochs.write(f"#{n + 1}:\tPeak memory      {(mx.metal.get_peak_memory() // (1024 ** 2)):,} MB")
 
                     # Eval callback
                     if eval_callback is not None:
