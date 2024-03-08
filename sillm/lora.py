@@ -103,14 +103,14 @@ if __name__ == "__main__":
                 plot.add_train_loss(i, loss)
         
         def eval_callback(i, val_loss):
+            if args.plot is not None:
+                plot.add_valid_loss(i, val_loss)
+                plot.save(args.plot)
+
             if i > 1 and args.save_checkpoints and args.output_dir is not None:
                 fpath_ckpt = model.save_checkpoint(args.output_dir, i)
 
                 return f"Saved checkpoint to {fpath_ckpt}"
-            
-            if args.plot is not None:
-                plot.add_valid_loss(i, val_loss)
-                plot.save(args.plot)
 
         # Model training
         training_config = {
