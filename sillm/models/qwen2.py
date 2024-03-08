@@ -21,7 +21,6 @@ class Attention(llama.Attention):
         self.n_heads: int = args.n_heads
         self.n_kv_heads: int = args.n_kv_heads
 
-        self.repeats = self.n_heads // self.n_kv_heads
         self.scale = self.args.head_dim ** -0.5
 
         self.wq = nn.Linear(args.dim, args.n_heads * args.head_dim, bias=True)
