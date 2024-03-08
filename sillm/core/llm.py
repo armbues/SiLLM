@@ -212,8 +212,7 @@ class LLM():
                  prompt: str,
                  temp: float = 0.0,
                  num_tokens: int = 1024,
-                 flush: int = 5,
-                 stop_words: str = ""
+                 flush: int = 5
                  ):
         """
         Iterator for generating tokens.
@@ -225,13 +224,12 @@ class LLM():
         Yields:
             Tuple of generated text and metadata.
         """
-        yield from generate(self.model, self.tokenizer, prompt=prompt, temp=temp, num_tokens=num_tokens, flush=flush, stop_words=stop_words)
+        yield from generate(self.model, self.tokenizer, prompt=prompt, temp=temp, num_tokens=num_tokens, flush=flush)
 
     def completion(self,
                    prompt: str,
                    temp: float = 0.0,
-                   num_tokens: int = 1024,
-                   stop_words: str = None
+                   num_tokens: int = 1024
                    ) -> str:
         """
         Generate a completion and wait for all tokens.
@@ -242,15 +240,14 @@ class LLM():
         Returns:
             Generated completion.
         """
-        return ''.join([t[0] for t in generate(self.model, self.tokenizer, prompt=prompt, temp=temp, num_tokens=num_tokens, stop_words=stop_words)])
+        return ''.join([t[0] for t in generate(self.model, self.tokenizer, prompt=prompt, temp=temp, num_tokens=num_tokens)])
 
 def generate(model,
              tokenizer: Tokenizer,
              prompt: str,
              temp: float = 0.0,
              num_tokens: int = 1024,
-             flush: int = 5,
-             stop_words: list[str] = None
+             flush: int = 5
              ):
     """
     Generic iterator for generating tokens.
@@ -269,10 +266,7 @@ def generate(model,
 
     # Define stop tokens
     stop_tokens = [tokenizer.eos_id, tokenizer.bos_id]
-    if stop_words is not None:
-        for s in stop_words:
-            stop_tokens += tokenizer.encode(s, bos=False)[:1]
-
+    
     # Initialize metadata
     metadata = {
         "runtime": 0.0,

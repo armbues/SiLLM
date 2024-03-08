@@ -77,9 +77,9 @@ if __name__ == "__main__":
         "flush": args.flush
     }
 
+    # Set conversation template
     if args.template:
         conversation = sillm.Conversation(template=args.template, system_prompt=args.system_prompt)
-        generate_args["stop_words"] = conversation.stop_words
     else:
         conversation = None
 

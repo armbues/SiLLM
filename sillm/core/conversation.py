@@ -8,38 +8,32 @@ default_templates = {
     "llama-2": {
         "system":       "[INST] <<SYS>>\n{}\n<</SYS>>\n{}[/INST] ",
         "user":         "[INST]{}[/INST] ",
-        "assistant":    "{}\n",
-        "stop":         ["[INST]"]
+        "assistant":    "{}\n"
     },
     "chatml": {
         "system":       "<|im_start|>system\n{}<|im_end|>\n",
         "user":         "<|im_start|>user\n{}<|im_end|>\n",
-        "assistant":    "<|im_start|>assistant\n{}<|im_end|>\n",
-        "stop":         ["<|im_end|>", "<|im_start|>"]
+        "assistant":    "<|im_start|>assistant\n{}<|im_end|>\n"
     },
     "alpaca": {
         "system":       "### System Prompt\n{}\n\n### User Message\n{}\n\n",
         "user":         "### User Message\n{}\n\n",
-        "assistant":    "### Assistant\n{}\n\n",
-        "stop":         ["###"]
+        "assistant":    "### Assistant\n{}\n\n"
     },
     "vicuna": {
         "system":       "{}\nUSER: {}\n",
         "user":         "USER: {}\n",
-        "assistant":    "ASSISTANT: {}\n",
-        "stop":         ["USER:"]
+        "assistant":    "ASSISTANT: {}\n"
     },
     "gemma": {
         "system":       "<start_of_turn>user\n{}\n{}<end_of_turn>\n", # See https://ai.google.dev/gemma/docs/formatting#system-instructions
         "user":         "<start_of_turn>user\n{}<end_of_turn>\n",
-        "assistant":    "<start_of_turn>model\n{}<end_of_turn>\n",
-        "stop":         ["<end_of_turn>", "<start_of_turn>"]
+        "assistant":    "<start_of_turn>model\n{}<end_of_turn>\n"
     },
     "phi": {
         "system":       "{}\nInstruct: {}\n",
         "user":         "Instruct: {}\n",
-        "assistant":    "Output: {}\n",
-        "stop":         []
+        "assistant":    "Output: {}\n"
     }
 }
 
@@ -72,7 +66,7 @@ def format_message(content: Union[str, list],
 
 class Conversation(object):
     """
-    Wrapper for conversations.
+    Wrapper for conversation templates.
     """
     def __init__(self,
                 template: str = "llama-2",
@@ -89,7 +83,6 @@ class Conversation(object):
         self._text = ""
 
         self.trigger = self.template["assistant"].split("{}")[0]
-        self.stop_words = self.template["stop"]
 
     def __str__(self):
         """
