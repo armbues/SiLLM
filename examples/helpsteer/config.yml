@@ -5,4 +5,3 @@ template:           llama-2
 max_length:         1024
 learning_rate:      1.0e-7
 epochs:             1
-plot:               loss.png

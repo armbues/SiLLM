@@ -14,4 +14,4 @@ if __name__ == "__main__":
     # Load model
     model = sillm.load(args.model)
 
-    mmlu = datasets.load_dataset("cais/mmlu", split=['all'])
+    mmlu = datasets.load_dataset("cais/mmlu", "all", split="test")
