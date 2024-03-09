@@ -187,7 +187,7 @@ def load_model_dir(model_path: str) -> LLM:
         raise ValueError("No weights files found")
 
     if model_format == ModelFormat.HUGGINGFACE:
-        logger.debug("Permuting HuggingFace weights")
+        logger.debug("Disabling rope_traditional for HuggingFace model")
 
         model_args.rope_traditional = False
 

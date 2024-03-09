@@ -59,7 +59,6 @@ if __name__ == "__main__":
 
         # Initialize LoRA layers
         model.init_lora()
-        # TODO load/save LoRA config
 
         # Load and merge adapter file
         model.load_adapters(args.input_adapters)

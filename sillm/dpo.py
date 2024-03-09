@@ -17,7 +17,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output_dir", default=None, type=str, help="Output directory for adapter weights")
     parser.add_argument("-s", "--save_checkpoints", default=False, action="store_true", help="Save model checkpoints to output directory")
     parser.add_argument("-m", "--save_merge", default=None, type=str, help="Save merged model weights to .safetensors file")
-    parser.add_argument("-g", "--grad_checkpoint", default=False, action="store_true", help="Use gradient checkpointing")
+    # parser.add_argument("-g", "--grad_checkpoint", default=False, action="store_true", help="Use gradient checkpointing")
     parser.add_argument("--max_length", default=1024, type=int, help="Max token length per training dataset entry (default: 1024)")
     parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama-2, alpaca, etc.)")
     parser.add_argument("--layers", default=-1, type=int, help="Layers to use for LoRA (default: -1 for all layers)")
@@ -108,18 +108,17 @@ if __name__ == "__main__":
                 plot.add_train_loss(i, loss)
 
         def eval_callback(i, val_loss):
-            if args.save_checkpoints and args.output_dir is not None:
-                fpath_ckpt = model.save_checkpoint(args.output_dir, i)
-                
-                return f"Saved checkpoint to {fpath_ckpt}"
-            
             if args.plot is not None:
                 plot.add_valid_loss(i, val_loss)
                 plot.save(args.plot)
+        
+            if i > 1 and args.save_checkpoints and args.output_dir is not None:
+                fpath_ckpt = model.save_checkpoint(args.output_dir, i)
+                
+                return f"Saved checkpoint to {fpath_ckpt}"
 
         # Model training
         training_config = {
-            "grad_checkpoint":      args.grad_checkpoint,
             "batch_size":           args.batch_size,
             "learning_rate":        args.learning_rate,
             "epochs":               args.epochs,
@@ -130,6 +129,7 @@ if __name__ == "__main__":
         }
         model.train(dataset_training,
                     dataset_validation,
+                    compiled_step=False,
                     eval_callback=eval_callback,
                     **training_config)
         

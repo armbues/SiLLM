@@ -365,6 +365,7 @@ class TrainableLoRA(LLM):
               dataset_validation: Dataset,
               batch_size: int = 4,
               learning_rate: float = 1e-5,
+              compiled_step: bool = True,
               grad_checkpoint: bool = False,
               epochs: int = 1,
               iterations: int = 0,
@@ -399,24 +400,28 @@ class TrainableLoRA(LLM):
         logger.info(f"Training the model for {epochs} epochs of {iterations} batch iterations with batch size {batch_size}")
         logger.debug(f"Training learning rate: {learning_rate}")
 
+        optimizer = optim.Adam(learning_rate=learning_rate)
+
         if grad_checkpoint:
             logger.info(f"Enabled gradient checkpointing")
+
+            if not compiled_step:
+                logger.warning(f"Gradient checkpointing requires compiled step function")
+                compiled_step = True
             
             for layer in self.model.layers:
                 layer.forward = nn.utils.checkpoint(layer, layer.forward)
-        
-        # Initialize optimizer
-        optimizer = optim.Adam(learning_rate=learning_rate)
 
-        state = [self.model.state, optimizer.state]
+        if compiled_step:
+            state = [self.model.state, optimizer.state]
 
-        # Step function for forward and backward pass
-        @partial(mx.compile, inputs=state, outputs=state)
-        def step(batch):
-            (loss_value, reward, num_tokens), grad = loss_value_and_grad(*batch)
-            optimizer.update(self.model, grad)
+            # Step function for forward and backward pass
+            @partial(mx.compile, inputs=state, outputs=state)
+            def step(batch):
+                (loss_value, reward, num_tokens), grad = loss_value_and_grad(*batch)
+                optimizer.update(self.model, grad)
 
-            return loss_value, reward, num_tokens
+                return loss_value, reward, num_tokens
         
         # Create value and gradient function for loss
         loss_value_and_grad = nn.value_and_grad(self.model, self.loss)
@@ -434,8 +439,13 @@ class TrainableLoRA(LLM):
                 n = epoch * iterations + iter
                 batch = next(dataset_training.iterate_batches(batch_size, train=True))
 
-                loss_value, reward, num_tokens = step(batch)
-                mx.eval(state, loss_value, reward, num_tokens)
+                if compiled_step:
+                    loss_value, reward, num_tokens = step(batch)
+                else:
+                    (loss_value, reward, num_tokens), grad = loss_value_and_grad(*batch)
+                    optimizer.update(self.model, grad)
+
+                mx.eval(loss_value, reward, num_tokens)
 
                 # Record loss and number of tokens
                 losses.append(loss_value.item())
