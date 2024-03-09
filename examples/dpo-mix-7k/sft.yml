@@ -1,0 +1,7 @@
+train:              data/sft/
+output_dir:         adapters/sft/
+save_checkpoints:   True
+template:           chatml
+max_length:         1024
+learning_rate:      1.0e-6
+epochs:             1
