@@ -1,4 +1,3 @@
-from functools import partial
 from typing import Optional, Tuple
 
 import mlx.core as mx

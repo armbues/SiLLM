@@ -7,6 +7,8 @@ from sillm.core.llm import LLM, generate
 from sillm.models.args import ModelArgs
 from sillm.training.lora import TrainableLoRA
 
+logger = logging.getLogger("sillm")
+
 class TrainableDPO(TrainableLoRA):
     """
     Trainable DPO model wrapper.
@@ -58,7 +60,7 @@ class TrainableDPO(TrainableLoRA):
             self.reference.freeze()
             self.reference.train(mode=True)
 
-        logging.info(f"Initialized DPO with reference model")
+        logger.info(f"Initialized DPO with reference model")
 
     def comparison(self,
                    prompt: str,

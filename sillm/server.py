@@ -1,11 +1,11 @@
 import sys
 import argparse
-import logging
 
 import fastapi
 import uvicorn
 
 import sillm
+import sillm.utils as utils
 
 app = fastapi.FastAPI()
 
@@ -33,12 +33,12 @@ if __name__ == "__main__":
 
     # Initialize logging
     log_level = 40 - (10 * args.verbose) if args.verbose > 0 else 0
-    logging.basicConfig(level=log_level, stream=sys.stdout, format="%(asctime)s %(levelname)s %(message)s")
+    logger = utils.init_logger(log_level)
     
     # Load model
     model = sillm.load(args.model)
     app.models = [model]
 
-    logging.warning("API server is not fully implemented yet.")
+    logger.warning("API server is not fully implemented yet.")
 
     uvicorn.run(app, host=args.host, port=args.port)

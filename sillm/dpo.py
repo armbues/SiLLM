@@ -1,13 +1,10 @@
-import sys
 import os
 import argparse
-import logging
 
 import mlx.core as mx
 
 import sillm
 import sillm.utils as utils
-from sillm.utils.common import load_yaml, log_arguments
 
 if __name__ == "__main__":
     # Parse commandline arguments
@@ -48,15 +45,15 @@ if __name__ == "__main__":
 
     # Load YAML configuration file
     if args.config is not None:
-        load_yaml(args.config, args)
+        utils.load_yaml(args.config, args)
     
     # Initialize logging
     log_level = 40 - (10 * args.verbose) if args.verbose > 0 else 0
-    logging.basicConfig(level=log_level, stream=sys.stdout, format="%(asctime)s %(levelname)s %(message)s")
+    logger = utils.init_logger(log_level)
 
     # Log commandline arguments
     if log_level <= 10:
-        log_arguments(args.__dict__)
+        utils.log_arguments(args.__dict__)
 
     # Load base model
     model = sillm.load(args.model)
@@ -96,7 +93,7 @@ if __name__ == "__main__":
         plot = utils.Plot()
     
     # Log memory usage
-    logging.debug(f"Peak memory usage: {(mx.metal.get_peak_memory() // (1024 ** 2)):,} MB")
+    logger.debug(f"Peak memory usage: {(mx.metal.get_peak_memory() // (1024 ** 2)):,} MB")
 
     if args.train is not None:
         # Load training dataset

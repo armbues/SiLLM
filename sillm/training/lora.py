@@ -18,6 +18,8 @@ from sillm.core.llm import LLM
 from sillm.models.args import ModelArgs
 from sillm.training.dataset import Dataset
 
+logger = logging.getLogger("sillm")
+
 ########
 # Based on mlx-examples:
 # https://github.com/ml-explore/mlx-examples/blob/e74889d0fa0fb49d95bfdf6a1dcad907713eb50e/lora/models.py#L55
@@ -231,20 +233,20 @@ class TrainableLoRA(LLM):
                     if re.search(r"\.attention\.(wq|wv)$", key)
                 ]
             if len(self._lora_modules) == 0:
-                logging.error(f"No target modules found for LoRA: {target_modules}")
+                logger.error(f"No target modules found for LoRA: {target_modules}")
             self.model.update_modules(tree_unflatten(self._lora_modules))
 
             # Enable training mode
             self.model.train(mode=True)
 
-            logging.info(f"Initialized LoRA with rank {rank} for {num_layers} layers")
-            logging.debug(f"LoRA target modules: {target_modules}")
-            logging.debug(f"LoRA parameters: Alpha {alpha}, Dropout {dropout}, Scale {scale}")
+            logger.info(f"Initialized LoRA with rank {rank} for {num_layers} layers")
+            logger.debug(f"LoRA target modules: {target_modules}")
+            logger.debug(f"LoRA parameters: Alpha {alpha}, Dropout {dropout}, Scale {scale}")
 
             trainable_params = 0
             for _, module in self._lora_modules:
                 trainable_params += module.lora_size
-            logging.debug(f"LoRA trainable parameters: {trainable_params/ 10**6:.2f}M")
+            logger.debug(f"LoRA trainable parameters: {trainable_params/ 10**6:.2f}M")
 
     def merge_and_unload_lora(self):
         """
@@ -257,7 +259,7 @@ class TrainableLoRA(LLM):
             ]
             self.model.update_modules(tree_unflatten(merged_modules))
 
-            logging.info(f"Merged LoRA layers back into model")
+            logger.info(f"Merged LoRA layers back into model")
 
         self._lora = None
         self._lora_modules = []
@@ -314,9 +316,9 @@ class TrainableLoRA(LLM):
         if self._lora is not None:
             self.model.load_weights(adapter_path, strict=False)
         
-            logging.info(f"Loaded adapter weights from {adapter_path}")
+            logger.info(f"Loaded adapter weights from {adapter_path}")
         else:
-            logging.error(f"LoRA not initialized, cannot load adapter weights")
+            logger.error(f"LoRA not initialized, cannot load adapter weights")
 
     ########
     # Based on mlx-examples:
@@ -394,11 +396,11 @@ class TrainableLoRA(LLM):
         # Calculate number of validation batches
         validation_batches = validation_samples // batch_size
         
-        logging.info(f"Training the model for {epochs} epochs of {iterations} batch iterations with batch size {batch_size}")
-        logging.debug(f"Training learning rate: {learning_rate}")
+        logger.info(f"Training the model for {epochs} epochs of {iterations} batch iterations with batch size {batch_size}")
+        logger.debug(f"Training learning rate: {learning_rate}")
 
         if grad_checkpoint:
-            logging.info(f"Enabled gradient checkpointing")
+            logger.info(f"Enabled gradient checkpointing")
             
             for layer in self.model.layers:
                 layer.forward = nn.utils.checkpoint(layer, layer.forward)

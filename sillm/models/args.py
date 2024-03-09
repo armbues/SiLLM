@@ -5,6 +5,8 @@ import dataclasses
 
 from sillm.utils.mapping import map_config
 
+logger = logging.getLogger("sillm")
+
 @dataclasses.dataclass
 class ModelArgs:
     """
@@ -34,9 +36,9 @@ class ModelArgs:
         for k, v in dataclasses.asdict(self).items():
             if isinstance(v, dict):
                 for k2, v2 in v.items():
-                    logging.debug(f"Config {k}.{k2}: {v2}")
+                    logger.debug(f"Config {k}.{k2}: {v2}")
             else:
-                logging.debug(f"Config {k}: {v}")
+                logger.debug(f"Config {k}: {v}")
     
     def fix_config(self, weights):
         """
@@ -65,7 +67,7 @@ class ModelArgs:
                 ArgsClass = LlamaArgs
         if ArgsClass is None:
             ArgsClass = LlamaArgs
-            logging.warn(f"No model type specified - falling back to `llama` config")
+            logger.warn(f"No model type specified - falling back to `llama` config")
 
         fields = ModelArgs.__annotations__
         fields.update(ArgsClass.__annotations__)

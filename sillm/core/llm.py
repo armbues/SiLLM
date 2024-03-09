@@ -11,6 +11,8 @@ import sillm.models as models
 import sillm.models.args as args
 from sillm.training.dataset import Dataset
 
+logger = logging.getLogger("sillm")
+
 model_map = {
     "llama":        models.llama.Model,
     "mistral":      models.llama.Model,
@@ -103,16 +105,16 @@ class LLM():
             if name not in weights:
                 result = False
 
-                logging.warn(f"Key {name} not found in weights")
+                logger.warn(f"Key {name} not found in weights")
             elif weight.shape != weights[name].shape:
                 result = False
 
-                logging.warn(f"Shape mismatch for key {name}: {weight.shape} != {weights[name].shape}")
+                logger.warn(f"Shape mismatch for key {name}: {weight.shape} != {weights[name].shape}")
 
         model_keys = {name for name, _ in model_params}
         for name in weights:
             if name not in model_keys:
-                logging.debug(f"Unused key {name} in weights")
+                logger.debug(f"Unused key {name} in weights")
 
         return result
 
@@ -130,7 +132,7 @@ class LLM():
         }
         mx.save_safetensors(weights_path, state, metadata=metadata)
 
-        logging.info(f"Saved model weights to {weights_path}")
+        logger.info(f"Saved model weights to {weights_path}")
 
     def quantize(self,
                  group_size: int = 32,
@@ -160,16 +162,16 @@ class LLM():
 
             self._update_names()
 
-            logging.info(f"Quantized model with group size {group_size} and {bits} bits")
+            logger.info(f"Quantized model with group size {group_size} and {bits} bits")
         else:
-            logging.warn(f"Model is already quantized with group size {group_size} and {bits} bits")
+            logger.warn(f"Model is already quantized with group size {group_size} and {bits} bits")
 
     def dequantize(self):
         """
         Dequantize model.
         """
         if self._quantization is None:
-            logging.warn(f"Model is not quantized")
+            logger.warn(f"Model is not quantized")
         else:
             layers = []
             for name, module in self.model.named_modules():
@@ -189,7 +191,7 @@ class LLM():
 
             self._update_names()
 
-            logging.info(f"Dequantized model")
+            logger.info(f"Dequantized model")
 
     def perplexity(self,
                    dataset: Dataset,

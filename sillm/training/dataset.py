@@ -8,6 +8,8 @@ import mlx.core as mx
 
 from sillm.core.conversation import format_message
 
+logger = logging.getLogger("sillm")
+
 class Dataset:
     """
     Dataset wrapper.
@@ -68,7 +70,7 @@ class DatasetCompletion(Dataset):
                 num_outsized += 1
 
         if num_outsized > 0:
-            logging.debug(f"Removed {num_outsized} entries from dataset due to max. length {max_length}")
+            logger.debug(f"Removed {num_outsized} entries from dataset due to max. length {max_length}")
     
     ########
     # Based on mlx-examples:
@@ -151,7 +153,7 @@ class DatasetInstruct(Dataset):
                 num_outsized += 1
 
         if num_outsized > 0:
-            logging.debug(f"Removed {num_outsized} entries from dataset due to max. length {max_length}")
+            logger.debug(f"Removed {num_outsized} entries from dataset due to max. length {max_length}")
 
     def iterate_batches(self,
                         batch_size: int,
@@ -239,7 +241,7 @@ class DatasetDPO(Dataset):
                 num_outsized += 1
         
         if num_outsized > 0:
-            logging.debug(f"Removed {num_outsized} entries from dataset due to max. length {max_length}")
+            logger.debug(f"Removed {num_outsized} entries from dataset due to max. length {max_length}")
 
     def iterate_batches(self,
                         batch_size: int,
@@ -355,6 +357,6 @@ def load_dataset(tokenizer,
         dataset = dataset_class(entries_split[name], tokenizer, template=template, max_length=max_length)
         datasets.append(dataset)
 
-        logging.info(f"Loaded {name} dataset with {len(dataset)} entries")
+        logger.info(f"Loaded {name} dataset with {len(dataset)} entries")
 
     return datasets

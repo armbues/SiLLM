@@ -1,3 +1,4 @@
+import sys
 import logging
 
 import numpy as np
@@ -22,6 +23,20 @@ def load_yaml(fpath, args):
         for key, value in config.items():
             setattr(args, key, value)
 
+def init_logger(log_level):
+    logger = logging.getLogger("sillm")
+
+    # Set log level
+    logger.setLevel(log_level)
+
+    # Initialize formatter and handler
+    formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    return logger
+
 def log_arguments(args):
     """
     Log arguments.
@@ -29,5 +44,7 @@ def log_arguments(args):
     Args:
         args: The parsed arguments.
     """
+    logger = logging.getLogger("sillm")
+
     for key, value in args.items():
-        logging.debug(f"Argument: {key} = {value}")
+        logger.debug(f"Argument: {key} = {value}")

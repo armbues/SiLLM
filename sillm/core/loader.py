@@ -9,6 +9,8 @@ from .tokenizer import GGUFTokenizer, TransformerTokenizer, SentencePieceTokeniz
 from sillm.models.args import ModelArgs
 from sillm.utils.mapping import map_key, map_config
 
+logger = logging.getLogger("sillm")
+
 class ModelFormat(enum.Enum):
     """
     Model type enumeration.
@@ -75,7 +77,7 @@ def load_gguf_file(model_path: str) -> LLM:
     Returns:
         SiLLM model.
     """
-    logging.debug(f"Loading GGUF file {model_path}")
+    logger.debug(f"Loading GGUF file {model_path}")
     gguf_weights, metadata = mx.load(model_path, return_metadata=True)
 
     # Map metadata to configuration
@@ -88,13 +90,13 @@ def load_gguf_file(model_path: str) -> LLM:
         mlx_key = map_key(gguf_key)
 
         if mlx_key is None:
-            logging.warn(f"Unknown key: {gguf_key}")
+            logger.warn(f"Unknown key: {gguf_key}")
         else:
             weights[mlx_key] = value
 
     # Map quantization configuration
     gguf_file_type = metadata["general.file_type"].item()
-    logging.debug(f"GGUF file type: {gguf_file_type}")
+    logger.debug(f"GGUF file type: {gguf_file_type}")
     quantization = None
     if gguf_file_type == 0 or gguf_file_type == 1:
         # No quantization
@@ -104,7 +106,7 @@ def load_gguf_file(model_path: str) -> LLM:
     elif gguf_file_type == 7:
         quantization = {"group_size": 32, "bits": 8}
     else:
-        logging.warn(f"Unsupported GGUF file type: {gguf_file_type}")
+        logger.warn(f"Unsupported GGUF file type: {gguf_file_type}")
     model_args.quantization = quantization
 
     # Fix configuration
@@ -113,7 +115,7 @@ def load_gguf_file(model_path: str) -> LLM:
 
     # Load tokenizer
     tokenizer = GGUFTokenizer(metadata)
-    logging.info("Loaded tokenizer from GGUF metadata")
+    logger.info("Loaded tokenizer from GGUF metadata")
 
     # Initialize model
     model = LLM(tokenizer, model_args)
@@ -140,7 +142,7 @@ def load_gguf_file(model_path: str) -> LLM:
     model.update_weights(weights)
 
     total_params = sum(v.size for v in weights.values())
-    logging.info(f"Loaded model weights with {total_params/10**9:.2f}B total parameters")
+    logger.info(f"Loaded model weights with {total_params/10**9:.2f}B total parameters")
 
     return model
 
@@ -162,10 +164,10 @@ def load_model_dir(model_path: str) -> LLM:
             model_args = ModelArgs.load_file(config_path)
             break
         else:
-            logging.debug(f"No config file {config_path} not found")
+            logger.debug(f"No config file {config_path} not found")
     if model_args is None:
         raise ValueError(f"Configuration could not be loaded from {model_path}")
-    logging.info(f"Loaded model config from {config_path}")
+    logger.info(f"Loaded model config from {config_path}")
 
     # Load weights
     weights_files_npz = sorted(list(model_path.glob("weights*.npz")))
@@ -185,7 +187,7 @@ def load_model_dir(model_path: str) -> LLM:
         raise ValueError("No weights files found")
 
     if model_format == ModelFormat.HUGGINGFACE:
-        logging.debug("Permuting HuggingFace weights")
+        logger.debug("Permuting HuggingFace weights")
 
         model_args.rope_traditional = False
 
@@ -203,8 +205,8 @@ def load_model_dir(model_path: str) -> LLM:
         if tokenizer_path.exists():
             tokenizer = TransformerTokenizer(str(model_path), model_args)
     if tokenizer is None:
-        logging.error(f"No tokenizer found in {model_path}")
-    logging.info(f"Loaded tokenizer from {tokenizer_path}")
+        logger.error(f"No tokenizer found in {model_path}")
+    logger.info(f"Loaded tokenizer from {tokenizer_path}")
 
     # Initialize model
     model = LLM(tokenizer, model_args)
@@ -221,7 +223,7 @@ def load_model_dir(model_path: str) -> LLM:
     model.update_weights(weights)
 
     total_params = sum(v.size for v in weights.values())
-    logging.info(f"Loaded model weights with {total_params/10**9:.2f}B total parameters")
+    logger.info(f"Loaded model weights with {total_params/10**9:.2f}B total parameters")
 
     return model
 
@@ -236,23 +238,23 @@ def load_mlx_weights(weights_files) -> dict:
     weights = {}
     format = ModelFormat.UNKNOWN
     for weights_path in weights_files:
-        logging.debug(f"Loading model weights file {weights_path}")
+        logger.debug(f"Loading model weights file {weights_path}")
         weights_shard = mx.load(str(weights_path))
 
         # Guess model format according to key names
         if format == ModelFormat.UNKNOWN:
             format = ModelFormat.guess_from_weights(weights_shard)
-            logging.debug(f"Guessing model format: {format}")
+            logger.debug(f"Guessing model format: {format}")
 
         for key, value in weights_shard.items():
             mlx_key = map_key(key)
             mx.eval(value)
 
             if mlx_key is None:
-                logging.warning(f"Unknown key: {key}")
+                logger.warning(f"Unknown key: {key}")
             else:
                 if mlx_key in weights:
-                    logging.warning(f"Duplicate key: {mlx_key} {value.shape}")
+                    logger.warning(f"Duplicate key: {mlx_key} {value.shape}")
 
                 weights[mlx_key] = value
 
@@ -269,22 +271,22 @@ def load_torch_weights(weights_files) -> dict:
     weights = {}
     format = ModelFormat.UNKNOWN
     for weights_path in weights_files:
-        logging.debug(f"Loading model weights file {weights_path}")
+        logger.debug(f"Loading model weights file {weights_path}")
         weights_shard = load_torch_file(str(weights_path))
 
         # Guess model format according to key names
         if format == ModelFormat.UNKNOWN:
             format = ModelFormat.guess_from_weights(weights_shard)
-            logging.info(f"Guessing model format: {format}")
+            logger.info(f"Guessing model format: {format}")
 
         for key, value in weights_shard.items():
             mlx_key = map_key(key)
 
             if mlx_key is None:
-                logging.warning(f"Unknown key: {key}")
+                logger.warning(f"Unknown key: {key}")
             else:
                 if mlx_key in weights:
-                    logging.warning(f"Duplicate key: {mlx_key}")
+                    logger.warning(f"Duplicate key: {mlx_key}")
 
                 weights[mlx_key] = value
 
