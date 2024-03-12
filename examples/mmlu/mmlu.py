@@ -59,7 +59,7 @@ if __name__ == "__main__":
         pred = mx.argmax(choices_prob).item()
 
         # Print prompt and prediction
-        print(f"==== {subject} ====")
+        print(f"\n==== {subject} ====")
         print(prompt, end="")
         print(choices[pred])
 
@@ -78,6 +78,6 @@ if __name__ == "__main__":
             num_correct["all"] += 1
             num_correct[subject] += 1
 
-            print(f"\n => CORRECT!  \t{choices[answer]} ({pred_acc:.2f})\ttotal: {num_correct['all']}/{num_total['all']}")
+            print(f"\n => CORRECT!  \t{choices[answer]} ({pred_acc:.2f})\ttotal: {num_correct['all']}/{num_total['all']} ({accuracy['all']/num_total['all']:.2f})")
         else:
-            print(f"\n => INCORRECT!\t{choices[answer]} ({pred_acc:.2f})\ttotal: {num_correct['all']}/{num_total['all']}")
+            print(f"\n => INCORRECT!\t{choices[answer]} ({pred_acc:.2f})\ttotal: {num_correct['all']}/{num_total['all']} ({accuracy['all']/num_total['all']:.2f})")
