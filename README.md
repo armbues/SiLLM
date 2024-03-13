@@ -5,10 +5,15 @@ SiLLM simplifies the process of training and running Large Language Models (LLMs
 
 - **LLM Loading**: load LLMs for inference and training in different formats (Huggingface, Torch, GGUF, MLX)
 - **LoRA Training**: train LLMs using *Low-rank Adaptation*
-- **DPO Training**: train LLMs with *Direct Preference Optimization* using different loss functions (sigmoid, hinge, IPO, DPOP)
+- **DPO Training**: train LLMs with *Direct Preference Optimization*
 
-### Features
+## Features
 
+- Model architectures: Llama, Mistral, Mixtral, Phi-2, Gemma, Qwen2, Starcoder2
+- Loss functions for DPO: sigmoid, hinge, IPO, DPOP
+- Conversation templates: llama-2, chatml, alpaca, vicuna, gemma, phi
+- Training loss plots using matplotlib
+- Perplexity calculation
 
 ## Installation
 
@@ -21,6 +26,14 @@ pip install sillm
 
 ### [Examples](examples/)
 
+#### [LoRA Fine-tuning](examples/helpsteer/)
+LoRA training [Mistral-7B-Instruct-v0.2](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2) with the Nvidia [HelpSteer](https://huggingface.co/datasets/nvidia/HelpSteer) dataset.
+
+#### [DPO Fine-tuning](examples/dpo-mix-7k/)
+DPO training [Qwen1.5-7B-Chat](https://huggingface.co/Qwen/Qwen1.5-7B-Chat) with the [DPO Mix 7K](https://huggingface.co/datasets/argilla/dpo-mix-7k) dataset. The training consists of a supervised fine tuning (SFT) followed by direct preference optimization (DPO).
+
+#### [MMLU Benchmark](examples/mmlu/)
+Implementation of the "Massive Multitask Language Understanding" benchmark using the [MMLU](https://huggingface.co/datasets/cais/mmlu) dataset.
 
 ### Command-line interface (CLI) scripts
 
@@ -28,11 +41,11 @@ pip install sillm
 ``` sh
 python -m sillm.chat /path/to/model
 ```
-#### LoRA fine-tuning:
+#### LoRA Fine-tuning:
 ``` sh
 python -m sillm.lora /path/to/model -d /path/to/dataset
 ```
-#### DPO fine-tuning:
+#### DPO Fine-tuning:
 ``` sh
 python -m sillm.dpo /path/to/model -d /path/to/dataset
 ```
@@ -64,7 +77,6 @@ Here is a list of models that were successfully tested with SiLLM:
 ## Roadmap
 
 - API server (OpenAI compatible)
-- Training loss plots
 - Saving model to transformers format
 - Repetition penalty for inference
 - Learning rate schedulers for training
