@@ -93,7 +93,7 @@ if __name__ == "__main__":
             continue
 
         if conversation:
-            prompt = conversation.add_prompt(prompt)
+            prompt = conversation.add_user(prompt)
         
         logger.debug(f"Generating {args.num_tokens} tokens with temperature {args.temp}")
 
@@ -104,7 +104,7 @@ if __name__ == "__main__":
         print()
 
         if conversation:
-            conversation.add_response(response)
+            conversation.add_assistant(response)
 
         logger.debug(f"Evaluated {metadata['num_input']} prompt tokens in {metadata['eval_time']:.2f}s ({metadata['num_input'] / metadata['eval_time']:.2f} tok/sec)")
         logger.debug(f"Generated {metadata['num_tokens']} tokens in {metadata['runtime']:.2f}s ({metadata['num_tokens'] / metadata['runtime']:.2f} tok/sec)")

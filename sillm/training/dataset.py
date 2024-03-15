@@ -6,8 +6,6 @@ import numpy as np
 
 import mlx.core as mx
 
-from sillm.core.conversation import format_message
-
 logger = logging.getLogger("sillm")
 
 class Dataset:
@@ -141,8 +139,11 @@ class DatasetInstruct(Dataset):
             prompt = entry[prompt_key]
             response = entry[response_key]
             if template is not None:
-                prompt = format_message(prompt, template, role="user")
-                response = format_message(response, template, role="assistant", strip=True)
+                messages = [
+                    { "role": "user", "content": prompt},
+                    { "role": "assistant", "content": response }
+                ]
+                template.apply_chat_template(messages)
 
             tokens_prompt = tokenizer.encode(prompt)
             tokens = tokens_prompt + tokenizer.encode(response, bos=False, eos=True)
@@ -227,13 +228,26 @@ class DatasetDPO(Dataset):
             chosen = entry[chosen_key]
             rejected = entry[rejected_key]
             if template is not None:
-                prompt = format_message(prompt, template, role="user")
-                chosen = format_message(chosen, template, role="assistant", strip=True)
-                rejected = format_message(rejected, template, role="assistant", strip=True)
+                messages_prompt = [
+                    { "role": "user", "content": prompt}
+                ]
+                prompt = template.apply_chat_template(messages_prompt)
+
+                messages_chosen = [
+                    { "role": "user", "content": prompt},
+                    { "role": "assistant", "content": chosen}
+                ]
+                chosen = template.apply_chat_template(messages_chosen)
+
+                messages_rejected = [
+                    { "role": "user", "content": prompt},
+                    { "role": "assistant", "content": chosen}
+                ]
+                rejected = template.apply_chat_template(messages_rejected)
 
             tokens_prompt = tokenizer.encode(prompt)
-            tokens_chosen = tokens_prompt + tokenizer.encode(chosen, bos=False, eos=True)
-            tokens_rejected = tokens_prompt + tokenizer.encode(rejected, bos=False, eos=True)
+            tokens_chosen = tokenizer.encode(chosen, bos=False, eos=True)
+            tokens_rejected = tokenizer.encode(rejected, bos=False, eos=True)
 
             if len(tokens_chosen) < max_length and len(tokens_rejected) < max_length:
                 self._data.append((tokens_prompt, tokens_chosen, tokens_rejected))

@@ -1,89 +1,52 @@
+import logging
+
 from typing import Union
 
-########
-# Reference:
-# https://github.com/huggingface/chat-ui/blob/main/PROMPTS.md
-########
-default_templates = {
-    "llama-2": {
-        "system":       "[INST] <<SYS>>\n{}\n<</SYS>>\n{}[/INST] ",
-        "user":         "[INST]{}[/INST] ",
-        "assistant":    "{}\n"
-    },
-    "chatml": {
-        "system":       "<|im_start|>system\n{}<|im_end|>\n",
-        "user":         "<|im_start|>user\n{}<|im_end|>\n",
-        "assistant":    "<|im_start|>assistant\n{}<|im_end|>\n"
-    },
-    "alpaca": {
-        "system":       "### System Prompt\n{}\n\n### User Message\n{}\n\n",
-        "user":         "### User Message\n{}\n\n",
-        "assistant":    "### Assistant\n{}\n\n"
-    },
-    "vicuna": {
-        "system":       "{}\nUSER: {}\n",
-        "user":         "USER: {}\n",
-        "assistant":    "ASSISTANT: {}\n"
-    },
-    "gemma": {
-        "system":       "<start_of_turn>user\n{}\n{}<end_of_turn>\n", # See https://ai.google.dev/gemma/docs/formatting#system-instructions
-        "user":         "<start_of_turn>user\n{}<end_of_turn>\n",
-        "assistant":    "<start_of_turn>model\n{}<end_of_turn>\n"
-    },
-    "phi": {
-        "system":       "{}\nInstruct: {}\n",
-        "user":         "Instruct: {}\n",
-        "assistant":    "Output: {}\n"
-    }
-}
+import jinja2
+import jinja2.exceptions
 
-def format_message(content: Union[str, list],
-                   template: Union[str, dict] = "llama-2",
-                   role: str = "user",
-                   strip: bool = False
-                   ):
-    """
-    Format message using conversation template.
-    """
-    if isinstance(template, str) and template in default_templates:
-        template = default_templates[template]
-    elif not isinstance(template, dict):
-        raise ValueError(f"Template could not be loaded")
-    
-    if role in template:
-        template_format = template[role]
-    else:
-        raise ValueError(f"Role {role} not found in template")
-    
-    if role == "system":
-        result = template_format.format(*content)
-    else:
-        result = template_format.format(content)
+logger = logging.getLogger("sillm")
 
-    if strip:
-        return result.rstrip()
-    return result
+class Template(object):
+    def __init__(self,
+                 template: str = "chatml"
+                 ):
+        loader = jinja2.PackageLoader('sillm', 'templates')
+        env = jinja2.Environment(loader=loader, trim_blocks=True, lstrip_blocks=True)
+        env.globals["raise_exception"] = self._raise_exception
+
+        fname_template = template + ".jinja"
+        self.template = env.get_template(fname_template)
+
+    def _raise_exception(self, msg):
+        logger.error(f"Template error: {msg}")
+
+    def apply_chat_template(self,
+                            messages: list,
+                            add_generation_prompt: bool = False
+                            ):
+        template_args = {
+            "add_generation_prompt": add_generation_prompt
+        }
+        
+        return self.template.render(messages=messages, **template_args)
 
 class Conversation(object):
     """
     Wrapper for conversation templates.
     """
     def __init__(self,
-                template: str = "llama-2",
+                template: Template,
                 system_prompt: str = None):
-        if type(template) == dict:
-            self.template = template
-        elif type(template) == str and template in default_templates:
-            self.template = default_templates[template]
-        else:
-            raise ValueError(f"Template could not be loaded")
-
+        self.template = Template(template)
         self.system_prompt = system_prompt
 
         self.messages = []
-        self._text = ""
 
-        self.generation_prompt = self.template["assistant"].split("{}")[0]
+    def apply_chat_template(self,
+                            add_generation_prompt: bool = False
+                            ):
+        return self.template.apply_chat_template(messages=self.messages, add_generation_prompt=add_generation_prompt)
 
     def __str__(self):
         """
@@ -91,41 +54,48 @@ class Conversation(object):
         Returns:
             Formatted conversation string.
         """
-        return self._text
-    
+        return self.apply_chat_template()
+        
     def clear(self):
         """
         Clear conversation.
         """
         self.messages = []
-        self._text = ""
-    
-    def _format(self,
-               content: Union[str, list],
-               role: str = "user"
-               ):
-            """
-            Format message using conversation template.
-            Args:
-                content: Message content.
-                role: Message role.
-            Returns:
-                Formatted conversation string.
-            """
-            if role in self.template:
-                template_format = self.template[role]
-            else:
-                raise ValueError(f"Role {role} not found in template")
 
-            if role == "system":
-                return template_format.format(*content)
+    def load_messages(self,
+                      messages: list
+                      ):
+        """
+        Load messages into conversation.
+        Args:
+            messages: List of messages.
+        """
+        self.messages = messages
 
-            return template_format.format(content)
+    def add_message(self,
+                    content: str,
+                    role: str,
+                    add_generation_prompt: bool = True
+                    ):
+        if len(self.messages) == 0 and self.system_prompt is not None:
+            # Add system message
+            msg_system = {
+                "role": "system",
+                "content": self.system_prompt
+            }
+            self.messages.append(msg_system)
+        msg = {
+            "role": role,
+            "content": content
+        }
+        self.messages.append(msg)
 
-    def add_prompt(self,
-                   content: str,
-                   add_generation_prompt: bool = True
-                   ):
+        return self.apply_chat_template(add_generation_prompt=add_generation_prompt)
+
+    def add_user(self,
+                 content: str,
+                 add_generation_prompt: bool = True
+                 ):
         """
         Add user message to the conversation.
         Args:
@@ -134,36 +104,9 @@ class Conversation(object):
         Returns:
             Formatted conversation string.
         """
-        if len(self.messages) == 0 and self.system_prompt is not None:
-            # Add system message
-            msg_system = {
-                "role": "system",
-                "content": self.system_prompt
-            }
-            self.messages.append(msg_system)
-
-            msg_user = {
-                "role": "user",
-                "content": content
-            }
-            self.messages.append(msg_user)
-
-            self._text += self._format((self.system_prompt, content), role="system")
-        else:
-            # Add user message
-            msg = {
-                "role": "user",
-                "content": content
-            }
-            self.messages.append(msg)
-
-            self._text += self._format(content, role="user")
-
-        if add_generation_prompt:
-            return self._text + self.generation_prompt
-        return self._text
+        return self.add_message(content=content, role="user", add_generation_prompt=add_generation_prompt)
     
-    def add_response(self,
+    def add_assistant(self,
                      content: str
                      ):
         """
@@ -173,75 +116,20 @@ class Conversation(object):
         Returns:
             Formatted conversation string.
         """
-        msg = {
-            "role": "assistant",
-            "content": content
-        }
-        self.messages.append(msg)
-
-        self._text += self._format(content, role="assistant")
-
-        return self._text
+        return self.add_message(content=content, role="assistant")
     
 class AutoConversation(Conversation):
     """
-    Wrapper for tokenizer chat templates.
+    Wrapper for tokenizers with built-in chat templates.
     """
     def __init__(self,
                 tokenizer,
                 system_prompt: str = None):
         self.tokenizer = tokenizer
-        
         self.system_prompt = system_prompt
-        
         self.messages = []
-        self._text = ""
 
-    def add_prompt(self,
-                   content: str,
-                   add_generation_prompt: bool = True
-                   ):
-        """
-        Add user message to the conversation.
-        Args:
-            content: User prompt.
-            add_generation_prompt: Whether to add generation prompt.
-        """
-        if len(self.messages) == 0 and self.system_prompt is not None:
-            # Add system message
-            msg_system = {
-                "role": "system",
-                "content": self.system_prompt
-            }
-            self.messages.append(msg_system)
-        msg_user = {
-            "role": "user",
-            "content": content
-        }
-        self.messages.append(msg_user)
-
-        # Apply chat template
-        self._text = self.tokenizer.apply_chat_template(self.messages, tokenize=False, add_generation_prompt=add_generation_prompt)
-
-        return self._text
-    
-    def add_response(self,
-                     content: str
-                     ):
-        """
-        Add assistant message to the conversation.
-        Args:
-            content: Assistant response.
-        Returns:
-            Formatted conversation string.
-        """
-        msg = {
-            "role": "assistant",
-            "content": content
-        }
-        self.messages.append(msg)
-
-        # Apply chat template
-        self._text = self.tokenizer.apply_chat_template(self.messages, tokenize=False)
-
-        return self._text
+    def apply_chat_template(self,
+                            add_generation_prompt: bool = False
+                            ):
+        return self.tokenizer.apply_chat_template(self.messages, tokenize=False)
