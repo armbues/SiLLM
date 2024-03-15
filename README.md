@@ -10,8 +10,8 @@ SiLLM simplifies the process of training and running Large Language Models (LLMs
 ## Features
 
 - Model architectures: Llama, Mistral, Mixtral, Phi-2, Gemma, Qwen2, Starcoder2
-- Loss functions for DPO: sigmoid, hinge, IPO, DPOP
 - Conversation templates: llama-2, chatml, alpaca, vicuna, gemma, phi
+- Loss functions for DPO: sigmoid, hinge, IPO, DPOP
 - Training loss plots using matplotlib
 - Perplexity calculation
 
