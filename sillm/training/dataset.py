@@ -50,6 +50,7 @@ class DatasetCompletion(Dataset):
             key: Key to use for text.
             max_length: Max token length per training entry.
         """
+        self._type_id = "Completion"
         self._data = []
         if tokenizer.pad_id is not None and tokenizer.pad_id >= 0:
             self.pad_id = tokenizer.pad_id
@@ -128,6 +129,7 @@ class DatasetInstruct(Dataset):
             key: Key to use for text.
             max_length: Max token length per training entry.
         """
+        self._type_id = "Instruct"
         self._data = []
         self.pad_id = tokenizer.pad_id if tokenizer.pad_id >= 0 else tokenizer.eos_id
 
@@ -221,6 +223,7 @@ class DatasetDPO(Dataset):
             key: Key to use for text.
             max_length: Max token length per training entry.
         """
+        self._type_id = "DPO"
         self._data = []
         self.pad_id = tokenizer.pad_id if tokenizer.pad_id >= 0 else tokenizer.eos_id
 
@@ -336,10 +339,10 @@ def load_dataset(tokenizer,
     def guess_type(entry):
         if "text" in entry:
             return DatasetCompletion
-        elif "prompt" in entry and "response" in entry:
-            return DatasetInstruct
         elif "prompt" in entry and "chosen" in entry and "rejected" in entry:
             return DatasetDPO
+        elif "prompt" in entry and "response" in entry:
+            return DatasetInstruct
         else:
             entry_keys = list(entry.keys())
             raise ValueError(f"Unknown dataset type with keys: {', '.join(entry_keys)}")
@@ -378,6 +381,6 @@ def load_dataset(tokenizer,
         dataset = dataset_class(entries_split[name], tokenizer, template=template, max_length=max_length)
         datasets.append(dataset)
 
-        logger.info(f"Loaded {name} dataset with {len(dataset)} entries")
+        logger.info(f"Loaded {name} split for {dataset._type_id} dataset with {len(dataset)} entries")
 
     return datasets
