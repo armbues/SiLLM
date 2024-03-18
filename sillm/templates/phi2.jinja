@@ -1,0 +1,1 @@
+{{ bos_token }}{% if messages[0]['role'] == 'system' %}{{ raise_exception('System role not supported') }}{% endif %}{% for message in messages %}{% if (message['role'] == 'assistant') %}{{ 'Output: ' + message['content'] + '\n' }}{% else %}{{ 'Instruct: ' + message['content'] + '\n' }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{'Output: '}}{% endif %}

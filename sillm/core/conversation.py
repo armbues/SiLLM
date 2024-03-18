@@ -19,7 +19,7 @@ class Template(object):
         self.template = env.get_template(fname_template)
 
     def _raise_exception(self, msg):
-        logger.error(f"Template error: {msg}")
+        raise jinja2.exceptions.TemplateError(msg)
 
     def apply_chat_template(self,
                             messages: list,
