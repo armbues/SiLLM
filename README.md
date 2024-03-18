@@ -35,6 +35,9 @@ DPO training [Qwen1.5-7B-Chat](https://huggingface.co/Qwen/Qwen1.5-7B-Chat) with
 #### [MMLU Benchmark](examples/mmlu/)
 Implementation of the "Massive Multitask Language Understanding" benchmark using the [MMLU](https://huggingface.co/datasets/cais/mmlu) dataset.
 
+#### [Perplexity](examples/perplexity/)
+Calculating perplexity scores for a sample [dataset](https://huggingface.co/datasets/Cohere/wikipedia-2023-11-embed-multilingual-v3) of entry paragraphs from Wikipedia articles.
+
 ### Command-line interface (CLI) scripts
 
 #### Chat:
