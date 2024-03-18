@@ -19,6 +19,10 @@ setup(
     extras_require={
         "server": requirements_server
     },
-    packages = find_packages(),
-    python_requires = ">=3.8" # min for MLX
+    packages = find_packages(exclude="examples"),
+    include_package_data=True,
+    package_data = {
+        'sillm': ['templates/*.jinja']
+    },
+    python_requires = ">=3.8"
 )
