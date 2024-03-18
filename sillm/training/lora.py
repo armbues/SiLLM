@@ -412,6 +412,9 @@ class TrainableLoRA(LLM):
             for layer in self.model.layers:
                 layer.forward = nn.utils.checkpoint(layer, layer.forward)
 
+        # Create value and gradient function for loss
+        loss_value_and_grad = nn.value_and_grad(self.model, self.loss)
+
         if compiled_step:
             state = [self.model.state, optimizer.state]
 
@@ -422,9 +425,6 @@ class TrainableLoRA(LLM):
                 optimizer.update(self.model, grad)
 
                 return loss_value, reward, num_tokens
-        
-        # Create value and gradient function for loss
-        loss_value_and_grad = nn.value_and_grad(self.model, self.loss)
 
         losses = []
         rewards = None

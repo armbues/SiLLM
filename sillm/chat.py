@@ -72,14 +72,20 @@ if __name__ == "__main__":
 
     # Set conversation template
     if args.template:
-        if args.template == 'auto' and model.tokenizer.has_template:
+        # Use specified template
+        conversation = sillm.Conversation(template=args.template, system_prompt=args.system_prompt)
+    else:
+        template = sillm.guess_template(model.args)
+        if template:
+            # Use template guessed from model type
+            conversation = sillm.Conversation(template=template, system_prompt=args.system_prompt)
+        elif model.tokenizer.has_template:
             # Use template from tokenizer config
             conversation = sillm.AutoConversation(model.tokenizer, system_prompt=args.system_prompt)
         else:
-            # Use specified template
-            conversation = sillm.Conversation(template=args.template, system_prompt=args.system_prompt)
-    else:
-        conversation = None
+            conversation = None
+
+            logger.warn("No conversation template found")
 
     # Log memory usage
     logger.debug(f"Peak memory usage: {(mx.metal.get_peak_memory() // (1024 ** 2)):,} MB")

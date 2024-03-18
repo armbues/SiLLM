@@ -16,6 +16,12 @@ default_templates = {
     "qwen2": "qwen2"
 }
 
+def guess_template(args):
+    if args.model_type and args.model_type in default_templates:
+        return default_templates[args.model_type]
+
+    return None
+
 class Template(object):
     def __init__(self,
                  template: str = "chatml"
@@ -39,17 +45,6 @@ class Template(object):
         }
         
         return self.template.render(messages=messages, **template_args)
-    
-    @staticmethod
-    def from_args(self,
-                  args
-                  ):
-        if args.model_type and args.model_type in default_templates:
-            template_name = default_templates[args.model_type]
-            
-            return Template(template_name)
-
-        return None
 
 class Conversation(object):
     """
@@ -62,6 +57,8 @@ class Conversation(object):
         self.system_prompt = system_prompt
 
         self.messages = []
+
+        logger.info(f"Initialized conversation template: {template}")
 
     def apply_chat_template(self,
                             add_generation_prompt: bool = False

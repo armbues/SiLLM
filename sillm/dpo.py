@@ -17,7 +17,6 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output_dir", default=None, type=str, help="Output directory for adapter weights")
     parser.add_argument("-s", "--save_checkpoints", default=False, action="store_true", help="Save model checkpoints to output directory")
     parser.add_argument("-m", "--save_merge", default=None, type=str, help="Save merged model weights to .safetensors file")
-    # parser.add_argument("-g", "--grad_checkpoint", default=False, action="store_true", help="Use gradient checkpointing")
     parser.add_argument("--max_length", default=1024, type=int, help="Max token length per training dataset entry (default: 1024)")
     parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama-2, alpaca, etc.)")
     parser.add_argument("--layers", default=-1, type=int, help="Layers to use for LoRA (default: -1 for all layers)")
@@ -131,7 +130,7 @@ if __name__ == "__main__":
             "iterations":           args.iterations,
             "report_steps":         args.report_steps,
             "eval_steps":           args.eval_steps,
-            "validation_samples":   args.validation_samples,
+            "validation_samples":   args.validation_samples
         }
         model.train(dataset_training,
                     dataset_validation,
