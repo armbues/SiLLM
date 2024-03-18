@@ -78,6 +78,16 @@ if __name__ == "__main__":
             num_correct["all"] += 1
             num_correct[subject] += 1
 
-            print(f"\n => CORRECT!  \t{choices[answer]} ({pred_acc:.2f})\ttotal: {num_correct['all']}/{num_total['all']} ({accuracy['all']/num_total['all']:.2f})")
+            print(f"\n => CORRECT!  \t{choices[answer]} ({pred_acc:.2f})\ttotal: {num_correct['all']}/{num_total['all']} = {num_correct['all']/num_total['all']:.2f} (acc. {accuracy['all']/num_total['all']:.2f})")
         else:
-            print(f"\n => INCORRECT!\t{choices[answer]} ({pred_acc:.2f})\ttotal: {num_correct['all']}/{num_total['all']} ({accuracy['all']/num_total['all']:.2f})")
+            print(f"\n => INCORRECT!\t{choices[answer]} ({pred_acc:.2f})\ttotal: {num_correct['all']}/{num_total['all']} = {num_correct['all']/num_total['all']:.2f} (acc. {accuracy['all']/num_total['all']:.2f})")
+
+    print("\n=====================")
+    print("==== FINAL SCORE ====")
+    print("=====================")
+    print(f"Total: {num_correct['all']}/{num_total['all']} = {num_correct['all']/num_total['all']:.4f} (acc. {accuracy['all']/num_total['all']:.4f})")
+    print(f"Avg. accuracy: {accuracy['all']/num_total['all']:.4f}")
+    print("\n==== Subjects: ====")
+    for subject in num_total:
+        if subject != "all":
+            print(f"{subject}: {num_correct[subject]}/{num_total[subject]} = {num_correct[subject]/num_total[subject]:.4f} ({accuracy[subject]/num_total[subject]:.4f})")
