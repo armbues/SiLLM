@@ -138,15 +138,21 @@ class DatasetInstruct(Dataset):
         for entry in entries:
             prompt = entry[prompt_key]
             response = entry[response_key]
+            full = prompt + response
             if template is not None:
-                messages = [
+                messages_prompt = [
+                    { "role": "user", "content": prompt}
+                ]
+                messages_response = [
                     { "role": "user", "content": prompt},
                     { "role": "assistant", "content": response }
                 ]
-                template.apply_chat_template(messages)
+
+                prompt = template.apply_chat_template(messages_prompt)
+                full = template.apply_chat_template(messages_response)
 
             tokens_prompt = tokenizer.encode(prompt)
-            tokens = tokens_prompt + tokenizer.encode(response, bos=False, eos=True)
+            tokens = tokenizer.encode(full, eos=True)
 
             if len(tokens) < max_length:
                 self._data.append((tokens_prompt, tokens))
@@ -231,18 +237,17 @@ class DatasetDPO(Dataset):
                 messages_prompt = [
                     { "role": "user", "content": prompt}
                 ]
-                prompt = template.apply_chat_template(messages_prompt)
-
                 messages_chosen = [
                     { "role": "user", "content": prompt},
                     { "role": "assistant", "content": chosen}
                 ]
-                chosen = template.apply_chat_template(messages_chosen)
-
                 messages_rejected = [
                     { "role": "user", "content": prompt},
                     { "role": "assistant", "content": chosen}
                 ]
+
+                prompt = template.apply_chat_template(messages_prompt)
+                chosen = template.apply_chat_template(messages_chosen)
                 rejected = template.apply_chat_template(messages_rejected)
 
             tokens_prompt = tokenizer.encode(prompt)

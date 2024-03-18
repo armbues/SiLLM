@@ -1,7 +1,7 @@
 train:              data/
 output_dir:         adapters/
 save_checkpoints:   True
-template:           llama-2
+template:           llama2
 max_length:         1024
 learning_rate:      1.0e-7
 epochs:             1

@@ -85,13 +85,19 @@ if __name__ == "__main__":
     if args.plot is not None:
         plot = utils.Plot()
 
+    # Set conversation template
+    if args.template:
+        template = sillm.Template(template=args.template)
+    else:
+        template = None
+
     # Log memory usage
     logger.debug(f"Peak memory usage: {(mx.metal.get_peak_memory() // (1024 ** 2)):,} MB")
 
     if args.train is not None:
         # Load training dataset
         dataset_config = {
-            "template": args.template,
+            "template": template,
             "max_length": args.max_length
         }
         dataset_training, dataset_validation, dataset_test = sillm.load_dataset(model.tokenizer, args.train, **dataset_config)

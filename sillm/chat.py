@@ -64,9 +64,6 @@ if __name__ == "__main__":
         model.load_adapters(args.input_adapters)
         model.merge_and_unload_lora()
 
-    # Log memory usage
-    logger.debug(f"Peak memory usage: {(mx.metal.get_peak_memory() // (1024 ** 2)):,} MB")
-
     generate_args = {
         "temp": args.temp,
         "num_tokens": args.num_tokens,
@@ -83,6 +80,9 @@ if __name__ == "__main__":
             conversation = sillm.Conversation(template=args.template, system_prompt=args.system_prompt)
     else:
         conversation = None
+
+    # Log memory usage
+    logger.debug(f"Peak memory usage: {(mx.metal.get_peak_memory() // (1024 ** 2)):,} MB")
 
     # Input loop
     while True:
