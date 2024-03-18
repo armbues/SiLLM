@@ -19,3 +19,8 @@ Run `train.sh` in the `dpo-mix-7k` directory to download the dataset & model fro
 Implementation of the "Massive Multitask Language Understanding" benchmark using the [MMLU](https://huggingface.co/datasets/cais/mmlu) dataset.
 
 Run `mmlu.py` with the model you would like to evaluate.
+
+## Perplexity
+Calculating perplexity scores for a sample dataset of entry paragraphs from Wikipedia articles.
+
+Run `perplexity.py` with the model you would like to evaluate. Add quantization options to evaluate perplexity with quantized models.

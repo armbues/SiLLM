@@ -303,6 +303,20 @@ class DatasetDPO(Dataset):
             if not train:
                 break
     
+def load_jsonl(fpath,
+               shuffle: bool = False
+               ):
+    entries = []
+    with open(fpath, "r") as f:
+        for line in f:
+            entry = json.loads(line)
+            entries.append(entry)
+
+    if shuffle:
+        np.random.shuffle(entries)
+
+    return entries
+    
 def load_dataset(tokenizer,
                  dataset_path,
                  train_split: float = 0.9,
@@ -313,18 +327,6 @@ def load_dataset(tokenizer,
                  shuffle: bool = True
                  ):
     dataset_path = pathlib.Path(dataset_path)
-
-    def load_jsonl(fpath):
-        entries = []
-        with open(fpath, "r") as f:
-            for line in f:
-                entry = json.loads(line)
-                entries.append(entry)
-
-        if shuffle:
-            np.random.shuffle(entries)
-
-        return entries
 
     def guess_type(entry):
         if "text" in entry:
@@ -338,7 +340,7 @@ def load_dataset(tokenizer,
             raise ValueError(f"Unknown dataset type with keys: {', '.join(entry_keys)}")
 
     if dataset_path.is_file():
-        entries = load_jsonl(dataset_path)
+        entries = load_jsonl(dataset_path, shuffle=shuffle)
 
         assert train_split + valid_split + test_split == 1.0, "Dataset splits must sum to 1.0"
         ix_train = int(len(entries) * train_split)

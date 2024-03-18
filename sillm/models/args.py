@@ -67,6 +67,7 @@ class ModelArgs:
                 ArgsClass = LlamaArgs
         if ArgsClass is None:
             ArgsClass = LlamaArgs
+            config["model_type"] = "llama"
             logger.warn(f"No model type specified - falling back to `llama` config")
 
         fields = ModelArgs.__annotations__
