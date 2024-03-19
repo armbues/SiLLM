@@ -56,7 +56,9 @@ class LLM():
             description: Model description.
         """
         self.path = pathlib.Path(model_path)
-        self.id = self.path.stem
+        self.id = self.path.name
+        if self.path.is_file():
+            self.id = self.path.stem    
         self.created = int(self.path.stat().st_ctime)
     
     def description(self):
