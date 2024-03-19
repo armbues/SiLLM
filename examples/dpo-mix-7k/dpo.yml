@@ -3,7 +3,7 @@ output_dir:         adapters/dpo/
 save_checkpoints:   True
 template:           chatml
 max_length:         1024
-learning_rate:      1.0e-7
+learning_rate:      1.0e-6
 epochs:             1
 loss_type:          dpop
 loss_beta:          0.01
