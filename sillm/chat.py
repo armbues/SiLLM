@@ -75,10 +75,10 @@ if __name__ == "__main__":
         # Use specified template
         conversation = sillm.Conversation(template=args.template, system_prompt=args.system_prompt)
     else:
-        template = sillm.guess_template(model.args)
-        if template:
+        template_name = sillm.guess_template(model.args)
+        if template_name:
             # Use template guessed from model type
-            conversation = sillm.Conversation(template=template, system_prompt=args.system_prompt)
+            conversation = sillm.Conversation(template=template_name, system_prompt=args.system_prompt)
         elif model.tokenizer.has_template:
             # Use template from tokenizer config
             conversation = sillm.AutoConversation(model.tokenizer, system_prompt=args.system_prompt)
