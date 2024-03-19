@@ -40,7 +40,7 @@ class TrainableDPO(TrainableLoRA):
         Args:
             tokenizer: Tokenizer instance.
             args: Model arguments.
-            loss_type: Type of loss function (sigmoid/hinge/ipo).
+            loss_type: Type of loss function (sigmoid/hinge/ipo/dpop).
             loss_beta: Loss beta parameter.
         """
         super().__init__(model, tokenizer, args)
@@ -60,7 +60,7 @@ class TrainableDPO(TrainableLoRA):
             self.reference.freeze()
             self.reference.train(mode=False)
 
-        logger.info(f"Initialized DPO with reference model")
+        logger.info(f"Initialized DPO with reference model and loss type {loss_type}")
 
     def comparison(self,
                    prompt: str,
