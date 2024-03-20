@@ -14,7 +14,7 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--config", default=None, type=str, help="Load YAML configuration file for chat")
     parser.add_argument("-a", "--input_adapters", default=None, type=str, help="Load LoRA adapter weights from .safetensors file")
     parser.add_argument("-s", "--seed", type=int, default=-1, help="Seed for randomization")
-    parser.add_argument("-t", "--temp", type=float, default=0.7, help="Sampling temperature")
+    parser.add_argument("-t", "--temperature", type=float, default=0.7, help="Sampling temperature")
     parser.add_argument("-f", "--flush", type=int, default=5, help="Flush output every n tokens")
     parser.add_argument("-n", "--num_tokens", type=int, default=1024, help="Max. number of tokens to generate")
     parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama-2, alpaca, etc.)")
@@ -65,7 +65,7 @@ if __name__ == "__main__":
         model.merge_and_unload_lora()
 
     generate_args = {
-        "temp": args.temp,
+        "temperature": args.temperature,
         "num_tokens": args.num_tokens,
         "flush": args.flush
     }

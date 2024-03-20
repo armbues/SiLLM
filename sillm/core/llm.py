@@ -214,51 +214,51 @@ class LLM():
 
     def generate(self,
                  prompt: str,
-                 temp: float = 0.0,
-                 num_tokens: int = 1024,
+                 temperature: float = 0.0,
+                 max_tokens: int = 1024,
                  flush: int = 5
                  ):
         """
         Iterator for generating tokens.
         Args:
             prompt: Prompt to start generation.
-            temp: Sampling temperature.
-            num_tokens: Max number of tokens to generate.
+            temperature: Sampling temperature.
+            max_tokens: Max number of tokens to generate.
             flush: Flush every `flush` tokens.
         Yields:
             Tuple of generated text and metadata.
         """
-        yield from generate(self.model, self.tokenizer, prompt=prompt, temp=temp, num_tokens=num_tokens, flush=flush)
+        yield from generate(self.model, self.tokenizer, prompt=prompt, temperature=temperature, max_tokens=max_tokens, flush=flush)
 
     def completion(self,
                    prompt: str,
-                   temp: float = 0.0,
-                   num_tokens: int = 1024
+                   temperature: float = 0.0,
+                   max_tokens: int = 1024
                    ) -> str:
         """
         Generate a completion and wait for all tokens.
         Args:
             prompt: Prompt to start generation.
-            temp: Sampling temperature.
-            num_tokens: Max number of tokens to generate.
+            temperature: Sampling temperature.
+            max_tokens: Max number of tokens to generate.
         Returns:
             Generated completion.
         """
-        return ''.join([t[0] for t in generate(self.model, self.tokenizer, prompt=prompt, temp=temp, num_tokens=num_tokens)])
+        return ''.join([t[0] for t in generate(self.model, self.tokenizer, prompt=prompt, temperature=temperature, max_tokens=max_tokens)])
 
 def generate(model,
              tokenizer: Tokenizer,
              prompt: str,
-             temp: float = 0.0,
-             num_tokens: int = 1024,
+             temperature: float = 0.0,
+             max_tokens: int = 1024,
              flush: int = 5
              ):
     """
     Generic iterator for generating tokens.
     Args:
         prompt: Prompt to start generation.
-        temp: Sampling temperature.
-        num_tokens: Max number of tokens to generate.
+        temperature: Sampling temperature.
+        max_tokens: Max number of tokens to generate.
         flush: Flush every `flush` tokens.
     Yields:
         Tuple of generated text and metadata.
@@ -272,18 +272,25 @@ def generate(model,
     stop_tokens = [tokenizer.eos_id, tokenizer.bos_id]
     
     # Initialize metadata
-    metadata = {
+    timing = {
         "runtime": 0.0,
         "eval_time": 0.0,
-        "tokenizer_time": time.perf_counter() - start,
-        "num_tokens": 0,
-        "num_input": len(inputs)
+        "tokenizer_time": time.perf_counter() - start
+    }
+    usage = {
+        "prompt_tokens": len(inputs),
+        "completion_tokens": 0,
+        "total_tokens": 0
+    }
+    metadata = {
+        "timing": timing,
+        "usage": usage,
     }
 
     def generate_step():
         def sample(logits):
-            if temp > 0:
-                return mx.random.categorical(logits * (1 / temp))
+            if temperature > 0:
+                return mx.random.categorical(logits * (1 / temperature))
             else:
                 return mx.argmax(logits, axis=-1)
             # TODO add top-p sampling
@@ -298,11 +305,11 @@ def generate(model,
             yield y
 
     tokens = []
-    for token, i in zip(generate_step(), range(num_tokens)):
+    for token, i in zip(generate_step(), range(max_tokens)):
         if i == 0:
             mx.eval(token)
 
-            metadata["eval_time"] = time.perf_counter() - start
+            timing["eval_time"] = time.perf_counter() - start
 
         if token[0] in stop_tokens:
             break
@@ -314,15 +321,16 @@ def generate(model,
             s = tokenizer.decode(tokens)
             tokens = []
 
-            metadata["num_tokens"] = i+1
-            metadata["runtime"] = time.perf_counter() - start
+            timing["runtime"] = time.perf_counter() - start
+            usage["num_tokens"] = i+1
 
             yield s, metadata
 
     mx.eval(token)
     s = tokenizer.decode(tokens)
 
-    metadata["num_tokens"] = i+1
-    metadata["runtime"] = time.perf_counter() - start
+    timing["runtime"] = time.perf_counter() - start
+    usage["num_tokens"] = i+1
+    usage["total_tokens"] = usage["prompt_tokens"] + usage["completion_tokens"]
 
     yield s, metadata
