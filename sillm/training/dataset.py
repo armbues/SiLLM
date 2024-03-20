@@ -312,7 +312,7 @@ class DatasetDPO(Dataset):
                 break
     
 def load_jsonl(fpath,
-               shuffle: bool = False
+               shuffle: bool = True
                ):
     entries = []
     with open(fpath, "r") as f:

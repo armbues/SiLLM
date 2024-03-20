@@ -256,6 +256,8 @@ def generate(model,
     """
     Generic iterator for generating tokens.
     Args:
+        model: Model instance.
+        tokenizer: Tokenizer instance.
         prompt: Prompt to start generation.
         temperature: Sampling temperature.
         max_tokens: Max number of tokens to generate.
@@ -287,25 +289,8 @@ def generate(model,
         "usage": usage,
     }
 
-    def generate_step():
-        def sample(logits):
-            if temperature > 0:
-                return mx.random.categorical(logits * (1 / temperature))
-            else:
-                return mx.argmax(logits, axis=-1)
-            # TODO add top-p sampling
-
-        y = inputs
-        cache = None
-        while True:
-            logits, cache = model(y[None], cache=cache)
-            logits = logits[:, -1, :]
-            y = sample(logits)
-
-            yield y
-
     tokens = []
-    for token, i in zip(generate_step(), range(max_tokens)):
+    for token, i in zip(generate_step(model, inputs, temperature), range(max_tokens)):
         if i == 0:
             mx.eval(token)
 
@@ -322,7 +307,7 @@ def generate(model,
             tokens = []
 
             timing["runtime"] = time.perf_counter() - start
-            usage["num_tokens"] = i+1
+            usage["completion_tokens"] = i+1
 
             yield s, metadata
 
@@ -330,7 +315,24 @@ def generate(model,
     s = tokenizer.decode(tokens)
 
     timing["runtime"] = time.perf_counter() - start
-    usage["num_tokens"] = i+1
+    usage["completion_tokens"] = i+1
     usage["total_tokens"] = usage["prompt_tokens"] + usage["completion_tokens"]
 
     yield s, metadata
+
+def generate_step(model, inputs, temperature):
+    y = inputs
+    cache = None
+    while True:
+        logits, cache = model(y[None], cache=cache)
+        logits = logits[:, -1, :]
+        y = sample(logits, temperature)
+
+        yield y
+
+def sample(logits, temperature):
+    if temperature > 0:
+        return mx.random.categorical(logits * (1 / temperature))
+    else:
+        return mx.argmax(logits, axis=-1)
+    # TODO add top-p sampling
