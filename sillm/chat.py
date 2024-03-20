@@ -104,7 +104,7 @@ if __name__ == "__main__":
         if conversation:
             prompt = conversation.add_user(prompt)
         
-        logger.debug(f"Generating {args.num_tokens} tokens with temperature {args.temp}")
+        logger.debug(f"Generating {args.num_tokens} tokens with temperature {args.temperature}")
 
         response = ""
         for s, metadata in model.generate(prompt, **generate_args):
