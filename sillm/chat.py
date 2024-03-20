@@ -16,7 +16,7 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--seed", type=int, default=-1, help="Seed for randomization")
     parser.add_argument("-t", "--temperature", type=float, default=0.7, help="Sampling temperature")
     parser.add_argument("-f", "--flush", type=int, default=5, help="Flush output every n tokens")
-    parser.add_argument("-n", "--num_tokens", type=int, default=1024, help="Max. number of tokens to generate")
+    parser.add_argument("-m", "--max_tokens", type=int, default=1024, help="Max. number of tokens to generate")
     parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama-2, alpaca, etc.)")
     parser.add_argument("--system_prompt", type=str, default=None, help="System prompt for chat template")
     parser.add_argument("-q4", default=False, action="store_true", help="Quantize the model to 4 bits")
@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
     generate_args = {
         "temperature": args.temperature,
-        "num_tokens": args.num_tokens,
+        "max_tokens": args.max_tokens,
         "flush": args.flush
     }
 
@@ -104,7 +104,7 @@ if __name__ == "__main__":
         if conversation:
             prompt = conversation.add_user(prompt)
         
-        logger.debug(f"Generating {args.num_tokens} tokens with temperature {args.temperature}")
+        logger.debug(f"Generating {args.max_tokens} tokens with temperature {args.temperature}")
 
         response = ""
         for s, metadata in model.generate(prompt, **generate_args):
@@ -115,5 +115,5 @@ if __name__ == "__main__":
         if conversation:
             conversation.add_assistant(response)
 
-        logger.debug(f"Evaluated {metadata['num_input']} prompt tokens in {metadata['eval_time']:.2f}s ({metadata['num_input'] / metadata['eval_time']:.2f} tok/sec)")
-        logger.debug(f"Generated {metadata['num_tokens']} tokens in {metadata['runtime']:.2f}s ({metadata['num_tokens'] / metadata['runtime']:.2f} tok/sec)")
+        logger.debug(f"Evaluated {metadata['usage']['prompt_tokens']} prompt tokens in {metadata['timing']['eval_time']:.2f}s ({metadata['usage']['prompt_tokens'] / metadata['timing']['eval_time']:.2f} tok/sec)")
+        logger.debug(f"Generated {metadata['usage']['completion_tokens']} tokens in {metadata['timing']['runtime']:.2f}s ({metadata['usage']['completion_tokens'] / metadata['timing']['runtime']:.2f} tok/sec)")
