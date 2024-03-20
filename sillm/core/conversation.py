@@ -24,11 +24,16 @@ def guess_template(args):
 
 class Template(object):
     def __init__(self,
-                 template: str = "chatml"
+                 template: str = "chatml",
+                 exception_callback = None
                  ):
         loader = jinja2.PackageLoader('sillm', 'templates')
         env = jinja2.Environment(loader=loader, trim_blocks=True, lstrip_blocks=True)
-        env.globals["raise_exception"] = self._raise_exception
+
+        if exception_callback is None:
+            env.globals["raise_exception"] = self._raise_exception
+        else:
+            env.globals["raise_exception"] = exception_callback
 
         fname_template = template + ".jinja"
         self.template = env.get_template(fname_template)
@@ -52,7 +57,8 @@ class Conversation(object):
     """
     def __init__(self,
                 template: Template,
-                system_prompt: str = None):
+                system_prompt: str = None
+                ):
         self.template = Template(template)
         self.system_prompt = system_prompt
 
