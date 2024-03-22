@@ -16,12 +16,6 @@ default_templates = {
     "qwen2": "qwen2"
 }
 
-def guess_template(args):
-    if args.model_type and args.model_type in default_templates:
-        return default_templates[args.model_type]
-
-    return None
-
 class Template(object):
     def __init__(self,
                  template: str = "chatml",
@@ -38,6 +32,14 @@ class Template(object):
         fname_template = template + ".jinja"
         self.template = env.get_template(fname_template)
 
+        logger.info(f"Initialized conversation template: {template}")
+
+    @staticmethod
+    def guess_template(args):
+        if args.model_type and args.model_type in default_templates:
+            return default_templates[args.model_type]
+        return None
+
     def _raise_exception(self, msg):
         raise jinja2.exceptions.TemplateError(msg)
 
@@ -45,11 +47,21 @@ class Template(object):
                             messages: list,
                             add_generation_prompt: bool = False
                             ):
-        template_args = {
-            "add_generation_prompt": add_generation_prompt
-        }
-        
-        return self.template.render(messages=messages, **template_args)
+        return self.template.render(messages=messages, add_generation_prompt=add_generation_prompt)
+    
+class AutoTemplate(Template):
+    def __init__(self,
+                 tokenizer
+                 ):
+        self.tokenizer = tokenizer
+
+        logger.info(f"Initialized built-in conversation template from tokenizer")
+    
+    def apply_chat_template(self,
+                            messages: list,
+                            add_generation_prompt: bool = False,
+                            ):
+        return self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=add_generation_prompt)
 
 class Conversation(object):
     """
@@ -63,8 +75,6 @@ class Conversation(object):
         self.system_prompt = system_prompt
 
         self.messages = []
-
-        logger.info(f"Initialized conversation template: {template}")
 
     def apply_chat_template(self,
                             add_generation_prompt: bool = False
@@ -152,7 +162,9 @@ class AutoConversation(Conversation):
         self.system_prompt = system_prompt
         self.messages = []
 
+        logger.info(f"Initialized built-in conversation template from tokenizer")
+
     def apply_chat_template(self,
                             add_generation_prompt: bool = False
                             ):
-        return self.tokenizer.apply_chat_template(self.messages, tokenize=False)
+        return self.tokenizer.apply_chat_template(self.messages, tokenize=False, add_generation_prompt=add_generation_prompt)

@@ -89,9 +89,11 @@ if __name__ == "__main__":
 
     # Initialize messages template
     if args.template is None:
-        template_name = sillm.guess_template(model.args)
+        template_name = sillm.Template.guess_template(model.args)
         if template_name:
             template = sillm.Template(template=template_name)
+        elif model.tokenizer.has_template:
+            template = sillm.AutoTemplate(model.tokenizer)
         else:
             raise ValueError("Missing a conversation template.")
     else:
