@@ -59,7 +59,7 @@ def chat_completions(completion: ChatCompletion):
             "content": content
         },
         "logprobs": None,
-        "finish_reason": "stop"
+        "finish_reason": metadata["finish_reason"]
     }]
     result["usage"] = metadata["usage"]
 

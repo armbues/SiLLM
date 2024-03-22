@@ -251,20 +251,9 @@ def generate(model,
              prompt: str,
              temperature: float = 0.0,
              max_tokens: int = 1024,
+             logprobs: bool = False,
              flush: int = 5
              ):
-    """
-    Generic iterator for generating tokens.
-    Args:
-        model: Model instance.
-        tokenizer: Tokenizer instance.
-        prompt: Prompt to start generation.
-        temperature: Sampling temperature.
-        max_tokens: Max number of tokens to generate.
-        flush: Flush every `flush` tokens.
-    Yields:
-        Tuple of generated text and metadata.
-    """
     start = time.perf_counter()
 
     # Tokenize prompt
@@ -287,19 +276,25 @@ def generate(model,
     metadata = {
         "timing": timing,
         "usage": usage,
+        "logprobs": [],
+        "finish_reason": "length"
     }
 
     tokens = []
-    for token, i in zip(generate_step(model, inputs, temperature), range(max_tokens)):
+    for (token,p) , i in zip(generate_step(model, inputs, temperature, logprobs), range(max_tokens)):
         if i == 0:
             mx.eval(token)
 
             timing["eval_time"] = time.perf_counter() - start
 
-        if token[0] in stop_tokens:
+        if token.item() in stop_tokens:
+            metadata["finish_reason"] = "stop"
             break
 
         tokens.append(token.item())
+
+        if logprobs:
+            metadata["logprobs"].append(p)
 
         if (len(tokens) % flush) == 0:
             mx.eval(token)
@@ -308,6 +303,7 @@ def generate(model,
 
             timing["runtime"] = time.perf_counter() - start
             usage["completion_tokens"] = i+1
+            usage["total_tokens"] = usage["prompt_tokens"] + usage["completion_tokens"]
 
             yield s, metadata
 
@@ -320,7 +316,7 @@ def generate(model,
 
     yield s, metadata
 
-def generate_step(model, inputs, temperature):
+def generate_step(model, inputs, temperature, logprobs=False):
     y = inputs
     cache = None
     while True:
@@ -328,7 +324,11 @@ def generate_step(model, inputs, temperature):
         logits = logits[:, -1, :]
         y = sample(logits, temperature)
 
-        yield y
+        p = 0.0
+        if logprobs:
+            p = nn.log_softmax(logits, axis=-1)[0,y].item()
+        
+        yield y, p
 
 def sample(logits, temperature):
     if temperature > 0:
