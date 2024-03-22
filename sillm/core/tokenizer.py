@@ -230,26 +230,13 @@ class GGUFTokenizer(SentencePieceTokenizer):
         scores = metadata.get("tokenizer.ggml.scores", None)
         scores = scores.tolist() if scores is not None else None
         token_types = metadata.get("tokenizer.ggml.token_type", None)
-        token_types = token_types.tolist() if token_types is not None else None
-        
-        # Determine if there enough tokens to use byte fallback
         byte_fallback = False
-        if token_types:
-            # 6 is the token type for BYTE
-            if token_types.count(6) >= 256:
-                byte_fallback = True
 
-        if "tokenizer.ggml.unknown_token_id" in metadata:
-            self.unk_id = metadata["tokenizer.ggml.unknown_token_id"].item()
-        else:
-            self.unk_id = len(tokens)
-            tokens.append("<unk>")
-            if scores:
-                scores.append(0)
-            if token_types:
-                token_types.append(2) # 2 is the token type for UNKNOWN
         self.bos_id = metadata["tokenizer.ggml.bos_token_id"].item()
         self.eos_id = metadata["tokenizer.ggml.eos_token_id"].item()
+        self.unk_id = -1
+        if "tokenizer.ggml.unknown_token_id" in metadata:
+            self.unk_id = metadata["tokenizer.ggml.unknown_token_id"].item()
         if "tokenizer.ggml.padding_token_id" in metadata:
             self.pad_id = metadata["tokenizer.ggml.padding_token_id"].item()
             pad_token = tokens[self.pad_id]
@@ -257,6 +244,30 @@ class GGUFTokenizer(SentencePieceTokenizer):
             self.pad_id = -1
             pad_token = "<pad>"
         self._sep = "▁"
+        
+        if token_types is not None:
+            token_types = token_types.tolist()
+
+            # Determine if there enough tokens to use byte fallback
+            if token_types.count(6) >= 256:
+                # 6 is the token type for BYTE
+                byte_fallback = True
+            
+            # Find UNK token if not provided in metadata
+            if self.unk_id < 0:
+                for i in range(len(token_types)):
+                    if token_types[i] == 2:
+                        self.unk_id = i
+
+        # Add UNK token if not defined
+        if self.unk_id < 0:
+            self.unk_id = len(tokens)
+            tokens.append("<unk>")
+            if scores:
+                scores.append(0)
+            if token_types:
+                # 2 is the token type for UNKNOWN
+                token_types.append(2)
 
         trainer_spec = sentencepiece.sentencepiece_model_pb2.TrainerSpec(
             model_type="BPE",
