@@ -92,7 +92,7 @@ if __name__ == "__main__":
         template = None
 
     # Log memory usage
-    logger.debug(f"Peak memory usage: {(mx.metal.get_peak_memory() // (1024 ** 2)):,} MB")
+    utils.log_memory_usage()
 
     if args.train is not None:
         # Load training dataset

@@ -1,3 +1,4 @@
+import os
 import pathlib
 import time
 import logging
@@ -426,6 +427,9 @@ class TrainableLoRA(LLM):
 
                 return loss_value, reward, num_tokens
 
+        # Get system memory
+        system_memory = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
+
         losses = []
         rewards = None
         intv_tokens = 0
@@ -458,6 +462,12 @@ class TrainableLoRA(LLM):
                     else:
                         rewards = np.vstack([rewards, reward])
 
+                # Get peak memory usage
+                peak_memory = mx.metal.get_peak_memory()
+                memory_usage = peak_memory / system_memory
+                if memory_usage > 0.9:
+                    pbar_epochs.write(f"HIGH MEMORY USAGE: {(peak_memory // (1024 ** 2)):,} MB ({memory_usage:.2%} of system memory)")
+
                 # Report training loss if needed
                 if (n + 1) % report_steps == 0:
                     train_loss = np.mean(losses)
@@ -482,7 +492,7 @@ class TrainableLoRA(LLM):
                     val_loss = self.evaluate(dataset_validation, batch_size, validation_batches)
                     start = time.perf_counter()
                     pbar_epochs.write(f"#{n + 1}:\tValidation loss  {val_loss:.3f}\t{(start - stop):.3f} sec")
-                    pbar_epochs.write(f"#{n + 1}:\tPeak memory      {(mx.metal.get_peak_memory() // (1024 ** 2)):,} MB")
+                    pbar_epochs.write(f"#{n + 1}:\tPeak memory      {(peak_memory // (1024 ** 2)):,} MB ({memory_usage:.2%} of system memory)")
 
                     # Eval callback
                     if eval_callback is not None:
