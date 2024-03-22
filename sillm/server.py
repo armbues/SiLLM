@@ -45,8 +45,7 @@ def chat_completions(completion: ChatCompletion):
     
     generate_args = {
         "max_tokens": completion.max_tokens,
-        "temperature": completion.temperature,
-        "logprobs": completion.logprobs
+        "temperature": completion.temperature
     }
 
     content = ""
@@ -59,7 +58,7 @@ def chat_completions(completion: ChatCompletion):
             "role": "assistant",
             "content": content
         },
-        "logprobs": metadata["logprobs"],
+        "logprobs": None,
         "finish_reason": metadata["finish_reason"]
     }]
     result["usage"] = metadata["usage"]
