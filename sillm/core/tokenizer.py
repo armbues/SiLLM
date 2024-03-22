@@ -224,7 +224,7 @@ class GGUFTokenizer(SentencePieceTokenizer):
             import sentencepiece
             import sentencepiece.sentencepiece_model_pb2
         except ImportError:
-            raise ImportError("Please install sentencepiece library to use SentencePieceTokenizer")
+            raise ImportError("Please install sentencepiece and protobuf==3.20.1 libraries to use SentencePieceTokenizer")
         
         tokens = metadata["tokenizer.ggml.tokens"]
         scores = metadata.get("tokenizer.ggml.scores", None)
