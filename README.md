@@ -24,7 +24,7 @@ pip install sillm
 
 ## Usage
 
-### [Examples](examples/)
+### Examples
 
 #### [LoRA Fine-tuning](examples/helpsteer/)
 LoRA training [Mistral-7B-Instruct-v0.2](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2) with the Nvidia [HelpSteer](https://huggingface.co/datasets/nvidia/HelpSteer) dataset.
@@ -44,6 +44,10 @@ Calculating perplexity scores for a sample [dataset](https://huggingface.co/data
 ``` sh
 python -m sillm.chat /path/to/model
 ```
+Running sillm.chat in the terminal with Gemma-2B-it on a MacBook Air M2 with 16GB memory:
+
+https://github.com/armbues/SiLLM/assets/4117144/42e2d0f8-3bd8-44ca-9f78-8c4a885b8939
+
 #### LoRA Fine-tuning:
 ``` sh
 python -m sillm.lora /path/to/model -d /path/to/dataset
