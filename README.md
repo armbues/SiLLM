@@ -10,7 +10,8 @@ SiLLM simplifies the process of training and running Large Language Models (LLMs
 ## Features
 
 - Model architectures: Llama, Mistral, Mixtral, Phi-2, Gemma, Qwen2, Starcoder2
-- Conversation templates: llama-2, chatml, alpaca, vicuna, gemma, phi
+- Conversation templates: llama-2, chatml, alpaca, vicuna, gemma, phi, openchat
+- API server with OpenAI compatible chat endpoints
 - Loss functions for DPO: sigmoid, hinge, IPO, DPOP
 - Training loss plots using matplotlib
 - Perplexity calculation
@@ -48,6 +49,11 @@ Running sillm.chat in the terminal with Gemma-2B-it on a MacBook Air M2 with 16G
 
 https://github.com/armbues/SiLLM/assets/4117144/42e2d0f8-3bd8-44ca-9f78-8c4a885b8939
 
+#### Server:
+``` sh
+python -m sillm.server /path/to/model --port 8000
+```
+
 #### LoRA Fine-tuning:
 ``` sh
 python -m sillm.lora /path/to/model -d /path/to/dataset
@@ -60,6 +66,7 @@ Run the CLI scripts with the argument -h to see a print-out of all available arg
 
 ### Python
 
+Minimal example of loading a model with SiLLM and generating a text completion.
 ``` python
 import sillm
 
@@ -86,7 +93,6 @@ Here is a list of models that were successfully tested with SiLLM:
 
 ## Roadmap
 
-- API server (OpenAI compatible)
 - Saving model to transformers format
 - Repetition penalty for inference
 - Learning rate schedulers for training
