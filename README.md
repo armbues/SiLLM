@@ -40,6 +40,7 @@ Implementation of the "Massive Multitask Language Understanding" benchmark using
 Calculating perplexity scores for a sample [dataset](https://huggingface.co/datasets/Cohere/wikipedia-2023-11-embed-multilingual-v3) of entry paragraphs from Wikipedia articles.
 
 ### Command-line interface (CLI) scripts
+Run the CLI scripts with the argument -h to see a print-out of all available arguments.
 
 #### Chat:
 ``` sh
@@ -62,11 +63,9 @@ python -m sillm.lora /path/to/model -d /path/to/dataset
 ``` sh
 python -m sillm.dpo /path/to/model -d /path/to/dataset
 ```
-Run the CLI scripts with the argument -h to see a print-out of all available arguments.
 
 ### Python
-
-Minimal example of loading a model with SiLLM and generating a text completion.
+Minimal example of loading a model with SiLLM and generating a text completion:
 ``` python
 import sillm
 
@@ -93,11 +92,14 @@ Here is a list of models that were successfully tested with SiLLM:
 
 ## Roadmap
 
-- Saving model to transformers format
+- Saving model to different formats (transformers, GGUF)
 - Repetition penalty for inference
 - Learning rate schedulers for training
 - Merging models
 
 ## License
+This project uses the [MIT License](LICENSE).
 
 ## Acknowledgments
+Big thanks to the Apple MLX team for implementing and maintaining the [MLX](https://github.com/ml-explore/mlx/) framework that makes it possible to unlock the power of Apple Silicon and run/train LLMs on MacBooks and other Apple devices. Thank you to all the contributors of the [MLX Examples](https://github.com/ml-explore/mlx-examples) project and developers sharing model implementations online.
+Last but not least, thank you to the larger community sharing open weights models, fine tunes, and datasets - without you all the gen AI progress would happen behind locked doors!
