@@ -71,7 +71,7 @@ if __name__ == "__main__":
     parser.add_argument("model", type=str, help="The directory that contains the models")
     parser.add_argument("--host", type=str, default="0.0.0.0", help="Port to listen on")
     parser.add_argument("--port", type=int, default=8000, help="Port to listen on")
-    parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama-2, alpaca, etc.)")
+    parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama2, alpaca, etc.)")
     parser.add_argument("-v", "--verbose", default=1, action="count", help="Increase output verbosity")
     args = parser.parse_args()
 
