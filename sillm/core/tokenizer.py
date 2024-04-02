@@ -77,11 +77,12 @@ class SentencePieceTokenizer(Tokenizer):
         Encode string.
         Args:
             s: String to encode.
+            bos: Whether to prefix BOS token.
             eos: Whether to append EOS token.
         Returns:
             Encoded tokens.
         """
-        if bos is True:
+        if bos:
             tokens = [self.bos_id, *self._model.encode(s)]
         else:
             tokens = self._model.encode(s)
@@ -157,11 +158,12 @@ class TransformerTokenizer(Tokenizer):
         Encode string.
         Args:
             s: String to encode.
+            bos: Whether to prefix BOS token.
             eos: Whether to append EOS token.
         Returns:
             Encoded tokens.
         """
-        if bos is True:
+        if bos:
             tokens = [self.bos_id, *self._model.encode(s, add_special_tokens=False)]
         else:
             tokens = self._model.encode(s, add_special_tokens=False)
@@ -306,3 +308,52 @@ class GGUFTokenizer(SentencePieceTokenizer):
             model_proto.pieces.append(sentencepiece.sentencepiece_model_pb2.ModelProto.SentencePiece(piece=token, score=score, type=token_type))
         
         self._model = sentencepiece.SentencePieceProcessor(model_proto=model_proto.SerializeToString())
+
+class TiktokenTokenizer(Tokenizer):
+    """
+    Tokenizer wrapper for tiktoken.
+    """
+    def __init__(self,
+                 model_name: str,
+                 args: args.ModelArgs
+                 ):
+        try:
+            import tiktoken
+        except ImportError:
+            raise ImportError("Please install tiktoken library to use TiktokenTokenizer")
+        
+        self._model = tiktoken.encoding_for_model(model_name)
+
+    def encode(self,
+               s: str,
+               bos: bool = True,
+               eos: bool = False
+               ) -> List[int]:
+        """
+        Encode string.
+        Args:
+            s: String to encode.
+            bos: Whether to prefix BOS token.
+            eos: Whether to append EOS token.
+        Returns:
+            Encoded tokens.
+        """
+        tokens = self._model.encode(s)
+        if bos:
+            tokens = [self.bos_id] + tokens
+        if eos:
+            tokens.append(self.eos_id)
+
+        return tokens
+    
+    def decode(self,
+               t: List[int]
+               ) -> str:
+        """
+        Decode tokens.
+        Args:
+            t: Tokens to decode.
+        Returns:
+            Decoded string.
+        """
+        return self._model.decode(t)
