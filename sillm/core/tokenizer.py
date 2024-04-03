@@ -324,6 +324,9 @@ class TiktokenTokenizer(Tokenizer):
         
         self._model = tiktoken.encoding_for_model(model_name)
 
+        self.bos_id = args.bos_token_id
+        self.eos_id = args.eos_token_id
+
     def encode(self,
                s: str,
                bos: bool = True,

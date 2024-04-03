@@ -57,8 +57,10 @@ if __name__ == "__main__":
         # Convert model to trainable
         model = sillm.TrainableLoRA.from_model(model)
 
+        lora_config = model.load_lora_config(args.input_adapters)
+
         # Initialize LoRA layers
-        model.init_lora()
+        model.init_lora(**lora_config)
 
         # Load and merge adapter file
         model.load_adapters(args.input_adapters)

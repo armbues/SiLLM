@@ -115,6 +115,9 @@ if __name__ == "__main__":
                 fpath_ckpt = model.save_checkpoint(args.output_dir, i)
 
                 return f"Saved checkpoint to {fpath_ckpt}"
+            
+        if args.output_dir is not None:
+            model.save_lora_config(args.output_dir)
 
         # Model training
         training_config = {
