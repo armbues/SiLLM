@@ -112,14 +112,14 @@ class DatasetCompletion(Dataset):
             if not train:
                 break
     
-class DatasetInstruct(Dataset):
+class DatasetMessages(Dataset):
     """
-    Q&A dataset wrapper.
+    Messages dataset wrapper.
     """
     def __init__(self,
                  entries,
                  tokenizer,
-                 template = None,
+                 template,
                  max_length: int = 4096
                  ):
         """
@@ -129,31 +129,24 @@ class DatasetInstruct(Dataset):
             key: Key to use for text.
             max_length: Max token length per training entry.
         """
-        self._type_id = "Instruct"
+        if template is None:
+            raise ValueError("Template must be specified for Messages dataset")
+
+        self._type_id = "Messages"
         self._data = []
         self.pad_id = tokenizer.pad_id if tokenizer.pad_id >= 0 else tokenizer.eos_id
 
-        prompt_key = "prompt"
-        response_key = "response"
+        messages_key = "messages"
 
         num_outsized = 0
         for entry in entries:
-            prompt = entry[prompt_key]
-            response = entry[response_key]
-            if template is None:
-                tokens_prompt = tokenizer.encode(prompt)
-                tokens = tokenizer.encode(prompt + response, eos=True)
-            else:
-                messages_prompt = [
-                    { "role": "user", "content": prompt}
-                ]
-                tokens_prompt = tokenizer.encode(template.apply_chat_template(messages_prompt))
+            messages = entry[messages_key]
 
-                messages_response = [
-                    { "role": "user", "content": prompt},
-                    { "role": "assistant", "content": response }
-                ]
-                tokens = tokenizer.encode(template.apply_chat_template(messages_response), eos=True)
+            text_prompt = template.apply_chat_template(messages[:-1])
+            tokens_prompt = tokenizer.encode(text_prompt)
+            
+            text = template.apply_chat_template(messages)
+            tokens = tokenizer.encode(text, eos=True)
 
             if len(tokens) < max_length:
                 self._data.append((tokens_prompt, tokens))
@@ -204,6 +197,57 @@ class DatasetInstruct(Dataset):
 
             if not train:
                 break
+
+class DatasetInstruct(DatasetMessages):
+    """
+    Q&A dataset wrapper.
+    """
+    def __init__(self,
+                 entries,
+                 tokenizer,
+                 template = None,
+                 max_length: int = 4096
+                 ):
+        """
+        Args:
+            tokenizer: Tokenizer to use.
+            dataset_path: Path to dataset file.
+            key: Key to use for text.
+            max_length: Max token length per training entry.
+        """
+        self._type_id = "Instruct"
+        self._data = []
+        self.pad_id = tokenizer.pad_id if tokenizer.pad_id >= 0 else tokenizer.eos_id
+
+        prompt_key = "prompt"
+        response_key = "response"
+
+        num_outsized = 0
+        for entry in entries:
+            prompt = entry[prompt_key]
+            response = entry[response_key]
+            if template is None:
+                tokens_prompt = tokenizer.encode(prompt)
+                tokens = tokenizer.encode(prompt + response, eos=True)
+            else:
+                messages_prompt = [
+                    { "role": "user", "content": prompt}
+                ]
+                tokens_prompt = tokenizer.encode(template.apply_chat_template(messages_prompt))
+
+                messages_response = [
+                    { "role": "user", "content": prompt},
+                    { "role": "assistant", "content": response }
+                ]
+                tokens = tokenizer.encode(template.apply_chat_template(messages_response), eos=True)
+
+            if len(tokens) < max_length:
+                self._data.append((tokens_prompt, tokens))
+            else:
+                num_outsized += 1
+
+        if num_outsized > 0:
+            logger.debug(f"Removed {num_outsized} entries from dataset due to max. length {max_length}")
 
 class DatasetDPO(Dataset):
     """
@@ -339,6 +383,8 @@ def load_dataset(tokenizer,
     def guess_type(entry):
         if "text" in entry:
             return DatasetCompletion
+        elif "messages" in entry:
+            return DatasetMessages
         elif "prompt" in entry and "chosen" in entry and "rejected" in entry:
             return DatasetDPO
         elif "prompt" in entry and "response" in entry:
