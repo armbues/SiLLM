@@ -4,6 +4,7 @@ import time
 import logging
 import math
 import re
+import json
 
 from functools import partial
 
@@ -267,6 +268,44 @@ class TrainableLoRA(LLM):
 
         # Disable training mode
         self.model.train(mode=False)
+
+    def save_lora_config(self,
+                         config_path: str
+                         ):
+        """
+        Save LoRA configuration.
+        Args:
+            config_path: Folder to save LoRA configuration to.
+        """
+        assert self._lora is not None
+
+        config_path = pathlib.Path(config_path) / "lora.json"
+
+        with open(config_path, "w") as f:
+            f.write(json.dumps(self._lora))
+
+    def load_lora_config(self,
+                         config_path: str
+                         ):
+        """
+        Load LoRA configuration.
+        Args:
+            config_path: Path to load LoRA configuration from.
+        """
+        config_path = pathlib.Path(config_path)
+        if config_path.is_file():
+            if config_path.suffix == ".safetensors":
+                config_path = config_path.parent
+        if config_path.is_dir():
+            config_path = config_path / "lora.json"
+
+        if config_path.exists():
+            with open(config_path, "r") as f:
+                logger.info(f"Loaded LoRA configuration from {config_path}")
+
+                return json.loads(f.read())
+            
+        return {}
 
     def save_adapters(self,
                       adapter_path: str,
