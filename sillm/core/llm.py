@@ -20,7 +20,8 @@ model_map = {
     "mixtral":      models.mixtral.Model,   
     "phi":          models.phi.Model,
     "starcoder2":   models.starcoder2.Model,
-    "qwen2":        models.qwen2.Model
+    "qwen2":        models.qwen2.Model,
+    "dbrx":         models.dbrx.Model,
 }
 
 class LLM():

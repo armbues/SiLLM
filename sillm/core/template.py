@@ -11,7 +11,8 @@ default_templates = {
     "gemma": "gemma",
     "mixtral": "mistral",
     "phi": "phi2",
-    "qwen2": "qwen2"
+    "qwen2": "qwen2",
+    "dbrx": "chatml"
 }
 
 class Template(object):

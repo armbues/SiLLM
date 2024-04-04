@@ -314,8 +314,8 @@ class TiktokenTokenizer(Tokenizer):
     Tokenizer wrapper for tiktoken.
     """
     def __init__(self,
-                 model_name: str,
-                 args: args.ModelArgs
+                 args: args.ModelArgs,
+                 model_name: str = "gpt-4"
                  ):
         try:
             import tiktoken
@@ -342,10 +342,6 @@ class TiktokenTokenizer(Tokenizer):
             Encoded tokens.
         """
         tokens = self._model.encode(s)
-        if bos:
-            tokens = [self.bos_id] + tokens
-        if eos:
-            tokens.append(self.eos_id)
 
         return tokens
     

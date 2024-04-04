@@ -63,6 +63,8 @@ class ModelArgs:
                 ArgsClass = Qwen2Args
             elif config["model_type"] == "starcoder2":
                 ArgsClass = Starcoder2Args
+            elif config["model_type"] == "dbrx":
+                ArgsClass = DbrxArgs
             else:
                 ArgsClass = LlamaArgs
         if ArgsClass is None:
@@ -140,3 +142,20 @@ class Starcoder2Args(ModelArgs):
     """
     rope_scaling: dict = None
     tie_word_embeddings: bool = True
+
+@dataclasses.dataclass
+class DbrxArgs(ModelArgs):
+    """
+    DBRX model arguments.
+    """
+    clip_qkv: int = 8
+    rope_theta: float = 500000.0
+    router_aux_loss_coef: float = 0.05
+    moe: dict = None
+
+    def __post_init__(self):
+        if self.moe is None:
+            self.moe = {
+                "num_experts": 16,
+                "num_experts_per_tok": 4
+            }

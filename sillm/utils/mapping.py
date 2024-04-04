@@ -74,6 +74,27 @@ def map_key(k):
         k = re.sub(r"\.ffn_up\.", ".feed_forward.w3.", k)
 
         return k
+    # DBRX keys
+    elif k.startswith("transformer.wte."):
+        return re.sub(r"^transformer\.wte\.", "tok_embeddings.", k)
+    elif k.startswith("transformer.norm_f."):
+        return re.sub(r"^transformer\.norm_f\.", "norm.", k)
+    elif k.startswith("transformer.blocks."):
+        layer = k.split(".")[2]
+
+        k = re.sub(r"^transformer\.blocks\.", "layers.", k)
+        k = re.sub(r"\.ffn\.router\.layer\.", ".feed_forward.gate.", k)
+
+        k = re.sub(r"\.ffn\.experts\.(\d+)\.w1.", r".feed_forward.experts.\1.w1.", k)
+        k = re.sub(r"\.ffn\.experts\.(\d+)\.w2.", r".feed_forward.experts.\1.w2.", k)
+        k = re.sub(r"\.ffn\.experts\.(\d+)\.v1.", r".feed_forward.experts.\1.w3.", k)
+        
+        k = re.sub(r"\.norm_attn_norm\.attn\.Wqkv\.", ".attention.wqkv.", k)
+        k = re.sub(r"\.norm_attn_norm\.attn\.out_proj\.", ".attention.wo.", k)
+        k = re.sub(r"\.norm_attn_norm\.norm_1\.", ".attention_norm.", k)
+        k = re.sub(r"\.norm_attn_norm\.norm_2\.", ".ffn_norm.", k)
+
+        return k
     
     return None
 
@@ -113,8 +134,10 @@ def map_config(config):
         "bos_token_id",
         "eos_token_id",
         "pad_token_id",
+        "quantization",
         "moe",
-        "tie_word_embeddings"
+        "tie_word_embeddings",
+        "clip_qkv",
     ]
     for key in mlx_keys:
         if key in config:
@@ -140,7 +163,9 @@ def map_config(config):
         "llama.rope.freq_base": "rope_theta",
         "llama.context_length": "max_position_embeddings",
         "tokenizer.ggml.bos_token_id": "bos_token_id",
-        "tokenizer.ggml.eos_token_id": "eos_token_id"
+        "tokenizer.ggml.eos_token_id": "eos_token_id",
+        # DBRX
+        "d_model": "dim",
     }
 
     for key in key_map:
@@ -163,6 +188,27 @@ def map_config(config):
             "num_experts": config["llama.expert_count"].item(),
             "num_experts_per_tok": config["llama.expert_used_count"].item()
         }
+
+    # DBRX config
+    if "attn_config" in config:
+        attn_config = config["attn_config"]
+
+        if "kv_n_heads" in attn_config:
+            result["n_kv_heads"] = attn_config["kv_n_heads"]
+        if "clip_qkv" in attn_config:
+            result["clip_qkv"] = attn_config["clip_qkv"]
+        if "rope_theta" in attn_config:
+            result["rope_theta"] = attn_config["rope_theta"]
+    if "ffn_config" in config:
+        ffn_config = config["ffn_config"]
+
+        if "ffn_hidden_size" in ffn_config:
+            result["hidden_dim"] = ffn_config["ffn_hidden_size"]
+        if "moe_num_experts" in ffn_config and "moe_top_k" in ffn_config:
+            result["moe"] = {
+                "num_experts": ffn_config["moe_num_experts"],
+                "num_experts_per_tok": ffn_config["moe_top_k"]
+            }
 
     # Calculate head_dim if not provided
     if "head_dim" not in result:

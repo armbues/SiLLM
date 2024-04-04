@@ -5,7 +5,7 @@ import enum
 import mlx.core as mx
 
 from .llm import LLM
-from .tokenizer import GGUFTokenizer, TransformerTokenizer, SentencePieceTokenizer
+from .tokenizer import GGUFTokenizer, TransformerTokenizer, SentencePieceTokenizer, TiktokenTokenizer
 from sillm.models.args import ModelArgs
 from sillm.utils.mapping import map_key, map_config
 
@@ -34,7 +34,7 @@ class ModelFormat(enum.Enum):
                 return ModelFormat.MLX
             elif k.startswith("blk."):
                 return ModelFormat.GGUF
-            elif k.startswith("model.layers."):
+            elif k.startswith("model.layers.") or k.startswith("transformer."):
                 return ModelFormat.HUGGINGFACE
             
         return ModelFormat.UNKNOWN
@@ -197,16 +197,17 @@ def load_model_dir(model_path: str) -> LLM:
 
     # Load tokenizer
     tokenizer = None
-    tokenizer_path = model_path / "tokenizer.model"
-    if tokenizer_path.exists():
-        tokenizer = SentencePieceTokenizer(str(tokenizer_path), model_args)
-    else:
-        tokenizer_path = model_path / "tokenizer.json"
-        if tokenizer_path.exists():
-            tokenizer = TransformerTokenizer(str(model_path), model_args)
+    tokenizer_path_model = model_path / "tokenizer.model"
+    tokenizer_path_json = model_path / "tokenizer.json"
+    if tokenizer_path_model.exists():
+        tokenizer = SentencePieceTokenizer(str(tokenizer_path_model), model_args)
+    elif tokenizer_path_json.exists():
+        tokenizer = TransformerTokenizer(str(model_path), model_args)
+    elif model_args.model_type == "dbrx":
+        tokenizer = TiktokenTokenizer(model_args)
     if tokenizer is None:
         logger.error(f"No tokenizer found in {model_path}")
-    logger.info(f"Loaded tokenizer from {tokenizer_path}")
+    logger.info(f"Loaded tokenizer from {model_path}")
 
     # Initialize model
     model = LLM(tokenizer, model_args)
