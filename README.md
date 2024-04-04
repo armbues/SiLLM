@@ -9,7 +9,7 @@ SiLLM simplifies the process of training and running Large Language Models (LLMs
 
 ## Features
 
-- Model architectures: Llama, Mistral, Mixtral, Phi-2, Gemma, Qwen2, Starcoder2
+- Model architectures: Llama, Mistral, Mixtral, Phi-2, Gemma, Qwen2, Starcoder2, DBRX
 - Conversation templates: llama-2, chatml, alpaca, vicuna, gemma, phi, openchat
 - API server with OpenAI compatible chat endpoints
 - Loss functions for DPO: sigmoid, hinge, IPO, DPOP
@@ -24,20 +24,6 @@ pip install sillm
 ```
 
 ## Usage
-
-### Examples
-
-#### [LoRA Fine-tuning](examples/helpsteer/)
-LoRA training [Mistral-7B-Instruct-v0.2](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2) with the Nvidia [HelpSteer](https://huggingface.co/datasets/nvidia/HelpSteer) dataset.
-
-#### [DPO Fine-tuning](examples/dpo-mix-7k/)
-DPO training [Qwen1.5-7B-Chat](https://huggingface.co/Qwen/Qwen1.5-7B-Chat) with the [DPO Mix 7K](https://huggingface.co/datasets/argilla/dpo-mix-7k) dataset. The training consists of a supervised fine tuning (SFT) followed by direct preference optimization (DPO).
-
-#### [MMLU Benchmark](examples/mmlu/)
-Implementation of the "Massive Multitask Language Understanding" benchmark using the [MMLU](https://huggingface.co/datasets/cais/mmlu) dataset.
-
-#### [Perplexity](examples/perplexity/)
-Calculating perplexity scores for a sample [dataset](https://huggingface.co/datasets/Cohere/wikipedia-2023-11-embed-multilingual-v3) of entry paragraphs from Wikipedia articles.
 
 ### Command-line interface (CLI) scripts
 Run the CLI scripts with the argument -h to see a print-out of all available arguments.
@@ -74,6 +60,20 @@ for s, _ in model.generate("On a beautiful Sunday morning,"):
     print(s, flush=True, end="")
 ```
 
+### Examples
+
+#### [LoRA Fine-tuning](examples/helpsteer/)
+LoRA training [Mistral-7B-Instruct-v0.2](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2) with the Nvidia [HelpSteer](https://huggingface.co/datasets/nvidia/HelpSteer) dataset.
+
+#### [DPO Fine-tuning](examples/dpo-mix-7k/)
+DPO training [Qwen1.5-7B-Chat](https://huggingface.co/Qwen/Qwen1.5-7B-Chat) with the [DPO Mix 7K](https://huggingface.co/datasets/argilla/dpo-mix-7k) dataset. The training consists of a supervised fine tuning (SFT) followed by direct preference optimization (DPO).
+
+#### [MMLU Benchmark](examples/mmlu/)
+Implementation of the "Massive Multitask Language Understanding" benchmark using the [MMLU](https://huggingface.co/datasets/cais/mmlu) dataset.
+
+#### [Perplexity](examples/perplexity/)
+Calculating perplexity scores for a sample [dataset](https://huggingface.co/datasets/Cohere/wikipedia-2023-11-embed-multilingual-v3) of entry paragraphs from Wikipedia articles.
+
 ## Model Support
 SiLLM generally supports loading LLMs of the following model architectures/families: *Llama 2*, *Mistral*, *Mixtral*, *Gemma*, *Phi*, *Qwen 2*, *StarCoder2*.
 
@@ -92,7 +92,7 @@ Here is a list of models that were successfully tested with SiLLM:
 
 ## Roadmap
 
-- Saving model to different formats (transformers, GGUF)
+- Saving models to different formats (transformers, GGUF)
 - Repetition penalty for inference
 - Learning rate schedulers for training
 - Merging models
