@@ -77,6 +77,18 @@ def map_key(k):
     
     return None
 
+def map_keys(keys):
+    """
+    Map weights keys to MLX naming scheme.
+    Args:
+        keys: Keys to map.
+    """
+    result = {}
+    for k in keys:
+        result[k] = map_key(k)
+
+    return result
+
 def map_config(config):
     """
     Map config to MLX naming scheme.
