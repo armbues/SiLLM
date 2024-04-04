@@ -159,3 +159,8 @@ class DbrxArgs(ModelArgs):
                 "num_experts": 16,
                 "num_experts_per_tok": 4
             }
+
+        if self.bos_token_id is None:
+            self.bos_token_id = 100257
+        if self.eos_token_id is None:
+            self.eos_token_id = 100257

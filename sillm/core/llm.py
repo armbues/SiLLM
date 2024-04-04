@@ -261,7 +261,7 @@ def generate(model,
     inputs = mx.array(tokenizer.encode(prompt))
 
     # Define stop tokens
-    stop_tokens = [tokenizer.eos_id, tokenizer.bos_id]
+    stop_tokens = tokenizer.special_ids
     
     # Initialize metadata
     timing = {

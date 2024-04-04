@@ -68,6 +68,8 @@ class SentencePieceTokenizer(Tokenizer):
             self.eos_id = args.eos_token_id
         self.pad_id = self._model.pad_id()
 
+        self.special_ids = [self.bos_id, self.eos_id, self.pad_id]
+
     def encode(self,
                s: str,
                bos: bool = True,
@@ -131,6 +133,7 @@ class TransformerTokenizer(Tokenizer):
 
         try:
             import transformers
+            transformers.logging.set_verbosity_error()
         except ImportError:
             raise ImportError("Please install transformers library to use TransformerTokenizer")
 
@@ -148,6 +151,8 @@ class TransformerTokenizer(Tokenizer):
             self.pad_id = self._model.pad_token_id
         else:
             self.pad_id = args.pad_token_id
+
+        self.special_ids = set([self.bos_id, self.eos_id] + self._model.all_special_ids)
 
     def encode(self,
                s: str,
@@ -246,6 +251,8 @@ class GGUFTokenizer(SentencePieceTokenizer):
             self.pad_id = -1
             pad_token = "<pad>"
         self._sep = "▁"
+
+        self.special_ids = set([self.bos_id, self.eos_id])
         
         if token_types is not None:
             token_types = token_types.tolist()
@@ -327,6 +334,8 @@ class TiktokenTokenizer(Tokenizer):
         self.bos_id = args.bos_token_id
         self.eos_id = args.eos_token_id
 
+        self.special_ids = set([self.bos_id, self.eos_id])
+
     def encode(self,
                s: str,
                bos: bool = True,
@@ -342,6 +351,10 @@ class TiktokenTokenizer(Tokenizer):
             Encoded tokens.
         """
         tokens = self._model.encode(s)
+        if bos:
+            tokens = [self.bos_id] + tokens
+        if eos:
+            tokens.append(self.eos_id)
 
         return tokens
     

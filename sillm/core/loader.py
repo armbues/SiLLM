@@ -197,17 +197,19 @@ def load_model_dir(model_path: str) -> LLM:
 
     # Load tokenizer
     tokenizer = None
-    tokenizer_path_model = model_path / "tokenizer.model"
-    tokenizer_path_json = model_path / "tokenizer.json"
-    if tokenizer_path_model.exists():
-        tokenizer = SentencePieceTokenizer(str(tokenizer_path_model), model_args)
-    elif tokenizer_path_json.exists():
+    tokenizer_path = None
+    if (model_path / "tokenizer.model").exists():
+        tokenizer_path = model_path / "tokenizer.model"
+        tokenizer = SentencePieceTokenizer(str(tokenizer_path), model_args)
+    elif (model_path / "tokenizer.json").exists():
+        tokenizer_path = model_path / "tokenizer.json"
         tokenizer = TransformerTokenizer(str(model_path), model_args)
     elif model_args.model_type == "dbrx":
+        tokenizer_path = "tiktoken"
         tokenizer = TiktokenTokenizer(model_args)
     if tokenizer is None:
         logger.error(f"No tokenizer found in {model_path}")
-    logger.info(f"Loaded tokenizer from {model_path}")
+    logger.info(f"Loaded tokenizer from {tokenizer_path}")
 
     # Initialize model
     model = LLM(tokenizer, model_args)
