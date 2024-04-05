@@ -5,3 +5,4 @@ from sillm.models import mixtral
 from sillm.models import phi
 from sillm.models import starcoder2
 from sillm.models import dbrx
+from sillm.models import cohere

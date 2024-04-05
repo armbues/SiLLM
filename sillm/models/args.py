@@ -65,6 +65,8 @@ class ModelArgs:
                 ArgsClass = Starcoder2Args
             elif config["model_type"] == "dbrx":
                 ArgsClass = DbrxArgs
+            elif config["model_type"] == "cohere":
+                ArgsClass = CohereArgs
             else:
                 ArgsClass = LlamaArgs
         if ArgsClass is None:
@@ -164,3 +166,12 @@ class DbrxArgs(ModelArgs):
             self.bos_token_id = 100257
         if self.eos_token_id is None:
             self.eos_token_id = 100257
+
+@dataclasses.dataclass
+class CohereArgs(ModelArgs):
+    """
+    Cohere model arguments.
+    """
+    norm_bias: bool = False
+    logit_scale: float = 0.0625
+    use_qk_norm: bool = False

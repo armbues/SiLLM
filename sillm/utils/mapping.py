@@ -153,6 +153,7 @@ def map_config(config):
         "rms_norm_eps": "norm_eps",
         "layer_norm_eps": "norm_eps",
         "norm_epsilon": "norm_eps",
+        "layer_norm_bias": "norm_bias",
         # GGUF metadata: https://github.com/ggerganov/ggml/blob/master/docs/gguf.md
         "llama.embedding_length": "dim",
         "llama.block_count": "n_layers",

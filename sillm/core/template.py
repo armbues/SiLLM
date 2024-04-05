@@ -12,7 +12,8 @@ default_templates = {
     "mixtral": "mistral",
     "phi": "phi2",
     "qwen2": "qwen2",
-    "dbrx": "chatml"
+    "dbrx": "chatml",
+    "cohere": "cohere",
 }
 
 class Template(object):
