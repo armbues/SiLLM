@@ -24,6 +24,7 @@ class ModelArgs:
     rope_theta: float = 10000.0
     rope_traditional: bool = True
     max_position_embeddings: int = 0
+    tie_word_embeddings: bool = False
     bos_token_id: int = None
     eos_token_id: int = None
     pad_token_id: int = None
@@ -128,7 +129,6 @@ class PhiArgs(ModelArgs):
     """
     rope_scaling: dict = None
     partial_rotary_factor: float = 0.4
-    tie_word_embeddings: bool = False
 
 @dataclasses.dataclass
 class Qwen2Args(ModelArgs):
@@ -136,7 +136,6 @@ class Qwen2Args(ModelArgs):
     Starcoder2 model arguments.
     """
     rope_scaling: dict = None
-    tie_word_embeddings: bool = False
 
 @dataclasses.dataclass
 class Starcoder2Args(ModelArgs):
