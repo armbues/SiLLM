@@ -35,6 +35,12 @@ class Template(object):
         logger.info(f"Initialized conversation template: {template}")
 
     @staticmethod
+    def list_templates():
+        loader = jinja2.PackageLoader('sillm', 'templates')
+
+        return loader.list_templates()
+    
+    @staticmethod
     def guess_template(args):
         if args.model_type and args.model_type in default_templates:
             return default_templates[args.model_type]

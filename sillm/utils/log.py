@@ -6,15 +6,29 @@ import mlx.core as mx
 
 logger = logging.getLogger("sillm")
 
-def init_logger(log_level):
+def init_logger(log_level,
+                fmt = "%(asctime)s %(levelname)s %(message)s",
+                datefmt = "%Y-%m-%d %H:%M:%S",
+                add_stdout = True
+                ):
+    """
+    Initialize the logger.
+    Args:
+        log_level: The log level.
+        fmt: The log format.
+        datefmt: The date format.
+    Returns:
+        The logger.
+    """
     # Set log level
     logger.setLevel(log_level)
 
-    # Initialize formatter and handler
-    formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    if add_stdout:
+        # Initialize formatter and handler
+        formatter = logging.Formatter(fmt, datefmt=datefmt)
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
 
     return logger
 
