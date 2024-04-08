@@ -128,6 +128,7 @@ class PhiArgs(ModelArgs):
     """
     rope_scaling: dict = None
     partial_rotary_factor: float = 0.4
+    tie_word_embeddings: bool = False
 
 @dataclasses.dataclass
 class Qwen2Args(ModelArgs):
