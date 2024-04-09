@@ -29,8 +29,8 @@ class Attention(nn.Module):
         super().__init__()
         self.args = args
 
-        self.n_heads: int = args.n_heads
-        self.n_kv_heads: int = args.n_kv_heads
+        self.n_heads = args.n_heads
+        self.n_kv_heads = args.n_kv_heads
         self.use_qk_norm = args.use_qk_norm
 
         self.scale = self.args.head_dim ** -0.5
