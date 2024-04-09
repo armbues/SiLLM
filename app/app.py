@@ -2,15 +2,12 @@ import os
 import pathlib
 
 import chainlit as cl
-from chainlit.input_widget import Select, Switch, Slider, TextInput
+from chainlit.input_widget import Select, Slider, TextInput
 
 import sillm
 import sillm.utils as utils
 
-if cl.config.run.debug:
-    log_level = 10
-else:
-    log_level = 20
+log_level = 10
 logger = utils.init_logger(log_level, "%(asctime)s - %(message)s", add_stdout=False)
 
 # Initialize model paths
