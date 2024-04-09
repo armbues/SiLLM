@@ -5,7 +5,6 @@ import mlx.nn as nn
 
 from sillm.models.base import BaseModel
 from sillm.models.args import ModelArgs
-from sillm.models.base import RMSNorm
 
 ########
 # Based on mlx-examples:
@@ -124,8 +123,8 @@ class TransformerBlock(nn.Module):
         
         self.attention = Attention(args=args)
         self.feed_forward = FeedForward(args=args)
-        self.attention_norm = RMSNorm(args.dim, eps=args.norm_eps)
-        self.ffn_norm = RMSNorm(args.dim, eps=args.norm_eps)
+        self.attention_norm = nn.RMSNorm(args.dim, eps=args.norm_eps)
+        self.ffn_norm = nn.RMSNorm(args.dim, eps=args.norm_eps)
 
     def forward(
             self,
@@ -169,7 +168,7 @@ class Model(BaseModel):
         
         self.tok_embeddings = nn.Embedding(args.vocab_size, args.dim)
         self.layers = [TransformerBlock(args=args) for _ in range(args.n_layers)]
-        self.norm = RMSNorm(args.dim, eps=args.norm_eps)
+        self.norm = nn.RMSNorm(args.dim, eps=args.norm_eps)
         self.output = nn.Linear(args.dim, args.vocab_size, bias=False)
 
     def __call__(self,

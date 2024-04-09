@@ -101,8 +101,8 @@ class TransformerBlock(nn.Module):
         self.dim = args.dim
         self.attention = llama.Attention(args=args)
         self.feed_forward = FeedForward(args=args)
-        self.attention_norm = llama.RMSNorm(args.dim, eps=args.norm_eps)
-        self.ffn_norm = llama.RMSNorm(args.dim, eps=args.norm_eps)
+        self.attention_norm = nn.RMSNorm(args.dim, eps=args.norm_eps)
+        self.ffn_norm = nn.RMSNorm(args.dim, eps=args.norm_eps)
         self.args = args
 
     def forward(self,
@@ -140,7 +140,7 @@ class Model(BaseModel):
 
         self.tok_embeddings = nn.Embedding(args.vocab_size, args.dim)
         self.layers = [TransformerBlock(args=args) for _ in range(args.n_layers)]
-        self.norm = llama.RMSNorm(args.dim, eps=args.norm_eps)
+        self.norm = nn.RMSNorm(args.dim, eps=args.norm_eps)
         self.output = nn.Linear(args.dim, args.vocab_size, bias=False)
 
     def __call__(self,

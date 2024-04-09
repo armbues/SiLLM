@@ -5,7 +5,6 @@ import mlx.nn as nn
 
 from sillm.models.base import BaseModel
 from sillm.models.args import ModelArgs
-from sillm.models.base import LayerNorm
 import sillm.models.llama as llama
 
 class Attention(llama.Attention):
@@ -116,7 +115,7 @@ class TransformerBlock(nn.Module):
         self.dim = args.dim
 
         self.attention = Attention(args=args)
-        self.attention_norm = LayerNorm(args.dim, eps=args.norm_eps)
+        self.attention_norm = nn.LayerNorm(args.dim, eps=args.norm_eps)
         self.feed_forward = FeedForward(args=args)
 
     def forward(self,
@@ -147,5 +146,5 @@ class Model(llama.Model):
         
         self.tok_embeddings = nn.Embedding(args.vocab_size, args.dim)
         self.layers = [TransformerBlock(args=args) for _ in range(args.n_layers)]
-        self.norm = LayerNorm(args.dim, eps=args.norm_eps)
+        self.norm = nn.LayerNorm(args.dim, eps=args.norm_eps)
         self.output = nn.Linear(args.dim, args.vocab_size, bias=True)

@@ -3,7 +3,6 @@ import mlx.nn as nn
 
 from sillm.models.base import BaseModel
 from sillm.models.args import ModelArgs
-from sillm.models.base import RMSNorm
 import sillm.models.llama as llama
 
 class Attention(llama.Attention):
@@ -50,8 +49,8 @@ class TransformerBlock(llama.TransformerBlock):
         
         self.attention = Attention(args=args)
         self.feed_forward = llama.FeedForward(args=args)
-        self.attention_norm = RMSNorm(args.dim, eps=args.norm_eps)
-        self.ffn_norm = RMSNorm(args.dim, eps=args.norm_eps)
+        self.attention_norm = nn.RMSNorm(args.dim, eps=args.norm_eps)
+        self.ffn_norm = nn.RMSNorm(args.dim, eps=args.norm_eps)
 
 ########
 # References:
@@ -74,7 +73,7 @@ class Model(llama.Model):
         
         self.tok_embeddings = nn.Embedding(args.vocab_size, args.dim)
         self.layers = [TransformerBlock(args=args) for _ in range(args.n_layers)]
-        self.norm = RMSNorm(args.dim, eps=args.norm_eps)
+        self.norm = nn.RMSNorm(args.dim, eps=args.norm_eps)
 
         if args.tie_word_embeddings:
             self.output = None

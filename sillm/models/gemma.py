@@ -7,12 +7,6 @@ from sillm.models.base import BaseModel
 from sillm.models.args import ModelArgs
 import sillm.models.llama as llama
 
-@partial(mx.compile, shapeless=True)
-def rms_norm(x, weight, eps):
-    x = x.astype(mx.float32)
-    x = x * mx.rsqrt(x.square().mean(-1, keepdims=True) + eps)
-
-    return (1.0 + weight) * x.astype(weight.dtype)
 
 class RMSNorm(nn.Module):
     """
@@ -27,7 +21,7 @@ class RMSNorm(nn.Module):
         self.eps = eps
 
     def __call__(self, x):
-        return rms_norm(x, self.weight, self.eps)
+        return mx.fast.rms_norm(x, 1.0 + self.weight, self.eps)
     
 class FeedForward(llama.FeedForward):
     """
