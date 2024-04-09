@@ -87,7 +87,7 @@ hide_cot = false
     #paper = "#FFFFFF"
 
     [UI.theme.light.primary]
-        #main = "#F80061"
+        main = "#3F85AD"
         #dark = "#980039"
         #light = "#FFE7EB"
 
@@ -97,7 +97,7 @@ hide_cot = false
     #paper = "#FFFFFF"
 
     [UI.theme.dark.primary]
-        #main = "#F80061"
+        main = "#3F85AD"
         #dark = "#980039"
         #light = "#FFE7EB"
 

@@ -23,7 +23,7 @@ ADAPTER_DIR = os.environ.get("SILLM_ADAPTER_DIR")
 if ADAPTER_DIR is None:
     ADAPTER_PATHS = {}
 else:
-    ADAPTER_PATHS = {adapter_path.name: adapter_path for adapter_path in pathlib.Path(ADAPTER_DIR).iterdir() if adapter_path.suffix == ".safetensors"}
+    ADAPTER_PATHS = {adapter_path.stem: adapter_path for adapter_path in pathlib.Path(ADAPTER_DIR).iterdir() if adapter_path.suffix == ".safetensors"}
 
 models = {}
 @cl.step
@@ -51,8 +51,13 @@ async def load_model(model_name: str,
 @cl.on_chat_start
 async def on_chat_start():
     model_names = list(MODEL_PATHS.keys())
+    model_names.sort()
+
     adapter_names = ["[none]"] + list(ADAPTER_PATHS.keys())
+    adapter_names.sort()
+
     templates = ["[default]"] + [template.removesuffix(".jinja") for template in sillm.Template.list_templates()]
+    templates.sort()
 
     settings = [
         Select(id="Model", label="Model", values=model_names, initial_index=0),
