@@ -23,10 +23,6 @@ if __name__ == "__main__":
     if log_level <= 10:
         utils.log_arguments(args.__dict__)
 
-    # Check for conversion arguments
-    if args.input_adapters is None and args.q4 is False and args.q8 is False:
-        raise ValueError("No conversion requested. Please specify adapters or quantization.")
-
     # Load model
     model = sillm.load(args.input)
 
