@@ -12,7 +12,7 @@ if __name__ == "__main__":
     parser.add_argument("model", type=str, help="The model directory or file")
     parser.add_argument("-d", "--chdir", default=None, type=str, help="Change working directory")
     parser.add_argument("-c", "--config", default=None, type=str, help="Load YAML configuration file for chat")
-    parser.add_argument("-a", "--input_adapters", default=None, type=str, help="Load LoRA adapter weights from .safetensors file")
+    parser.add_argument("-a", "--input_adapters", default=None, type=str, help="Load and merge LoRA adapter weights from .safetensors file")
     parser.add_argument("-s", "--seed", type=int, default=-1, help="Seed for randomization")
     parser.add_argument("-t", "--temperature", type=float, default=0.7, help="Sampling temperature")
     parser.add_argument("-f", "--flush", type=int, default=5, help="Flush output every n tokens")
@@ -47,12 +47,6 @@ if __name__ == "__main__":
     # Load model
     model = sillm.load(args.model)
 
-    # Quantize model
-    if args.q4 is True:
-        model.quantize(bits=4)
-    elif args.q8 is True:
-        model.quantize(bits=8)
-
     if args.input_adapters is not None:
         # Convert model to trainable
         model = sillm.TrainableLoRA.from_model(model)
@@ -65,6 +59,12 @@ if __name__ == "__main__":
         # Load and merge adapter file
         model.load_adapters(args.input_adapters)
         model.merge_and_unload_lora()
+
+    # Quantize model
+    if args.q4 is True:
+        model.quantize(bits=4)
+    elif args.q8 is True:
+        model.quantize(bits=8)
 
     generate_args = {
         "temperature": args.temperature,

@@ -1,6 +1,7 @@
 import logging
 import time
 import pathlib
+import json
 
 import mlx.core as mx
 import mlx.nn as nn
@@ -40,6 +41,7 @@ class LLM():
         """
         self.args = args
         self._quantization = None
+        self._mapping = None
 
         if args.model_type in model_map:
             model_class = model_map[args.model_type]
@@ -81,16 +83,28 @@ class LLM():
             module.name = name
 
     def update_weights(self,
-                       weights: dict
+                       weights: dict,
+                       mapping: dict = None
                        ):
         """
         Update model weights.
         Args:
             weights: Weights to update.
         """
+        # Update weights
         weights = tree_unflatten(list(weights.items()))
         self.model.update(weights)
         mx.eval(self.model.parameters())
+
+        # Add key mapping for quantization if needed
+        for key1 in list(mapping.keys()):
+            key2 = mapping[key1]
+            if key1.endswith(".weight"):
+                mapping[key1.removesuffix(".weight") + ".scales"] = key2.removesuffix(".weight") + ".scales"
+                mapping[key1.removesuffix(".weight") + ".biases"] = key2.removesuffix(".weight") + ".biases"
+        
+        # Update key mapping
+        self._mapping = mapping
 
     def verify_weights(self,
                        weights: dict
@@ -126,17 +140,100 @@ class LLM():
                      weights_path: str
                      ):
         """
-        Save model weights.
+        Save model weights into a single safetensors file.
         Args:
             weights_path: Path to weights file.
         """
-        state = dict(tree_flatten(self.parameters()))
-        metadata = {
-            "format": "mlx"
-        }
-        mx.save_safetensors(weights_path, state, metadata=metadata)
+        state = dict(tree_flatten(self.model.parameters()))
+        mx.save_safetensors(weights_path, state)
 
         logger.info(f"Saved model weights to {weights_path}")
+
+    def save_shards(self,
+                    weights_path: str,
+                    max_shard_size: int = 5<<30
+                    ):
+        """
+        Save model weights into shards.
+        Args:
+            weights_dir: Path to weights directory.
+        """
+        weights_path = pathlib.Path(weights_path)
+
+        state = dict(tree_flatten(self.model.parameters()))
+
+        shards = []
+        weight_map = {}
+        shard, shard_size = {}, 0
+        total_size = 0
+        for key, value in state.items():
+            if self._mapping is not None:
+                key = self._mapping[key]
+
+            if shard_size + value.nbytes > max_shard_size:
+                shards.append(shard)
+                shard, shard_size = {}, 0
+
+            shard[key] = value
+            weight_map[key] = len(shards)
+
+            shard_size += value.nbytes
+            total_size += value.nbytes
+        shards.append(shard)
+
+        def save_shard(shard, shard_path):
+            mx.save_safetensors(shard_path, shard)
+            logger.debug(f"Saved shard to {shard_path}")
+
+        if len(shards) > 1:
+            for i, shard in enumerate(shards):
+                save_shard(shard, str(weights_path / f"model-{i+1:05d}-of-{len(shards):05d}.safetensors"))
+
+            for key, i in weight_map.items():
+                weight_map[key] = f"model-{i+1:05d}-of-{len(shards):05d}.safetensors"
+        else:
+            save_shard(shard, str(weights_path / "model.safetensors"))
+
+            for key in weight_map:
+                weight_map[key] = "model.safetensors"
+
+        index_path = str(weights_path / "model.safetensors.index.json")
+        with open(index_path, "w") as f:
+            index_data = {
+                "metadata": {
+                    "total_size": total_size,
+                },
+                "weight_map": weight_map
+            }
+
+            f.write(json.dumps(index_data, indent=4))
+            logger.debug(f"Saved weight index to {index_path}")
+
+    def save(self,
+             model_path: str,
+             max_shard_size: int = 5<<30
+             ):
+        """
+        Save model.
+        Args:
+            model_path: Path to model directory.
+        """
+        model_path = pathlib.Path(model_path)
+        model_path.mkdir(parents=True, exist_ok=True)
+
+        # Save model config
+        config_path = model_path / "config.json"
+        self.args.save_config(config_path)
+        logger.debug(f"Saved model config to {config_path}")
+
+        # Save tokenizer
+        self.tokenizer.save(model_path)
+        logger.debug(f"Saved tokenizer to {model_path}")
+
+        # Save model weights
+        self.save_shards(model_path, max_shard_size=max_shard_size)
+
+        logger.info(f"Saved model to {model_path}")
 
     def quantize(self,
                  group_size: int = 32,
@@ -156,6 +253,7 @@ class LLM():
                 "bits": bits
             }
             self._quantization = quantization
+            self.args.quantization = quantization
 
             linear_class_predicate = lambda m: isinstance(m, nn.Linear) and m.weight.shape[0] != 8 and m.name not in excluded
             nn.QuantizedLinear.quantize_module(
@@ -192,6 +290,7 @@ class LLM():
             
             self.model.update_modules(tree_unflatten(layers))
             self._quantization = None
+            self.args.quantization = None
 
             self._update_names()
 

@@ -169,6 +169,7 @@ class TrainableLoRA(LLM):
         """
         model = TrainableLoRA(llm.model, llm.tokenizer, llm.args)
         model._quantization = llm._quantization
+        model._mapping = llm._mapping
 
         return model
     

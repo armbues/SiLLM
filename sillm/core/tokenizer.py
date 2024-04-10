@@ -1,4 +1,5 @@
 import pathlib
+import shutil
 
 from typing import List
 
@@ -25,9 +26,14 @@ class Tokenizer():
                             **kwargs
                             ):
         raise NotImplementedError("Tokenizer does not support chat templates - check has_template() first")
-    
+        
     @property
     def vocab_size(self) -> int:
+        raise NotImplementedError("Class tokenizer.Tokenizer is used for inheritance only")
+    
+    def save(self,
+             tokenizer_path: str
+             ):
         raise NotImplementedError("Class tokenizer.Tokenizer is used for inheritance only")
     
 ########
@@ -47,6 +53,7 @@ class SentencePieceTokenizer(Tokenizer):
             tokenizer_path: Path to tokenizer file.
         """
         assert pathlib.Path(tokenizer_path).exists(), tokenizer_path
+        self._source = tokenizer_path
 
         try:
             import sentencepiece
@@ -116,6 +123,13 @@ class SentencePieceTokenizer(Tokenizer):
         Vocabulary size.
         """
         return self._model.vocab_size()
+    
+    def save(self,
+            tokenizer_path: str
+            ):
+        tokenizer_path = pathlib.Path(tokenizer_path) / "tokenizer.model"
+
+        shutil.copy(self._source, tokenizer_path)
     
 class TransformerTokenizer(Tokenizer):
     """
@@ -211,6 +225,11 @@ class TransformerTokenizer(Tokenizer):
         Vocabulary size.
         """
         return self._model.vocab_size
+    
+    def save(self,
+            tokenizer_path: str
+            ):
+        self._model.save_pretrained(tokenizer_path)
 
 ########
 # Based on mlx-examples:
@@ -316,6 +335,11 @@ class GGUFTokenizer(SentencePieceTokenizer):
         
         self._model = sentencepiece.SentencePieceProcessor(model_proto=model_proto.SerializeToString())
 
+    def save(self,
+            tokenizer_path: str
+            ):
+        raise NotImplementedError("GGUFTokenizer does not support saving")
+
 class TiktokenTokenizer(Tokenizer):
     """
     Tokenizer wrapper for tiktoken.
@@ -369,3 +393,15 @@ class TiktokenTokenizer(Tokenizer):
             Decoded string.
         """
         return self._model.decode(t)
+    
+    @property
+    def vocab_size(self) -> int:
+        """
+        Vocabulary size.
+        """
+        return self._model.n_vocab
+    
+    def save(self,
+            tokenizer_path: str
+            ):
+        raise NotImplementedError("TiktokenTokenizer does not support saving")

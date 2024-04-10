@@ -50,6 +50,22 @@ class ModelArgs:
         if self.vocab_size <= 0 and "output.weight" in weights:
             self.vocab_size = weights["output.weight"].shape[0]
 
+    def save_config(self, config_path):
+        """
+        Save model config to JSON file.
+        Args:
+            config_path: Path to config file.
+        """
+        config = dataclasses.asdict(self)
+        
+        # Remove None values
+        for k in list(config.keys()):
+            if config[k] is None:
+                del config[k]
+
+        with open(config_path, "w") as f:
+            f.write(json.dumps(config, indent=4))
+
     @staticmethod
     def load_config(config):
         ArgsClass = None

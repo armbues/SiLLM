@@ -86,8 +86,10 @@ def load_gguf_file(model_path: str) -> LLM:
 
     # Map weights keys
     weights = {}
+    mapping = {}
     for gguf_key, value in gguf_weights.items():
         mlx_key = map_key(gguf_key)
+        mapping[mlx_key] = gguf_key
 
         if mlx_key is None:
             logger.warn(f"Unknown key: {gguf_key}")
@@ -133,13 +135,15 @@ def load_gguf_file(model_path: str) -> LLM:
         scales = weights.pop(f"{k}.scales")
         biases = weights.pop(f"{k}.biases")
         weights[f"{k}.weight"] = mx.dequantize(weight, scales=scales, biases=biases, **quantization)
+    
+    # Dequantize token embedding weights
     dequantize("tok_embeddings")
 
     # Verify that all model weights are present
     model.verify_weights(weights)
 
     # Update model weights
-    model.update_weights(weights)
+    model.update_weights(weights, mapping=mapping)
 
     total_params = sum(v.size for v in weights.values())
     logger.info(f"Loaded model weights with {total_params/10**9:.2f}B total parameters")
@@ -176,13 +180,13 @@ def load_model_dir(model_path: str) -> LLM:
     weights_files_bin = sorted(list(model_path.glob("pytorch_model-*.bin")))
 
     if len(weights_files_npz) > 0:
-        weights, model_format = load_mlx_weights(weights_files_npz)
+        weights, mapping, model_format = load_mlx_weights(weights_files_npz)
     elif len(weights_files_safetensors) > 0:
-        weights, model_format = load_mlx_weights(weights_files_safetensors)
+        weights, mapping, model_format = load_mlx_weights(weights_files_safetensors)
     elif len(weights_files_consolidated) > 0:
-        weights, model_format = load_torch_weights(weights_files_consolidated)
+        weights, mapping, model_format = load_torch_weights(weights_files_consolidated)
     elif len(weights_files_bin) > 0:
-       weights, model_format = load_torch_weights(weights_files_bin)
+       weights, mapping, model_format = load_torch_weights(weights_files_bin)
     else:
         raise ValueError("No weights files found")
 
@@ -223,14 +227,14 @@ def load_model_dir(model_path: str) -> LLM:
     model.verify_weights(weights)
 
     # Update model weights
-    model.update_weights(weights)
+    model.update_weights(weights, mapping=mapping)
 
     total_params = sum(v.size for v in weights.values())
     logger.info(f"Loaded model weights with {total_params/10**9:.2f}B total parameters")
 
     return model
 
-def load_mlx_weights(weights_files) -> dict:
+def load_mlx_weights(weights_files):
     """
     Load model weights using MLX.
     Args:
@@ -239,6 +243,7 @@ def load_mlx_weights(weights_files) -> dict:
         Model weights.
     """
     weights = {}
+    mapping = {}
     format = ModelFormat.UNKNOWN
     for weights_path in weights_files:
         logger.debug(f"Loading model weights file {weights_path}")
@@ -251,6 +256,8 @@ def load_mlx_weights(weights_files) -> dict:
 
         for key, value in weights_shard.items():
             mlx_key = map_key(key)
+            mapping[mlx_key] = key
+            
             mx.eval(value)
 
             if mlx_key is None:
@@ -261,9 +268,9 @@ def load_mlx_weights(weights_files) -> dict:
 
                 weights[mlx_key] = value
 
-    return weights, format
+    return weights, mapping, format
 
-def load_torch_weights(weights_files) -> dict:
+def load_torch_weights(weights_files):
     """
     Load model weights using PyTorch.
     Args:
@@ -272,6 +279,7 @@ def load_torch_weights(weights_files) -> dict:
         Model weights.
     """
     weights = {}
+    mapping = {}
     format = ModelFormat.UNKNOWN
     for weights_path in weights_files:
         logger.debug(f"Loading model weights file {weights_path}")
@@ -284,6 +292,7 @@ def load_torch_weights(weights_files) -> dict:
 
         for key, value in weights_shard.items():
             mlx_key = map_key(key)
+            mapping[mlx_key] = key
 
             if mlx_key is None:
                 logger.warning(f"Unknown key: {key}")
@@ -293,9 +302,9 @@ def load_torch_weights(weights_files) -> dict:
 
                 weights[mlx_key] = value
 
-    return weights, format
+    return weights, mapping, format
 
-def load_torch_file(weights_path) -> dict:
+def load_torch_file(weights_path):
     """
     Load PyTorch weights and convert to MLX.
     Args:
@@ -309,16 +318,24 @@ def load_torch_file(weights_path) -> dict:
         raise ImportError("Please install torch library to load PyTorch weights")
     
     weights = {}
-    for k, v in torch.load(weights_path, map_location="cpu").items():
+    mapping = {}
+    format = ModelFormat.UNKNOWN
+    for key, value in torch.load(weights_path, map_location="cpu").items():
         # Convert to numpy
-        if v.dtype == torch.bfloat16:
-            v = v.to(dtype=torch.float16).numpy()
+        if value.dtype == torch.bfloat16:
+            value = value.to(dtype=torch.float16).numpy()
         else:
             v = v.numpy()
 
-        weights[k] = mx.array(v, dtype=mx.float16)
+        mlx_key = map_key(key)
+        mapping[mlx_key] = key
 
-    return weights
+        if mlx_key is None:
+            logger.warning(f"Unknown key: {key}")
+        else:
+            weights[key] = mx.array(v, dtype=mx.float16)
+
+    return weights, mapping, format
 
 ########
 # Based on:

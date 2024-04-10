@@ -132,6 +132,9 @@ class Model(BaseModel):
         Args:
             args: Model arguments.
         """
+        # Override RoPE settings
+        args.rope_traditional = True
+
         super().__init__(args)
         self.args = args
 
