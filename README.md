@@ -27,7 +27,9 @@ pip install sillm
 ## Usage
 
 ### Chat web application
-The web app uses [Chainlit](https://github.com/Chainlit/chainlit) to provide a seamless frontend for conversational AI running locally on Apple Silicon.
+The web app uses [Chainlit](https://github.com/Chainlit/chainlit) to provide a frontend for conversational AI running locally on Apple Silicon hardware.
+
+https://github.com/armbues/SiLLM/assets/4117144/833d63ab-08b1-45ca-980f-474c7e9cc284
 
 To start the web app, clone the repository and start the app using chainlit:
 ``` sh
