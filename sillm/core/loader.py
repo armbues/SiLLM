@@ -318,8 +318,6 @@ def load_torch_file(weights_path):
         raise ImportError("Please install torch library to load PyTorch weights")
     
     weights = {}
-    mapping = {}
-    format = ModelFormat.UNKNOWN
     for key, value in torch.load(weights_path, map_location="cpu").items():
         # Convert to numpy
         if value.dtype == torch.bfloat16:
@@ -327,15 +325,9 @@ def load_torch_file(weights_path):
         else:
             v = v.numpy()
 
-        mlx_key = map_key(key)
-        mapping[mlx_key] = key
+        weights[key] = mx.array(v, dtype=mx.float16)
 
-        if mlx_key is None:
-            logger.warning(f"Unknown key: {key}")
-        else:
-            weights[key] = mx.array(v, dtype=mx.float16)
-
-    return weights, mapping, format
+    return weights
 
 ########
 # Based on:
