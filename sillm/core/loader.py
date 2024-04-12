@@ -180,13 +180,13 @@ def load_model_dir(model_path: str) -> LLM:
     weights_files_bin = sorted(list(model_path.glob("pytorch_model-*.bin")))
 
     if len(weights_files_npz) > 0:
-        weights, mapping, model_format = load_mlx_weights(weights_files_npz)
+        weights, mapping, model_format = load_weights(weights_files_npz, load_func=mx.load)
     elif len(weights_files_safetensors) > 0:
-        weights, mapping, model_format = load_mlx_weights(weights_files_safetensors)
+        weights, mapping, model_format = load_weights(weights_files_safetensors, load_func=mx.load)
     elif len(weights_files_consolidated) > 0:
-        weights, mapping, model_format = load_torch_weights(weights_files_consolidated)
+        weights, mapping, model_format = load_weights(weights_files_consolidated, load_func=load_torch_file)
     elif len(weights_files_bin) > 0:
-       weights, mapping, model_format = load_torch_weights(weights_files_bin)
+       weights, mapping, model_format = load_weights(weights_files_bin, load_func=load_torch_file)
     else:
         raise ValueError("No weights files found")
 
@@ -234,11 +234,14 @@ def load_model_dir(model_path: str) -> LLM:
 
     return model
 
-def load_mlx_weights(weights_files):
+def load_weights(weights_files,
+                 load_func: callable
+                 ):
     """
-    Load model weights using MLX.
+    Load model weights.
     Args:
         weights_files: List of weights files.
+        loader: File loader function.
     Returns:
         Model weights.
     """
@@ -247,7 +250,7 @@ def load_mlx_weights(weights_files):
     format = ModelFormat.UNKNOWN
     for weights_path in weights_files:
         logger.debug(f"Loading model weights file {weights_path}")
-        weights_shard = mx.load(str(weights_path))
+        weights_shard = load_func(str(weights_path))
 
         # Guess model format according to key names
         if format == ModelFormat.UNKNOWN:
@@ -265,40 +268,6 @@ def load_mlx_weights(weights_files):
             else:
                 if mlx_key in weights:
                     logger.warning(f"Duplicate key: {mlx_key} {value.shape}")
-
-                weights[mlx_key] = value
-
-    return weights, mapping, format
-
-def load_torch_weights(weights_files):
-    """
-    Load model weights using PyTorch.
-    Args:
-        weights_files: List of weights files.
-    Returns:
-        Model weights.
-    """
-    weights = {}
-    mapping = {}
-    format = ModelFormat.UNKNOWN
-    for weights_path in weights_files:
-        logger.debug(f"Loading model weights file {weights_path}")
-        weights_shard = load_torch_file(str(weights_path))
-
-        # Guess model format according to key names
-        if format == ModelFormat.UNKNOWN:
-            format = ModelFormat.guess_from_weights(weights_shard)
-            logger.info(f"Guessing model format: {format}")
-
-        for key, value in weights_shard.items():
-            mlx_key = map_key(key)
-            mapping[mlx_key] = key
-
-            if mlx_key is None:
-                logger.warning(f"Unknown key: {key}")
-            else:
-                if mlx_key in weights:
-                    logger.warning(f"Duplicate key: {mlx_key}")
 
                 weights[mlx_key] = value
 
