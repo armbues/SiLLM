@@ -3,15 +3,16 @@
 # SiLLM - Silicon LLM Training & Inference Toolkit
 SiLLM simplifies the process of training and running Large Language Models (LLMs) on Apple Silicon by leveraging the [MLX](https://github.com/ml-explore/mlx/) framework. Building upon the foundation provided by [MLX Examples](https://github.com/ml-explore/mlx-examples), this project introduces additional features specifically designed to enhance LLM operations with MLX in a streamlined package.
 
-- **LLM Loading**: load LLMs for inference and training in different formats (Huggingface, Torch, GGUF, MLX)
+- **LLM Loading**: load LLMs for chat and training in different formats (Huggingface, Torch, GGUF, MLX)
 - **LoRA Training**: train LLMs using *Low-rank Adaptation*
 - **DPO Training**: train LLMs with *Direct Preference Optimization*
 
 ## Features
 
-- Model architectures: Llama, Mistral, Mixtral, Phi-2, Gemma, Qwen2, Starcoder2, DBRX
-- Conversation templates: llama-2, chatml, alpaca, vicuna, gemma, phi, openchat
+- Web app for a seamless chat experience running on local hardware
 - API server with OpenAI compatible chat endpoints
+- Model architectures: Llama, Mistral, Mixtral, Phi-2, Gemma, Qwen2, Starcoder2, DBRX, Cohere Command-R
+- Conversation templates: llama-2, chatml, alpaca, vicuna, gemma, phi, openchat
 - Loss functions for DPO: sigmoid, hinge, IPO, DPOP
 - Training loss plots using matplotlib
 - Perplexity calculation
@@ -25,10 +26,22 @@ pip install sillm
 
 ## Usage
 
+### Chat web application
+The web app uses [Chainlit](https://github.com/Chainlit/chainlit) to provide a seamless frontend for conversational AI running locally on Apple Silicon.
+
+To start the web app, clone the repository and start the app using chainlit:
+``` sh
+git clone https://github.com/armbues/SiLLM.git
+cd SiLLM/app
+python -m chainlit run app.py -w
+```
+Set the environment variables `SILLM_MODEL_DIR` and `SILLM_ADAPTER_DIR` to load local models/adapters.
+
 ### Command-line interface (CLI) scripts
 Run the CLI scripts with the argument -h to see a print-out of all available arguments.
 
 #### Chat:
+Simple CLI interface for chatting with an LLM in the terminal.
 ``` sh
 python -m sillm.chat /path/to/model
 ```
@@ -37,17 +50,35 @@ Running sillm.chat in the terminal with Gemma-2B-it on a MacBook Air M2 with 16G
 https://github.com/armbues/SiLLM/assets/4117144/42e2d0f8-3bd8-44ca-9f78-8c4a885b8939
 
 #### Server:
+Run an API server with basic functionality compatible with OpenAI compatible chat endpoints.
 ``` sh
 python -m sillm.server /path/to/model --port 8000
 ```
 
 #### LoRA Fine-tuning:
+Fine-tune a model with low-rank adaptation (LoRA).
 ``` sh
-python -m sillm.lora /path/to/model -d /path/to/dataset
+python -m sillm.lora /path/to/model -d /path/to/dataset -o /output/adapters
 ```
+
 #### DPO Fine-tuning:
+Fine-tune a model with LoRA and direct preference optimization (DPO).
 ``` sh
-python -m sillm.dpo /path/to/model -d /path/to/dataset
+python -m sillm.dpo /path/to/model -d /path/to/dataset -o /output/adapters
+```
+
+#### Conversion
+Convert a model while merging adapters or quantizing the weights.
+
+Example of merging an adapter into a model:
+``` sh
+python -m sillm.convert /path/to/input/model /path/to/output/model -a /path/to/adapters
+```
+
+#### Quantization
+Quantize a model serially (without loading it entirely into memory):
+``` sh
+python -m sillm.quantize /path/to/input/model /path/to/output/model --bits 4
 ```
 
 ### Python
@@ -89,13 +120,15 @@ Here is a list of models that were successfully tested with SiLLM:
 | Qwen 1.5 | [7b-chat](https://huggingface.co/Qwen/Qwen1.5-7B-Chat), [14b-chat](https://huggingface.co/Qwen/Qwen1.5-14B-Chat) | |
 | StarCoder2 | [3b](https://huggingface.co/bigcode/starcoder2-3b), [7b](https://huggingface.co/bigcode/starcoder2-7b), [15b](https://huggingface.co/bigcode/starcoder2-15b) | |
 | CodeLlama | | [70b-instruct.Q4_0](https://huggingface.co/TheBloke/CodeLlama-70B-Instruct-GGUF), [Phind-34b-v2.Q4_0](https://huggingface.co/TheBloke/Phind-CodeLlama-34B-v2-GGUF) | |
+| DBRX | (currently not supported) | | [dbrx-instruct-4bit](https://huggingface.co/mlx-community/dbrx-instruct-4bit) |
+| Cohere | [Command-R](https://huggingface.co/CohereForAI/c4ai-command-r-v01) | |
 
 ## Roadmap
 
-- Saving models to different formats (transformers, GGUF)
 - Repetition penalty for inference
 - Learning rate schedulers for training
 - Merging models
+- Saving models to GGUF
 
 ## License
 This project uses the [MIT License](LICENSE).
