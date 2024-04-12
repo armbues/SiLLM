@@ -21,7 +21,7 @@ SiLLM simplifies the process of training and running Large Language Models (LLMs
 
 Using pip:
 ``` sh
-pip install sillm
+pip install sillm-mlx
 ```
 
 ## Usage
