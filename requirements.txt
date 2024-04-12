@@ -1,8 +1,10 @@
 mlx>=0.10.0
-sentencepiece
-transformers
+transformers>=4.39.3
+sentencepiece==0.2.0
+protobuf==5.26.1
 numpy
 tqdm
 psutil
 pyyaml
 matplotlib
+jinja2
