@@ -1,4 +1,4 @@
-mlx>=0.9.1
+mlx>=0.10.0
 sentencepiece
 transformers
 numpy
