@@ -9,7 +9,7 @@ requirements_server = (pkg_dir / "requirements-server.txt").read_text(encoding="
 
 setup(
     name = "sillm",
-    version = "0.1.0",
+    version = "0.2.0",
     description = "Running and training LLMs on Apple Silicon via MLX",
     long_description = readme,
     long_description_content_type = "text/markdown",
