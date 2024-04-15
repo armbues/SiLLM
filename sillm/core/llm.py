@@ -255,7 +255,10 @@ class LLM():
             self._quantization = quantization
             self.args.quantization = quantization
 
-            linear_class_predicate = lambda m: isinstance(m, nn.Linear) and m.weight.shape[0] != 8 and m.name not in excluded
+            linear_class_predicate = lambda m: (isinstance(m, nn.Linear) and
+                                                m.weight.shape[0] != 8 and
+                                                ".gate." not in m.name and
+                                                m.name not in excluded)
             nn.QuantizedLinear.quantize_module(
                 model = self.model,
                 **quantization,

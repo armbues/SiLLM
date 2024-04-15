@@ -43,7 +43,7 @@ def quantize_files(input_path: str,
             original_size += weight.nbytes
             mlx_key = map_key(key)
 
-            if key.endswith("weight") and len(weight.shape) > 1 and weight.shape[0] != 8 and not mlx_key.startswith("tok_embeddings."):
+            if key.endswith("weight") and len(weight.shape) > 1 and weight.shape[0] != 8 and not mlx_key.startswith("tok_embeddings.") and ".gate." not in mlx_key:
                 weight, scales, biases = mx.quantize(weight, group_size, bits)
                 quant_size = weight.nbytes + scales.nbytes + biases.nbytes
                 total_size += quant_size
@@ -53,6 +53,8 @@ def quantize_files(input_path: str,
 
                 shard[key_scales] = scales
                 shard[key_biases] = biases
+            else:
+                logger.debug(f"Skipping quantization for {key}")
             shard[key] = weight
             weight_map[key] = weights_path.name
 
