@@ -131,6 +131,7 @@ Here is a list of models that were successfully tested with SiLLM:
 - Learning rate schedulers for training
 - Merging models
 - Saving models to GGUF
+- Fine tuning with ORPO
 
 ## License
 This project uses the [MIT License](LICENSE).
