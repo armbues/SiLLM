@@ -292,9 +292,9 @@ def load_torch_file(weights_path):
         if value.dtype == torch.bfloat16:
             value = value.to(dtype=torch.float16).numpy()
         else:
-            v = v.numpy()
+            value = value.numpy()
 
-        weights[key] = mx.array(v, dtype=mx.float16)
+        weights[key] = mx.array(value, dtype=mx.float16)
 
     return weights
 
