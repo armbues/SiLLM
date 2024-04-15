@@ -35,6 +35,12 @@ def map_key(k):
         k = re.sub(r"\.mlp\.down_proj\.", ".feed_forward.w2.", k)
         k = re.sub(r"\.mlp\.up_proj\.", ".feed_forward.w3.", k)
 
+        # MoE
+        k = re.sub(r"\.block_sparse_moe\.gate\.", ".feed_forward.gate.", k)
+        k = re.sub(r"\.block_sparse_moe\.experts\.(\d+)\.w1.", r".feed_forward.experts.\1.w1.", k)
+        k = re.sub(r"\.block_sparse_moe\.experts\.(\d+)\.w2.", r".feed_forward.experts.\1.w2.", k)
+        k = re.sub(r"\.block_sparse_moe\.experts\.(\d+)\.w3.", r".feed_forward.experts.\1.w3.", k)
+
         # Phi mapping
         k = re.sub(r"\.self_attn\.dense\.", ".attention.wo.", k)
         k = re.sub(r"\.mlp\.fc1\.", ".feed_forward.w1.", k)

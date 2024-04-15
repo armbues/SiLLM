@@ -1,5 +1,6 @@
 import logging
 import pathlib
+import json
 
 import mlx.core as mx
 
@@ -8,10 +9,10 @@ from .mapping import map_key
 logger = logging.getLogger("sillm")
 
 def quantize_files(input_path: str,
-                     output_path: str,
-                     group_size: int = 32,
-                     bits: int = 4
-                     ):
+                   output_path: str,
+                   group_size: int = 32,
+                   bits: int = 4
+                   ):
     """
     Quantize weights files.
     Args:
@@ -31,6 +32,7 @@ def quantize_files(input_path: str,
         logger.debug(f"Saved quantized shard to {shard_path}")
     
     shard = {}
+    weight_map = {}
     original_size = 0
     total_size = 0
     for weights_path in weights_files:
@@ -41,7 +43,7 @@ def quantize_files(input_path: str,
             original_size += weight.nbytes
             mlx_key = map_key(key)
 
-            if key.endswith("weight") and len(weight.shape) > 1 and not mlx_key.startswith("tok_embeddings."):
+            if key.endswith("weight") and len(weight.shape) > 1 and weight.shape[0] != 8 and not mlx_key.startswith("tok_embeddings."):
                 weight, scales, biases = mx.quantize(weight, group_size, bits)
                 quant_size = weight.nbytes + scales.nbytes + biases.nbytes
                 total_size += quant_size
@@ -52,9 +54,22 @@ def quantize_files(input_path: str,
                 shard[key_scales] = scales
                 shard[key_biases] = biases
             shard[key] = weight
+            weight_map[key] = weights_path.name
 
         shard_path = str(output_path / weights_path.name)
         save_shard(shard, shard_path)
         shard = {}
 
     logger.debug(f"Quantization reduced weights size: {original_size//1024//1024:,} MB => {total_size//1024//1024:,} MB")
+
+    index_path = str(output_path / "model.safetensors.index.json")
+    with open(index_path, "w") as f:
+        index_data = {
+            "metadata": {
+                "total_size": total_size,
+            },
+            "weight_map": weight_map
+        }
+
+        f.write(json.dumps(index_data, indent=4))
+        logger.debug(f"Saved weight index to {index_path}")
