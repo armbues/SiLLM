@@ -42,7 +42,7 @@ class FeedForward(nn.Module):
 
         gate_logits = self.gate(x)
         
-        expert_indices = mx.stop_gradient(mx.argpartition(-gate_logits, kth=top_k, axis=-1)[:, :top_k])
+        expert_indices = mx.stop_gradient(mx.argpartition(-gate_logits, kth=top_k-1, axis=-1)[:, :top_k])
         expert_scores = mx.softmax(mx.take_along_axis(gate_logits, expert_indices, axis=-1).astype(mx.float32), axis=-1).astype(gate_logits.dtype)
         
         if self.training:

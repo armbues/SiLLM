@@ -65,6 +65,6 @@ class AutoTemplate(Template):
     
     def apply_chat_template(self,
                             messages: list,
-                            add_generation_prompt: bool = False,
+                            add_generation_prompt: bool = False
                             ):
         return self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=add_generation_prompt)
