@@ -9,10 +9,12 @@ from sillm.training.lora import TrainableLoRA
 
 logger = logging.getLogger("sillm")
 
+
 class TrainableDPO(TrainableLoRA):
     """
     Trainable DPO model wrapper.
     """
+
     @staticmethod
     def from_model(llm: LLM, **kwargs):
         """
@@ -26,7 +28,7 @@ class TrainableDPO(TrainableLoRA):
         model._quantization = llm._quantization
 
         return model
-    
+
     def __init__(self,
                  model,
                  tokenizer,
@@ -71,12 +73,15 @@ class TrainableDPO(TrainableLoRA):
         Generate comparison between policy and reference model completions.
         Args:
             prompt: Prompt to start generation.
+            temp: Temperature used for generation.
             num_tokens: Max number of tokens to generate.
         Returns:
             Completions.
         """
-        reference_completion = ''.join([t[0] for t in generate(self.reference, self.tokenizer, prompt, temp=temp, num_tokens=num_tokens)])
-        policy_completion = ''.join([t[0] for t in generate(self.model, self.tokenizer, prompt, temp=temp, num_tokens=num_tokens)])
+        reference_completion = ''.join([t[0] for t in generate(self.reference, self.tokenizer, prompt, temperature=temp,
+                                                               max_tokens=num_tokens)])
+        policy_completion = ''.join([t[0] for t in generate(self.model, self.tokenizer, prompt, temperature=temp,
+                                                            max_tokens=num_tokens)])
 
         return reference_completion, policy_completion
 
@@ -86,24 +91,26 @@ class TrainableDPO(TrainableLoRA):
     # https://huggingface.co/docs/trl/main/en/dpo_trainer
     ########
     def loss(self,
-            chosen: mx.array,
-            rejected: mx.array,
-            chosen_masks: mx.array,
-            rejected_masks: mx.array,
-            ):
+             chosen: mx.array,
+             rejected: mx.array,
+             chosen_masks: mx.array,
+             rejected_masks: mx.array,
+             ):
         """
         Calculate loss for inputs.
         Args:
-            inputs: Input tokens.
-            targets: Target tokens.
-            lengths: Lengths of inputs.
+            chosen: Chosen responses.
+            rejected: Rejected responses.
+            chosen_masks: Chosen masks.
+            rejected_masks: Rejected masks.
         Returns:
             Loss value.
         """
+
         def forward(model, x, mask):
             inputs = x[:, :-1]
             targets = x[:, 1:]
-            
+
             logits, _ = model(inputs)
             logits = logits.astype(mx.float32)
 
@@ -137,7 +144,7 @@ class TrainableDPO(TrainableLoRA):
             else:
                 reference_chosen_score = reference_chosen_scores.sum(-1)
                 reference_rejected_score = reference_rejected_scores.sum(-1)
-        
+
         logits = (policy_chosen_score - policy_rejected_score) - (reference_chosen_score - reference_rejected_score)
 
         if self.loss_type == "sigmoid":
@@ -156,7 +163,7 @@ class TrainableDPO(TrainableLoRA):
             losses = -(nn.log_sigmoid(self.beta * logits) - self.delta * penalty)
         else:
             raise ValueError(f"Unknown loss type: {self.loss_type}")
-        
+
         loss = mx.mean(losses)
         num_tokens = (num_chosen_tokens + num_rejected_tokens).sum()
 
