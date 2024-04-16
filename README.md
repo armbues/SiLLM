@@ -35,6 +35,7 @@ To start the web app, clone the repository and start the app using chainlit:
 ``` sh
 git clone https://github.com/armbues/SiLLM.git
 cd SiLLM/app
+pip install -r requirements.txt
 python -m chainlit run app.py -w
 ```
 Set the environment variables `SILLM_MODEL_DIR` and `SILLM_ADAPTER_DIR` to load local models/adapters.
@@ -123,7 +124,7 @@ Here is a list of models that were successfully tested with SiLLM:
 | StarCoder2 | [3b](https://huggingface.co/bigcode/starcoder2-3b), [7b](https://huggingface.co/bigcode/starcoder2-7b), [15b](https://huggingface.co/bigcode/starcoder2-15b) | |
 | CodeLlama | | [70b-instruct.Q4_0](https://huggingface.co/TheBloke/CodeLlama-70B-Instruct-GGUF), [Phind-34b-v2.Q4_0](https://huggingface.co/TheBloke/Phind-CodeLlama-34B-v2-GGUF) | |
 | DBRX | (currently not supported) | | [dbrx-instruct-4bit](https://huggingface.co/mlx-community/dbrx-instruct-4bit) |
-| Cohere | [Command-R](https://huggingface.co/CohereForAI/c4ai-command-r-v01) | |
+| Cohere | [Command-R](https://huggingface.co/CohereForAI/c4ai-command-r-v01), [Command-R+](CohereForAI/c4ai-command-r-plus) | |
 
 ## Roadmap
 
