@@ -23,7 +23,7 @@ else:
     ADAPTER_PATHS = {adapter_path.stem: adapter_path for adapter_path in pathlib.Path(ADAPTER_DIR).iterdir() if adapter_path.suffix == ".safetensors"}
 
 models = {}
-@cl.step
+@cl.step(name="Loading Model")
 async def load_model(model_name: str,
                      adapter_name: str = None
                      ):
@@ -130,7 +130,7 @@ async def on_message(message: cl.Message):
     generate_args = cl.user_session.get("generate_args")
 
     # Generate response
-    msg = cl.Message(content="")
+    msg = cl.Message(author=model_name, content="")
     response = ""
     for s, _ in model.generate(prompt, **generate_args):
         await msg.stream_token(s)
