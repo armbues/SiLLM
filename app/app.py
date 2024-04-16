@@ -29,6 +29,7 @@ async def load_model(model_name: str,
                      ):
     model = await cl.make_async(sillm.load)(MODEL_PATHS[model_name])
     msg = f"Loaded model {model_name}."
+    model_id = model_name
 
     if adapter_name is not None and adapter_name in ADAPTER_PATHS:
         adapter_path = str(ADAPTER_PATHS[adapter_name])
@@ -40,8 +41,9 @@ async def load_model(model_name: str,
         model.merge_and_unload_lora()
 
         msg = f"Loaded model {model_name} and adapters {adapter_name}."
+        model_id = f"{model_name}:{adapter_name}"
 
-    models[model_name] = model
+    models[model_id] = model
 
     return msg
 
@@ -98,11 +100,14 @@ async def on_message(message: cl.Message):
     # Initialize model
     model_name = cl.user_session.get("model_name")
     adapter_name = cl.user_session.get("adapter_name")
+    model_id = model_name
+    if adapter_name != "[none]":
+        model_id = f"{model_name}:{adapter_name}"
     if model_name is None:
-        raise ValueError("Please select a model.")
-    if model_name not in models:
+        raise ValueError("Please select a model.")    
+    if model_id not in models:
         await load_model(model_name, adapter_name)
-    model = models[model_name]
+    model = models[model_id]
 
     # Initialize conversation & templates
     conversation = cl.user_session.get("conversation")
@@ -130,7 +135,7 @@ async def on_message(message: cl.Message):
     generate_args = cl.user_session.get("generate_args")
 
     # Generate response
-    msg = cl.Message(author=model_name, content="")
+    msg = cl.Message(author=model_id, content="")
     response = ""
     for s, _ in model.generate(prompt, **generate_args):
         await msg.stream_token(s)
