@@ -31,6 +31,7 @@ def map_key(k):
         k = re.sub(r"\.post_attention_layernorm\.", ".ffn_norm.", k)
 
         k = re.sub(r"\.self_attn\.(q|k|v|o)_proj\.", r".attention.w\1.", k)
+        k = re.sub(r"\.self_attn\.(q|k)_norm\.", r".attention.\1_norm.", k)
         k = re.sub(r"\.mlp\.gate_proj\.", ".feed_forward.w1.", k)
         k = re.sub(r"\.mlp\.down_proj\.", ".feed_forward.w2.", k)
         k = re.sub(r"\.mlp\.up_proj\.", ".feed_forward.w3.", k)
@@ -145,6 +146,7 @@ def map_config(config):
         "tie_word_embeddings",
         "clip_qkv",
         "use_qk_norm",
+        "logit_scale",
     ]
     for key in mlx_keys:
         if key in config:

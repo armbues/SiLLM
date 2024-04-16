@@ -41,8 +41,8 @@ class Attention(nn.Module):
         self.wo = nn.Linear(args.n_heads * args.head_dim, args.dim, bias=False)
         
         if self.use_qk_norm:
-            self.q_norm = LayerNorm2D(self.n_heads, args.dim, eps=args.norm_eps)
-            self.k_norm = LayerNorm2D(self.n_kv_heads, args.dim, eps=args.norm_eps)
+            self.q_norm = LayerNorm2D(self.n_heads, args.head_dim, eps=args.norm_eps)
+            self.k_norm = LayerNorm2D(self.n_kv_heads, args.head_dim, eps=args.norm_eps)
 
         self.rope = nn.RoPE(args.head_dim, traditional=True, base=args.rope_theta)
 
@@ -55,16 +55,14 @@ class Attention(nn.Module):
 
         queries, keys, values = self.wq(x), self.wk(x), self.wv(x)
 
+        queries = queries.reshape(B, L, self.n_heads, -1)
+        keys = keys.reshape(B, L, self.n_kv_heads, -1)
         if self.use_qk_norm:
-            queries = queries.reshape(B, L, self.n_heads, -1)
-            keys = keys.reshape(B, L, self.n_kv_heads, -1)
-            queries = self.q_norm(queries).transpose(0, 2, 1, 3)
-            keys = self.k_norm(keys).transpose(0, 2, 1, 3)
-            values = values.reshape(B, L, self.n_kv_heads, -1).transpose(0, 2, 1, 3)
-        else:
-            queries = queries.reshape(B, L, self.n_heads, -1).transpose(0, 2, 1, 3)
-            keys = keys.reshape(B, L, self.n_kv_heads, -1).transpose(0, 2, 1, 3)
-            values = values.reshape(B, L, self.n_kv_heads, -1).transpose(0, 2, 1, 3)
+            queries = self.q_norm(queries)
+            keys = self.k_norm(keys)
+        queries = queries.transpose(0, 2, 1, 3)
+        keys = keys.transpose(0, 2, 1, 3)
+        values = values.reshape(B, L, self.n_kv_heads, -1).transpose(0, 2, 1, 3)
 
         if cache is not None:
             key_cache, value_cache = cache
