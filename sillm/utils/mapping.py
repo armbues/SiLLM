@@ -144,6 +144,7 @@ def map_config(config):
         "moe",
         "tie_word_embeddings",
         "clip_qkv",
+        "use_qk_norm",
     ]
     for key in mlx_keys:
         if key in config:
