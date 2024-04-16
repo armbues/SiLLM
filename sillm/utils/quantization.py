@@ -43,7 +43,26 @@ def quantize_files(input_path: str,
             original_size += weight.nbytes
             mlx_key = map_key(key)
 
-            if key.endswith("weight") and len(weight.shape) > 1 and weight.shape[0] != 8 and not mlx_key.startswith("tok_embeddings.") and ".gate." not in mlx_key:
+            # Checking if weight should be quantized
+            quantize_weight = key.endswith("weight") and len(weight.shape) > 1
+            if weight.shape[0] == 8 or ".gate." in mlx_key:
+                logger.debug(f"Skipping quantization for MoE gate: {key}")
+                quantize_weight = False
+            elif mlx_key.startswith("tok_embeddings."):
+                logger.debug(f"Skipping quantization for token embeddings: {key}")
+                quantize_weight = False
+            elif ".k_norm." in mlx_key or ".q_norm." in mlx_key:
+                logger.debug(f"Skipping quantization for attention norm: {key}")
+                quantize_weight = False
+            elif len(weight.shape) > 1 and weight.shape[1] < 512:
+                if bits == 4 and weight.shape[1] < 256:
+                    logger.debug(f"Skipping quantization for small weight: {key}")
+                    quantize_weight = False
+                if bits == 8 and weight.shape[1] < 128:
+                    logger.debug(f"Skipping quantization for small weight: {key}")
+                    quantize_weight = False
+
+            if quantize_weight:
                 weight, scales, biases = mx.quantize(weight, group_size, bits)
                 quant_size = weight.nbytes + scales.nbytes + biases.nbytes
                 total_size += quant_size
@@ -53,8 +72,6 @@ def quantize_files(input_path: str,
 
                 shard[key_scales] = scales
                 shard[key_biases] = biases
-            else:
-                logger.debug(f"Skipping quantization for {key}")
             shard[key] = weight
             weight_map[key] = weights_path.name
 
