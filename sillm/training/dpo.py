@@ -64,19 +64,20 @@ class TrainableDPO(TrainableLoRA):
 
     def comparison(self,
                    prompt: str,
-                   temp: float = 0.0,
-                   num_tokens: int = 1024
+                   temperature: float = 0.0,
+                   max_tokens: int = 1024
                    ):
         """
         Generate comparison between policy and reference model completions.
         Args:
             prompt: Prompt to start generation.
-            num_tokens: Max number of tokens to generate.
+            temperature: Sampling temperature.
+            max_tokens: Max number of tokens to generate.
         Returns:
             Completions.
         """
-        reference_completion = ''.join([t[0] for t in generate(self.reference, self.tokenizer, prompt, temp=temp, num_tokens=num_tokens)])
-        policy_completion = ''.join([t[0] for t in generate(self.model, self.tokenizer, prompt, temp=temp, num_tokens=num_tokens)])
+        reference_completion = ''.join([t[0] for t in generate(self.reference, self.tokenizer, prompt, temperature==temperature, max_tokens=max_tokens)])
+        policy_completion = ''.join([t[0] for t in generate(self.model, self.tokenizer, prompt, temperature=temperature, max_tokens=max_tokens)])
 
         return reference_completion, policy_completion
 
