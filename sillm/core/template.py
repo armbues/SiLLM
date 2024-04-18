@@ -43,7 +43,14 @@ class Template(object):
     @staticmethod
     def guess_template(args):
         if args.model_type and args.model_type in default_templates:
-            return default_templates[args.model_type]
+            template_name = default_templates[args.model_type]
+
+            # Hack for Llama-3
+            if args.model_type == "llama" and args.vocab_size == 128256:
+                template_name = "llama3"
+
+            return template_name
+
         return None
 
     def _raise_exception(self, msg):
