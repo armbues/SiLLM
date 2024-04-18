@@ -397,7 +397,7 @@ def generate(model,
         "finish_reason": "length"
     }
 
-    tokens = []
+    tokens, text, buffer, prefix = [], "", [], ""
     for (token,p) , i in zip(generate_step(model, inputs, temperature, logprobs), range(max_tokens)):
         if i == 0:
             mx.eval(token)
@@ -415,7 +415,15 @@ def generate(model,
 
         if (len(tokens) % flush) == 0:
             mx.eval(tokens)
+
             text = tokenizer.decode(tokens)
+            window = tokenizer.decode(buffer + tokens)
+            if prefix + " " + text == window:
+                prefix = text
+                text = " " + text
+            else:
+                prefix = text
+            buffer = tokens
             tokens = []
 
             timing["runtime"] = time.perf_counter() - start
@@ -425,7 +433,16 @@ def generate(model,
             yield text, metadata
 
     mx.eval(tokens)
+    
     text = tokenizer.decode(tokens)
+    window = tokenizer.decode(buffer + tokens)
+    if prefix + " " + text == window:
+        prefix = text
+        text = " " + text
+    else:
+        prefix = text
+    buffer = tokens
+    tokens = []
 
     timing["runtime"] = time.perf_counter() - start
     usage["completion_tokens"] = i+1
