@@ -134,7 +134,10 @@ class DatasetMessages(Dataset):
 
         self._type_id = "Messages"
         self._data = []
-        self.pad_id = tokenizer.pad_id if tokenizer.pad_id >= 0 else tokenizer.eos_id
+        if tokenizer.pad_id is not None and tokenizer.pad_id >= 0:
+            self.pad_id = tokenizer.pad_id
+        else:
+            self.pad_id = tokenizer.eos_id
 
         messages_key = "messages"
 
@@ -217,7 +220,10 @@ class DatasetInstruct(DatasetMessages):
         """
         self._type_id = "Instruct"
         self._data = []
-        self.pad_id = tokenizer.pad_id if tokenizer.pad_id >= 0 else tokenizer.eos_id
+        if tokenizer.pad_id is not None and tokenizer.pad_id >= 0:
+            self.pad_id = tokenizer.pad_id
+        else:
+            self.pad_id = tokenizer.eos_id
 
         prompt_key = "prompt"
         response_key = "response"
@@ -268,7 +274,10 @@ class DatasetDPO(Dataset):
         """
         self._type_id = "DPO"
         self._data = []
-        self.pad_id = tokenizer.pad_id if tokenizer.pad_id >= 0 else tokenizer.eos_id
+        if tokenizer.pad_id is not None and tokenizer.pad_id >= 0:
+            self.pad_id = tokenizer.pad_id
+        else:
+            self.pad_id = tokenizer.eos_id
 
         prompt_key = "prompt"
         chosen_key = "chosen"
