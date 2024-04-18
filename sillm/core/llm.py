@@ -82,6 +82,19 @@ class LLM():
         for name, module in self.model.named_modules():
             module.name = name
 
+    def get_size(self):
+        """
+        Get model size.
+        """
+        total_size = 0
+        for module in self.model.modules():
+            if isinstance(module, nn.QuantizedLinear):
+                total_size += module.weight.size * (32 // module.bits)
+            elif isinstance(module, nn.Linear):
+                total_size += module.weight.size
+
+        return total_size
+
     def update_weights(self,
                        weights: dict,
                        mapping: dict = None
@@ -401,24 +414,24 @@ def generate(model,
             metadata["logprobs"].append(p)
 
         if (len(tokens) % flush) == 0:
-            mx.eval(token)
-            s = tokenizer.decode(tokens)
+            mx.eval(tokens)
+            text = tokenizer.decode(tokens)
             tokens = []
 
             timing["runtime"] = time.perf_counter() - start
             usage["completion_tokens"] = i+1
             usage["total_tokens"] = usage["prompt_tokens"] + usage["completion_tokens"]
 
-            yield s, metadata
+            yield text, metadata
 
-    mx.eval(token)
-    s = tokenizer.decode(tokens)
+    mx.eval(tokens)
+    text = tokenizer.decode(tokens)
 
     timing["runtime"] = time.perf_counter() - start
     usage["completion_tokens"] = i+1
     usage["total_tokens"] = usage["prompt_tokens"] + usage["completion_tokens"]
 
-    yield s, metadata
+    yield text, metadata
 
 def generate_step(model, inputs, temperature, logprobs=False):
     y = inputs
