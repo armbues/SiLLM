@@ -10,5 +10,8 @@ Upload package to testpypi:
 Test installation from testpypi:
 `python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple sillm`
 
+Upload package to pypi:
+`python -m twine upload dist/*`
+
 Reset test environment:
 `pip uninstall -y -r <(pip freeze)`
