@@ -113,19 +113,11 @@ async def on_message(message: cl.Message):
     conversation = cl.user_session.get("conversation")
     if conversation is None:
         template_name = cl.user_session.get("template_name")
+        if template_name == "[default]":
+            template_name = None
 
-        if template_name is None or template_name == "[default]":
-            template_name = sillm.Template.guess_template(model.args)
-
-            if template_name:
-                conversation = sillm.Conversation(template=template_name)
-            elif model.tokenizer.has_template():
-                conversation = sillm.AutoConversation(model.tokenizer)
-            else:
-                raise ValueError("Please set a conversation template.")
-        else:
-            conversation = sillm.Conversation(template=template_name)
-            
+        template = sillm.init_template(model.tokenizer, model.args, template_name)
+        conversation = sillm.Conversation(template)            
         cl.user_session.set("conversation", conversation)
 
     # Add user message to conversation and get prompt string
