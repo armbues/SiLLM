@@ -49,7 +49,6 @@ class LLM():
         else:
             raise NotImplementedError(f"Model type {args.model_type} is not supported")
         self.model.train(mode=False)
-        self._update_names()
 
         self.tokenizer = tokenizer
 
@@ -74,13 +73,6 @@ class LLM():
             }
         else:
             raise ValueError("Model is missing an ID or creation time")
-    
-    def _update_names(self):
-        """
-        Update module names.
-        """
-        for name, module in self.model.named_modules():
-            module.name = name
 
     def get_size(self):
         """
@@ -109,7 +101,7 @@ class LLM():
         self.model.update(weights)
         mx.eval(self.model.parameters())
 
-        # Add key mapping for quantization if needed
+        # Add key mapping for potential quantization
         for key1 in list(mapping.keys()):
             key2 = mapping[key1]
             if key1.endswith(".weight"):
@@ -251,7 +243,7 @@ class LLM():
     def quantize(self,
                  group_size: int = 32,
                  bits: int = 4,
-                 excluded: list[str] = []
+                 weights: dict = None,
                  ):
         """
         Quantize model.
@@ -268,17 +260,16 @@ class LLM():
             self._quantization = quantization
             self.args.quantization = quantization
 
-            linear_class_predicate = lambda m: (isinstance(m, nn.Linear) and
-                                                m.weight.shape[0] != 8 and
-                                                ".gate." not in m.name and
-                                                m.name not in excluded)
-            nn.QuantizedLinear.quantize_module(
-                model = self.model,
-                **quantization,
-                linear_class_predicate = linear_class_predicate
-            )
-
-            self._update_names()
+            if weights is None:
+                class_predicate = lambda p, m: (isinstance(m, (nn.Linear, nn.Embedding)) and
+                                                ".gate." not in p
+                                                )
+            else:
+                class_predicate = lambda p, m: (isinstance(m, (nn.Linear, nn.Embedding)) and
+                                                f"{p}.scales" in weights
+                                                )
+            
+            nn.quantize(self.model, class_predicate=class_predicate, **quantization)
 
             logger.info(f"Quantized model with group size {group_size} and {bits} bits")
         else:
@@ -307,8 +298,6 @@ class LLM():
             self.model.update_modules(tree_unflatten(layers))
             self._quantization = None
             self.args.quantization = None
-
-            self._update_names()
 
             logger.info(f"Dequantized model")
 

@@ -104,6 +104,6 @@ class Model(llama.Model):
         for e, layer in enumerate(self.layers):
             h, cache[e] = layer.forward(h, mask, cache[e])
 
-        out = self.norm(h) @ self.tok_embeddings.weight.T
+        out = self.tok_embeddings.as_linear(self.norm(h))
 
         return out, cache

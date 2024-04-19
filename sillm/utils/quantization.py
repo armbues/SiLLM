@@ -48,9 +48,6 @@ def quantize_files(input_path: str,
             if weight.shape[0] == 8 or ".gate." in mlx_key:
                 logger.debug(f"Skipping quantization for MoE gate: {key}")
                 quantize_weight = False
-            elif mlx_key.startswith("tok_embeddings."):
-                logger.debug(f"Skipping quantization for token embeddings: {key}")
-                quantize_weight = False
             elif ".k_norm." in mlx_key or ".q_norm." in mlx_key:
                 logger.debug(f"Skipping quantization for attention norm: {key}")
                 quantize_weight = False

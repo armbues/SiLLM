@@ -12,7 +12,7 @@ class Conversation(object):
                 template: Template,
                 system_prompt: str = None
                 ):
-        self.template = Template(template)
+        self.template = template
         self.system_prompt = system_prompt
 
         self.messages = []

@@ -105,7 +105,7 @@ class Model(llama.Model):
             h, cache[e] = layer.forward(h, mask, cache[e])
 
         if self.output is None:
-            out = self.norm(h) @ self.tok_embeddings.weight.T
+            out = self.tok_embeddings.as_linear(self.norm(h))
         else:
             out = self.output(self.norm(h))
 

@@ -31,6 +31,10 @@ class Tokenizer():
     def vocab_size(self) -> int:
         raise NotImplementedError("Class tokenizer.Tokenizer is used for inheritance only")
     
+    @property
+    def special_tokens_map(self) -> dict:
+        raise NotImplementedError("Class tokenizer.Tokenizer is used for inheritance only")
+    
     def save(self,
              tokenizer_path: str
              ):
@@ -124,6 +128,18 @@ class SentencePieceTokenizer(Tokenizer):
         """
         return self._model.vocab_size()
     
+    @property
+    def special_tokens_map(self) -> dict:
+        """
+        Special tokens map.
+        """
+        special_tokens_map = {
+            "bos_token": self._model.id_to_piece(self.bos_id),
+            "eos_token": self._model.id_to_piece(self.eos_id),
+        }
+        
+        return special_tokens_map
+    
     def save(self,
             tokenizer_path: str
             ):
@@ -167,6 +183,10 @@ class TransformerTokenizer(Tokenizer):
             self.pad_id = args.pad_token_id
 
         self.special_ids = set([self.bos_id, self.eos_id] + self._model.all_special_ids)
+
+        # Hack for Llama-3
+        if "<|eot_id|>" in self._model.vocab:
+            self.special_ids.add(self._model.vocab["<|eot_id|>"])
 
     def encode(self,
                s: str,
@@ -225,6 +245,13 @@ class TransformerTokenizer(Tokenizer):
         Vocabulary size.
         """
         return self._model.vocab_size
+    
+    @property
+    def special_tokens_map(self) -> dict:
+        """
+        Special tokens map.
+        """
+        return self._model.special_tokens_map
     
     def save(self,
             tokenizer_path: str

@@ -125,19 +125,7 @@ def load_gguf_file(model_path: str) -> LLM:
 
     # Quantize model
     if quantization is not None:
-        excluded = []
-        if "output.scales" not in weights:
-            excluded = ["output"]
-        model.quantize(group_size=model_args.quantization["group_size"], bits=model_args.quantization["bits"], excluded=excluded)
-
-    def dequantize(k):
-        weight = weights.pop(f"{k}.weight")
-        scales = weights.pop(f"{k}.scales")
-        biases = weights.pop(f"{k}.biases")
-        weights[f"{k}.weight"] = mx.dequantize(weight, scales=scales, biases=biases, **quantization)
-    
-    # Dequantize token embedding weights
-    dequantize("tok_embeddings")
+        model.quantize(group_size=model_args.quantization["group_size"], bits=model_args.quantization["bits"], weights=weights)
 
     # Verify that all model weights are present
     model.verify_weights(weights)
@@ -222,7 +210,7 @@ def load_model_dir(model_path: str) -> LLM:
 
     # Quantize model
     if model_args.quantization is not None:
-        model.quantize(group_size=model_args.quantization["group_size"], bits=model_args.quantization["bits"])
+        model.quantize(group_size=model_args.quantization["group_size"], bits=model_args.quantization["bits"], weights=weights)
 
     # Verify that all model weights are present
     model.verify_weights(weights)

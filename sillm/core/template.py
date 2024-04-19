@@ -18,7 +18,8 @@ default_templates = {
 
 class Template(object):
     def __init__(self,
-                 template: str = "chatml",
+                 tokenizer,
+                 template_name: str = "chatml",
                  exception_callback = None
                  ):
         loader = jinja2.PackageLoader('sillm', 'templates')
@@ -29,10 +30,13 @@ class Template(object):
         else:
             env.globals["raise_exception"] = exception_callback
 
-        fname_template = template + ".jinja"
+        fname_template = template_name + ".jinja"
         self.template = env.get_template(fname_template)
 
-        logger.info(f"Initialized conversation template: {template}")
+        # Set special tokens map
+        self.special_tokens_map = tokenizer.special_tokens_map
+
+        logger.info(f"Initialized conversation template: {template_name}")
 
     @staticmethod
     def list_templates():
@@ -60,7 +64,7 @@ class Template(object):
                             messages: list,
                             add_generation_prompt: bool = False
                             ):
-        return self.template.render(messages=messages, add_generation_prompt=add_generation_prompt)
+        return self.template.render(messages=messages, add_generation_prompt=add_generation_prompt, **self.special_tokens_map)
     
 class AutoTemplate(Template):
     def __init__(self,

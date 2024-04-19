@@ -74,20 +74,17 @@ if __name__ == "__main__":
 
     # Set conversation template
     if args.template:
-        # Use specified template
-        conversation = sillm.Conversation(template=args.template, system_prompt=args.system_prompt)
+        template = sillm.Template(model.tokenizer, template_name=args.template)
     else:
         template_name = sillm.Template.guess_template(model.args)
         if template_name:
-            # Use template guessed from model type
-            conversation = sillm.Conversation(template=template_name, system_prompt=args.system_prompt)
+            template = sillm.Template(model.tokenizer, template_name=template_name)
         elif model.tokenizer.has_template:
-            # Use template from tokenizer config
-            conversation = sillm.AutoConversation(model.tokenizer, system_prompt=args.system_prompt)
+            template = sillm.AutoTemplate(model.tokenizer)
         else:
-            conversation = None
-
-            logger.warn("No conversation template found")
+            template = sillm.Template(model.tokenizer, template_name="empty")
+            logger.warn("No conversation template found - falling back to empty template.")
+    conversation = sillm.Conversation(template=template, system_prompt=args.system_prompt)
 
     # Log memory usage
     utils.log_memory_usage()

@@ -88,16 +88,17 @@ if __name__ == "__main__":
     app.fingerprint = "sillm_" + str(uuid.uuid4())
 
     # Initialize messages template
-    if args.template is None:
+    if args.template:
+        template = sillm.Template(model.tokenizer, template_name=args.template)
+    else:
         template_name = sillm.Template.guess_template(model.args)
         if template_name:
-            template = sillm.Template(template=template_name)
+            template = sillm.Template(model.tokenizer, template_name=template_name)
         elif model.tokenizer.has_template:
             template = sillm.AutoTemplate(model.tokenizer)
         else:
-            raise ValueError("Missing a conversation template.")
-    else:
-        template = sillm.Template(template=args.template)
+            template = sillm.Template(model.tokenizer, template_name="empty")
+            logger.warn("No conversation template found - falling back to empty template.")
     app.template = template
 
     uvicorn.run(app, host=args.host, port=args.port)
