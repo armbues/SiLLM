@@ -386,11 +386,31 @@ def generate(model,
         "finish_reason": "length"
     }
 
+    def sample(logits):
+        if temperature > 0:
+            return mx.random.categorical(logits * (1 / temperature))
+        else:
+            return mx.argmax(logits, axis=-1)
+        # TODO add top-p sampling
+
+    def generate_step(model, inputs):
+        y = inputs
+        cache = None
+        while True:
+            logits, cache = model(y[None], cache=cache)
+            logits = logits[:, -1, :]
+            y = sample(logits)
+
+            p = 0.0
+            if logprobs:
+                p = nn.log_softmax(logits, axis=-1)[0,y].item()
+            
+            yield y, p
+
     tokens, text, buffer, prefix = [], "", [], ""
-    for (token,p) , i in zip(generate_step(model, inputs, temperature, logprobs), range(max_tokens)):
+    for (token,p), i in zip(generate_step(model, inputs), range(max_tokens)):
         if i == 0:
             mx.eval(token)
-
             timing["eval_time"] = time.perf_counter() - start
 
         if token.item() in stop_tokens:
@@ -404,7 +424,7 @@ def generate(model,
 
         if (len(tokens) % flush) == 0:
             mx.eval(tokens)
-
+            
             text = tokenizer.decode(tokens)
             window = tokenizer.decode(buffer + tokens)
             if prefix + " " + text == window:
@@ -421,8 +441,6 @@ def generate(model,
 
             yield text, metadata
 
-    mx.eval(tokens)
-    
     text = tokenizer.decode(tokens)
     window = tokenizer.decode(buffer + tokens)
     if prefix + " " + text == window:
@@ -438,24 +456,3 @@ def generate(model,
     usage["total_tokens"] = usage["prompt_tokens"] + usage["completion_tokens"]
 
     yield text, metadata
-
-def generate_step(model, inputs, temperature, logprobs=False):
-    y = inputs
-    cache = None
-    while True:
-        logits, cache = model(y[None], cache=cache)
-        logits = logits[:, -1, :]
-        y = sample(logits, temperature)
-
-        p = 0.0
-        if logprobs:
-            p = nn.log_softmax(logits, axis=-1)[0,y].item()
-        
-        yield y, p
-
-def sample(logits, temperature):
-    if temperature > 0:
-        return mx.random.categorical(logits * (1 / temperature))
-    else:
-        return mx.argmax(logits, axis=-1)
-    # TODO add top-p sampling

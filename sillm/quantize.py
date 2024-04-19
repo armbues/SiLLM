@@ -12,7 +12,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="A simple CLI for generating text with SiLLM.")
     parser.add_argument("input", type=str, help="The input model directory or file")
     parser.add_argument("output", type=str, help="The output model directory or file")
-    parser.add_argument("--bits", default=4, help="Quantization bits")
+    parser.add_argument("--bits", type=int, default=4, help="Quantization bits")
     parser.add_argument("--group_size", default=32, help="Quantization group size")
     parser.add_argument("-v", "--verbose", default=1, action="count", help="Increase output verbosity")
     args = parser.parse_args()
