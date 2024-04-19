@@ -1,6 +1,6 @@
 import logging
 
-from sillm.core.template import Template
+from sillm.core.template import Template, AutoTemplate
 
 logger = logging.getLogger("sillm")
 

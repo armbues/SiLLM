@@ -72,19 +72,9 @@ if __name__ == "__main__":
         "flush": args.flush
     }
 
-    # Set conversation template
-    if args.template:
-        template = sillm.Template(model.tokenizer, template_name=args.template)
-    else:
-        template_name = sillm.Template.guess_template(model.args)
-        if template_name:
-            template = sillm.Template(model.tokenizer, template_name=template_name)
-        elif model.tokenizer.has_template:
-            template = sillm.AutoTemplate(model.tokenizer)
-        else:
-            template = sillm.Template(model.tokenizer, template_name="empty")
-            logger.warn("No conversation template found - falling back to empty template.")
-    conversation = sillm.Conversation(template=template, system_prompt=args.system_prompt)
+    # Init conversation template
+    template = sillm.init_template(model.tokenizer, model.args, args.template)
+    conversation = sillm.Conversation(template, system_prompt=args.system_prompt)
 
     # Log memory usage
     utils.log_memory_usage()

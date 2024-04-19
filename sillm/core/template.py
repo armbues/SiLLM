@@ -79,3 +79,22 @@ class AutoTemplate(Template):
                             add_generation_prompt: bool = False
                             ):
         return self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=add_generation_prompt)
+
+def init_template(tokenizer,
+                  args,
+                  template_name: str = None
+                  ):
+    if template_name:
+        template = Template(tokenizer, template_name=template_name)
+    else:
+        template_name = Template.guess_template(args)
+        if template_name:
+            template = Template(tokenizer, template_name=template_name)
+        elif tokenizer.has_template:
+            template = AutoTemplate(tokenizer)
+        else:
+            template = Template(tokenizer, template_name="empty")
+
+            logger.warn("No conversation template found - falling back to empty template.")
+
+    return template

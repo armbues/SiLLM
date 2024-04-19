@@ -1,5 +1,6 @@
 from sillm.core.loader import load
 from sillm.training.dataset import load_dataset
+from sillm.core.template import init_template
 
 from sillm.core.llm import LLM
 from sillm.core.conversation import Conversation, AutoConversation
