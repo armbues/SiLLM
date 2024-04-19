@@ -1,8 +1,6 @@
 import os
 import argparse
 
-import mlx.core as mx
-
 import sillm
 import sillm.utils as utils
 
