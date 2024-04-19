@@ -57,7 +57,6 @@ class LoRALinear(nn.Module):
 
         lora_lin = LoRALinear(input_dims, output_dims, rank, alpha, dropout, scale, bias)
         lora_lin.linear = linear
-        lora_lin.name = linear.name
 
         return lora_lin
 
