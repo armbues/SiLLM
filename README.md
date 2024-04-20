@@ -115,7 +115,7 @@ Here is a list of models that were successfully tested with SiLLM:
 
 | Model Family | Models/Sizes (HF) | Models/Sizes (GGUF) | Models/Sizes (MLX) |
 | --- | --- | --- | --- |
-| Llama-3 | [8B-Instruct](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct), [70B-Instruct](https://huggingface.co/meta-llama/Meta-Llama-3-70B-Instruct/discussions) | | |
+| Llama-3 | [8B-Instruct](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct), [70B-Instruct](https://huggingface.co/meta-llama/Meta-Llama-3-70B-Instruct/) | | |
 | Llama-2 | [7b-chat](https://huggingface.co/meta-llama/Llama-2-7b-chat-hf) | [7b-chat.Q8_0](https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGUF), [13b-chat.Q8_0](https://huggingface.co/TheBloke/Llama-2-13B-chat-GGUF) | [7b](https://huggingface.co/mlx-community/Llama-2-7b-mlx), [7b-chat](https://huggingface.co/mlx-community/Llama-2-7b-chat-mlx) |
 | Mistral | [7b-instruct-v0.2](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2) | [7b-instruct-v0.2.Q8_0](https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF) | |
 | Mixtral | | | [8x7B-Instruct-v0.1 ](https://huggingface.co/mlx-community/Mixtral-8x7B-Instruct-v0.1), [8x22B-Instruct-v0.1](https://huggingface.co/mistralai/Mixtral-8x22B-Instruct-v0.1) |
