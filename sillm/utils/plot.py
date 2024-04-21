@@ -60,6 +60,7 @@ class Plot:
         """
         self.plot()
         plt.savefig(fpath)
+        plt.close()
 
     def show(self):
         """
@@ -67,3 +68,4 @@ class Plot:
         """
         self.plot()
         plt.show()
+        plt.close()
