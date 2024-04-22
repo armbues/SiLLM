@@ -105,7 +105,7 @@ class DatasetCompletion(Dataset):
                 targets = batch[:, 1:]
 
                 lengths = mx.array(lengths)
-                loss_masks = mx.arange(inputs.shape[1])[None, :] < lengths[:, None]
+                loss_masks = mx.arange(inputs.shape[1])[None, :] < lengths[:, None] - 1
 
                 yield inputs, targets, loss_masks
 
@@ -192,8 +192,8 @@ class DatasetMessages(Dataset):
                 lengths = mx.array(lengths)
                 prompt_lengths = mx.array([len(x) for x in prompts])
                 loss_masks = mx.logical_and(
-                    mx.arange(inputs.shape[1])[None, :] < lengths[:, None],
-                    mx.arange(inputs.shape[1])[None, :] > prompt_lengths[:, None]
+                    mx.arange(inputs.shape[1])[None, :] >= prompt_lengths[:, None],
+                    mx.arange(inputs.shape[1])[None, :] < lengths[:, None] - 1
                 )
 
                 yield inputs, targets, loss_masks
@@ -351,12 +351,12 @@ class DatasetDPO(Dataset):
                 rejected_lengths = mx.array(rejected_lengths)
                 prompt_lengths = mx.array([len(x[0]) for x in batch])
                 chosen_masks = mx.logical_and(
-                    mx.arange(chosen.shape[1] - 1)[None, :] < chosen_lengths[:, None],
-                    mx.arange(chosen.shape[1] - 1)[None, :] > prompt_lengths[:, None]
+                    mx.arange(chosen.shape[1] - 1)[None, :] < chosen_lengths[:, None] - 1,
+                    mx.arange(chosen.shape[1] - 1)[None, :] >= prompt_lengths[:, None]
                 )
                 rejected_masks = mx.logical_and(
-                    mx.arange(rejected.shape[1] - 1)[None, :] < rejected_lengths[:, None],
-                    mx.arange(rejected.shape[1] - 1)[None, :] > prompt_lengths[:, None]
+                    mx.arange(rejected.shape[1] - 1)[None, :] < rejected_lengths[:, None] - 1,
+                    mx.arange(rejected.shape[1] - 1)[None, :] >= prompt_lengths[:, None]
                 )
                 
                 yield mx.array(chosen), mx.array(rejected), chosen_masks, rejected_masks

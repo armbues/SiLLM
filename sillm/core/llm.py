@@ -294,8 +294,16 @@ class LLM():
                         linear.bias = module.bias
 
                     layers.append((name, linear))
+                elif isinstance(module, nn.QuantizedEmbedding):
+                    weight = mx.dequantize(module.weight, module.scales, module.biases, module.group_size, module.bits).astype(mx.float16)
+                    num_embeddings, dims = weight.shape
+                    embedding = nn.Embedding(num_embeddings, dims)
+                    embedding.weight = weight
+                    layers.append((name, embedding))
             
-            self.model.update_modules(tree_unflatten(layers))
+            if len(layers) > 0:
+                self.model.update_modules(tree_unflatten(layers))
+                
             self._quantization = None
             self.args.quantization = None
 
@@ -424,7 +432,7 @@ def generate(model,
 
         if (len(tokens) % flush) == 0:
             mx.eval(tokens)
-            
+
             text = tokenizer.decode(tokens)
             window = tokenizer.decode(buffer + tokens)
             if prefix + " " + text == window:
