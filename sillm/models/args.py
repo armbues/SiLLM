@@ -199,4 +199,5 @@ class Phi3Args(ModelArgs):
     """
     Phi-3 model arguments.
     """
+    rope_scaling: dict = None
     embd_pdrop: float = 0.0
