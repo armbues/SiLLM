@@ -14,6 +14,7 @@ default_templates = {
     "qwen2": "qwen2",
     "dbrx": "chatml",
     "cohere": "cohere",
+    "phi3": "phi3",
 }
 
 class Template(object):

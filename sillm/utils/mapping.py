@@ -51,6 +51,10 @@ def map_key(k):
         k = re.sub(r"\.mlp\.c_fc\.", ".feed_forward.w1.", k)
         k = re.sub(r"\.mlp\.c_proj\.", ".feed_forward.w2.", k)
 
+        # Phi-3 mapping
+        k = re.sub(r"\.mlp\.gate_up_proj\.", ".feed_forward.w1.", k)
+        k = re.sub(r"\.self_attn\.qkv_proj\.", r".attention.wqkv.", k)
+
         return k
     # GGUF keys
     elif k.startswith("output_norm."):

@@ -20,6 +20,7 @@ model_map = {
     "gemma":        models.gemma.Model,
     "mixtral":      models.mixtral.Model,   
     "phi":          models.phi.Model,
+    "phi3":         models.phi3.Model,
     "starcoder2":   models.starcoder2.Model,
     "qwen2":        models.qwen2.Model,
     "dbrx":         models.dbrx.Model,
@@ -303,7 +304,7 @@ class LLM():
             
             if len(layers) > 0:
                 self.model.update_modules(tree_unflatten(layers))
-                
+
             self._quantization = None
             self.args.quantization = None
 

@@ -3,6 +3,7 @@ from sillm.models import gemma
 from sillm.models import qwen2
 from sillm.models import mixtral
 from sillm.models import phi
+from sillm.models import phi3
 from sillm.models import starcoder2
 from sillm.models import dbrx
 from sillm.models import cohere

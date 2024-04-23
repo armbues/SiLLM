@@ -84,6 +84,8 @@ class ModelArgs:
                 ArgsClass = DbrxArgs
             elif config["model_type"] == "cohere":
                 ArgsClass = CohereArgs
+            elif config["model_type"] == "phi3":
+                ArgsClass = Phi3Args
             else:
                 ArgsClass = LlamaArgs
         if ArgsClass is None:
@@ -191,3 +193,10 @@ class CohereArgs(ModelArgs):
     norm_bias: bool = False
     logit_scale: float = 0.0625
     use_qk_norm: bool = False
+
+@dataclasses.dataclass
+class Phi3Args(ModelArgs):
+    """
+    Phi-3 model arguments.
+    """
+    embd_pdrop: float = 0.0

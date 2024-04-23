@@ -137,7 +137,7 @@ class SentencePieceTokenizer(Tokenizer):
             "bos_token": self._model.id_to_piece(self.bos_id),
             "eos_token": self._model.id_to_piece(self.eos_id),
         }
-        
+
         return special_tokens_map
     
     def save(self,
@@ -187,6 +187,9 @@ class TransformerTokenizer(Tokenizer):
         # Hack for Llama-3
         if "<|eot_id|>" in self._model.vocab:
             self.special_ids.add(self._model.vocab["<|eot_id|>"])
+        # Hack for Phi-3
+        if "<|end|>" in self._model.vocab:
+            self.special_ids.add(self._model.vocab["<|end|>"])
 
     def encode(self,
                s: str,
