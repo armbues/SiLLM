@@ -96,16 +96,18 @@ for s, _ in model.generate("On a beautiful Sunday morning,"):
 
 ### Examples
 
-#### [LoRA Fine-tuning](examples/helpsteer/)
+The repository [SiLLM-examples](https://github.com/armbues/SiLLM-examples) contains Python code examples for using the SiLLM framework for training and running LLMs.
+
+#### LoRA Fine-tuning
 LoRA training [Mistral-7B-Instruct-v0.2](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2) with the Nvidia [HelpSteer](https://huggingface.co/datasets/nvidia/HelpSteer) dataset.
 
-#### [DPO Fine-tuning](examples/dpo-mix-7k/)
+#### DPO Fine-tuning
 DPO training [Qwen1.5-7B-Chat](https://huggingface.co/Qwen/Qwen1.5-7B-Chat) with the [DPO Mix 7K](https://huggingface.co/datasets/argilla/dpo-mix-7k) dataset. The training consists of a supervised fine tuning (SFT) followed by direct preference optimization (DPO).
 
-#### [MMLU Benchmark](examples/mmlu/)
+#### MMLU Benchmark
 Implementation of the "Massive Multitask Language Understanding" benchmark using the [MMLU](https://huggingface.co/datasets/cais/mmlu) dataset.
 
-#### [Perplexity](examples/perplexity/)
+#### Perplexity
 Calculating perplexity scores for a sample [dataset](https://huggingface.co/datasets/Cohere/wikipedia-2023-11-embed-multilingual-v3) of entry paragraphs from Wikipedia articles.
 
 ## Model Support
