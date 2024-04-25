@@ -123,7 +123,7 @@ Here is a list of models that were successfully tested with SiLLM:
 | Mixtral | | | [8x7B-Instruct-v0.1 ](https://huggingface.co/mlx-community/Mixtral-8x7B-Instruct-v0.1), [8x22B-Instruct-v0.1](https://huggingface.co/mistralai/Mixtral-8x22B-Instruct-v0.1) |
 | Gemma | [2b](https://huggingface.co/google/gemma-2b), [2b-it](https://huggingface.co/google/gemma-7b-it), [7b](https://huggingface.co/google/gemma-7b), [7b-it](https://huggingface.co/google/gemma-7b-it) | |
 | Phi-2 | [2.7b](https://huggingface.co/microsoft/phi-2) | |
-| Phi-3 | [phi-3-mini-4k](https://huggingface.co/microsoft/Phi-3-mini-4k-instruct) | |
+| Phi-3 | [mini-4k](https://huggingface.co/microsoft/Phi-3-mini-4k-instruct) | |
 | Qwen 1.5 | [7b-chat](https://huggingface.co/Qwen/Qwen1.5-7B-Chat), [14b-chat](https://huggingface.co/Qwen/Qwen1.5-14B-Chat) | |
 | StarCoder2 | [3b](https://huggingface.co/bigcode/starcoder2-3b), [7b](https://huggingface.co/bigcode/starcoder2-7b), [15b](https://huggingface.co/bigcode/starcoder2-15b) | |
 | CodeLlama | | [70b-instruct.Q4_0](https://huggingface.co/TheBloke/CodeLlama-70B-Instruct-GGUF), [Phind-34b-v2.Q4_0](https://huggingface.co/TheBloke/Phind-CodeLlama-34B-v2-GGUF) | |
