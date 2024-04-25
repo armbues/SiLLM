@@ -1,4 +1,4 @@
-__version__ = "0.1.3"
+from .version import __version__
 
 from sillm.core.loader import load
 from sillm.training.dataset import load_dataset
