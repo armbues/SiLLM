@@ -63,6 +63,8 @@ async def on_chat_start():
         Select(id="Adapter", label="Adapter", values=adapter_names, initial_index=0),
         Select(id="Template", label="Chat Template", values=templates, initial_index=0),
         Slider(id="Temperature", label="Model Temperature", initial=0.7, min=0, max=2, step=0.1),
+        Slider(id="Penalty", label="Repetition Penalty", initial=1.0, min=0.1, max=3.0, step=0.1),
+        Slider(id="Window", label="Repetition Window", initial=100, min=10, max=500, step=10),
         Slider(id="Tokens", label="Max. Tokens", initial=2048, min=256, max=8192, step=256),
         TextInput(id="Seed", label="Seed", initial="-1"),
     ]
@@ -86,6 +88,9 @@ async def on_settings_update(settings):
         "temperature": settings["Temperature"],
         "max_tokens": settings["Tokens"],
     }
+    if settings["Penalty"] != 1.0:
+        generate_args["repetition_penalty"] = settings["Penalty"]
+        generate_args["repetition_window"] = settings["Window"]
     cl.user_session.set("generate_args", generate_args)
 
     if "Adapter" in settings:
@@ -125,6 +130,8 @@ async def on_message(message: cl.Message):
     
     # Get model generation arguments
     generate_args = cl.user_session.get("generate_args")
+
+    logger.debug(f"Generating {generate_args['max_tokens']} tokens with temperature {generate_args['temperature']}")
 
     # Generate response
     msg = cl.Message(author=model_id, content="")
