@@ -131,7 +131,6 @@ Here is a list of models that were successfully tested with SiLLM:
 
 ## Roadmap
 
-- Repetition penalty for inference
 - Learning rate schedulers for training
 - Merging models
 - Saving models to GGUF

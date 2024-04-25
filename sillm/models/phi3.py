@@ -7,6 +7,56 @@ from sillm.models.base import BaseModel
 from sillm.models.args import ModelArgs
 import sillm.models.llama as llama
 
+########
+# Based on Phi-3 model implementation by Microsoft:
+# https://huggingface.co/microsoft/Phi-3-mini-128k-instruct/blob/38143357bf52ce57009ecbd58cf9f0b0029cb393/modeling_phi3.py#L142
+########
+class SuScaledRotaryEmbedding(nn.RoPE):
+    """
+    Phi-3 Scaled Uniform RoPE.
+    """
+    def __init__(self,
+                 args: ModelArgs,
+                 head_dim: int
+                 ):
+        """
+        Args:
+            head_dim: Head dimension.
+            base: Base for the RoPE.
+        """
+        super().__init__(head_dim, base=args.rope_theta, traditional=args.rope_traditional)
+
+        self.short_factor = args.rope_scaling["short_factor"]
+        self.long_factor = args.rope_scaling["long_factor"]
+        self.original_max_position_embeddings = args.original_max_position_embeddings
+
+        raise NotImplementedError("Scaled Uniform RoPE is not fully implemented")
+
+########
+# Based on Phi-3 model implementation by Microsoft:
+# https://huggingface.co/microsoft/Phi-3-mini-128k-instruct/blob/38143357bf52ce57009ecbd58cf9f0b0029cb393/modeling_phi3.py#L194
+########
+class YarnScaledRotaryEmbedding(nn.RoPE):
+    """
+    Phi-3 Yarn RoPE.
+    """
+    def __init__(self,
+                 args: ModelArgs,
+                 head_dim: int
+                 ):
+        """
+        Args:
+            head_dim: Head dimension.
+            base: Base for the RoPE.
+        """
+        super().__init__(head_dim, base=args.rope_theta, traditional=args.rope_traditional)
+
+        self.short_factor = args.rope_scaling["short_factor"]
+        self.long_factor = args.rope_scaling["long_factor"]
+        self.original_max_position_embeddings = args.original_max_position_embeddings
+
+        raise NotImplementedError("Yarn RoPE is not fully implemented")
+
 class Attention(nn.Module):
     """
     Multi-head attention module.
@@ -29,10 +79,18 @@ class Attention(nn.Module):
         self.wqkv = nn.Linear(args.dim, op_size, bias=False)
         self.wo = nn.Linear(args.n_heads * args.head_dim, args.dim, bias=False)
         
-        # TODO implement Phi3LongScaledRotaryEmbedding
-        self.rope = nn.RoPE(args.head_dim,
-                            traditional=args.rope_traditional,
-                            base=args.rope_theta)
+        if args.rope_scaling is not None:
+            # TODO implement Phi3LongScaledRotaryEmbedding & Phi3YarnScaledRotaryEmbedding
+            if args.rope_scaling["type"] == "su":
+                self.rope = SuScaledRotaryEmbedding(args, args.head_dim)
+            elif args.rope_scaling["type"] == "yarn":
+                self.rope = YarnScaledRotaryEmbedding(args, args.head_dim)
+            else:
+                raise NotImplementedError(f"Unknown scaling type {args.rope_scaling['type']}")
+        else:
+            self.rope = nn.RoPE(args.head_dim,
+                                traditional=args.rope_traditional,
+                                base=args.rope_theta)
         
     def __call__(self,
                  x: mx.array,

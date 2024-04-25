@@ -331,6 +331,8 @@ class LLM():
                  prompt: str,
                  temperature: float = 0.0,
                  max_tokens: int = 1024,
+                 repetition_penalty: float = None,
+                 repetition_window: int = 50,
                  flush: int = 5
                  ):
         """
@@ -343,11 +345,13 @@ class LLM():
         Yields:
             Tuple of generated text and metadata.
         """
-        yield from generate(self.model, self.tokenizer, prompt=prompt, temperature=temperature, max_tokens=max_tokens, flush=flush)
+        yield from generate(self.model, self.tokenizer, prompt=prompt, temperature=temperature, repetition_penalty=repetition_penalty, repetition_window=repetition_window, max_tokens=max_tokens, flush=flush)
 
     def completion(self,
                    prompt: str,
                    temperature: float = 0.0,
+                   repetition_penalty: float = None,
+                   repetition_window: int = 25,
                    max_tokens: int = 1024
                    ) -> str:
         """
@@ -359,13 +363,15 @@ class LLM():
         Returns:
             Generated completion.
         """
-        return ''.join([t[0] for t in generate(self.model, self.tokenizer, prompt=prompt, temperature=temperature, max_tokens=max_tokens)])
+        return ''.join([t[0] for t in generate(self.model, self.tokenizer, prompt=prompt, temperature=temperature, repetition_penalty=repetition_penalty, repetition_window=repetition_window, max_tokens=max_tokens)])
 
 def generate(model,
              tokenizer: Tokenizer,
              prompt: str,
              temperature: float = 0.0,
              max_tokens: int = 1024,
+             repetition_penalty: float = None,
+             repetition_window: int = 25,
              logprobs: bool = False,
              flush: int = 5
              ):
@@ -395,6 +401,10 @@ def generate(model,
         "finish_reason": "length"
     }
 
+    # Initialize token and string buffers
+    tokens, text = [], ""
+    buffer, output = [], ""
+
     def sample(logits):
         if temperature > 0:
             return mx.random.categorical(logits * (1 / temperature))
@@ -402,12 +412,24 @@ def generate(model,
             return mx.argmax(logits, axis=-1)
         # TODO add top-p sampling
 
+    def apply_repetition_penalty(logits):
+        indices = mx.array(tokens[-repetition_window:])
+        repeated_logits = logits[:, indices]
+        repeated_logits = mx.where(repeated_logits < 0, repeated_logits * repetition_penalty, repeated_logits / repetition_penalty)
+        logits[:, indices] = repeated_logits
+
+        return logits
+
     def generate_step(model, inputs):
         y = inputs
         cache = None
         while True:
             logits, cache = model(y[None], cache=cache)
             logits = logits[:, -1, :]
+
+            if len(tokens) > 0 and repetition_penalty is not None:
+                logits = apply_repetition_penalty(logits)
+
             y = sample(logits)
 
             p = 0.0
@@ -416,7 +438,7 @@ def generate(model,
             
             yield y, p
 
-    tokens, text, buffer, prefix = [], "", [], ""
+    # Main generation loop
     for (token,p), i in zip(generate_step(model, inputs), range(max_tokens)):
         if i == 0:
             mx.eval(token)
@@ -436,11 +458,11 @@ def generate(model,
 
             text = tokenizer.decode(tokens)
             window = tokenizer.decode(buffer + tokens)
-            if prefix + " " + text == window:
-                prefix = text
+            if output + " " + text == window:
+                output = text
                 text = " " + text
             else:
-                prefix = text
+                output = text
             buffer = tokens
             tokens = []
 
@@ -452,13 +474,11 @@ def generate(model,
 
     text = tokenizer.decode(tokens)
     window = tokenizer.decode(buffer + tokens)
-    if prefix + " " + text == window:
-        prefix = text
+    if output + " " + text == window:
+        output = text
         text = " " + text
     else:
-        prefix = text
-    buffer = tokens
-    tokens = []
+        output = text
 
     timing["runtime"] = time.perf_counter() - start
     usage["completion_tokens"] = i+1

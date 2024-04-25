@@ -13,6 +13,8 @@ if __name__ == "__main__":
     parser.add_argument("-a", "--input_adapters", default=None, type=str, help="Load and merge LoRA adapter weights from .safetensors file")
     parser.add_argument("-s", "--seed", type=int, default=-1, help="Seed for randomization")
     parser.add_argument("-t", "--temperature", type=float, default=0.7, help="Sampling temperature")
+    parser.add_argument("-p", "--repetition_penalty", type=float, default=None, help="Repetition penalty")
+    parser.add_argument("-w", "--repetition_window", type=int, default=50, help="Window of generated tokens to consider for repetition penalty")
     parser.add_argument("-f", "--flush", type=int, default=5, help="Flush output every n tokens")
     parser.add_argument("-m", "--max_tokens", type=int, default=1024, help="Max. number of tokens to generate")
     parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama2, alpaca, etc.)")
@@ -66,6 +68,8 @@ if __name__ == "__main__":
 
     generate_args = {
         "temperature": args.temperature,
+        "repetition_penalty": args.repetition_penalty,
+        "repetition_window": args.repetition_window,
         "max_tokens": args.max_tokens,
         "flush": args.flush
     }
