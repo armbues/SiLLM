@@ -71,10 +71,11 @@ class Attention(nn.Module):
 
         self.n_heads: int = args.n_heads
         self.n_kv_heads: int = args.n_kv_heads
+        self.head_dim: int = args.dim // self.n_heads
 
         self.scale = self.args.head_dim ** -0.5
 
-        op_size = args.n_heads * args.head_dim + 2 * (args.n_kv_heads * args.head_dim)
+        op_size = args.n_heads * self.head_dim + 2 * (args.n_kv_heads * args.head_dim)
 
         self.wqkv = nn.Linear(args.dim, op_size, bias=False)
         self.wo = nn.Linear(args.n_heads * args.head_dim, args.dim, bias=False)
@@ -100,7 +101,8 @@ class Attention(nn.Module):
         B, L, _ = x.shape
 
         qkv = self.wqkv(x)
-        queries, keys, values = mx.split(qkv, 3, axis=-1)        
+        query_pos = self.n_heads * self.head_dim
+        queries, keys, values = mx.split(qkv, [query_pos, query_pos + self.n_kv_heads * self.head_dim], axis=-1)
 
         queries = queries.reshape(B, L, self.n_heads, -1).transpose(0, 2, 1, 3)
         keys = keys.reshape(B, L, self.n_kv_heads, -1).transpose(0, 2, 1, 3)
