@@ -5,6 +5,12 @@ from typing import List
 
 import sillm.models.args as args
 
+model_special_tokens = [
+    "<|eot_id|>",   # Llama-3
+    "<|end|>",      # Phi-3
+    "<|im_end|>",   # Yi
+]
+
 class Tokenizer():
     def encode(self,
                s: str,
@@ -34,6 +40,13 @@ class Tokenizer():
     @property
     def special_tokens_map(self) -> dict:
         raise NotImplementedError("Class tokenizer.Tokenizer is used for inheritance only")
+    
+    @property
+    def special_ids(self) -> set:
+        """
+        Special token IDs.
+        """
+        return set([self.bos_id, self.eos_id])
     
     def save(self,
              tokenizer_path: str
@@ -78,16 +91,6 @@ class SentencePieceTokenizer(Tokenizer):
         else:
             self.eos_id = args.eos_token_id
         self.pad_id = self._model.pad_id()
-
-        self.special_ids = [self.bos_id, self.eos_id, self.pad_id]
-
-        # Manually add special tokens for Llama-3, Phi-3, and Yi
-        if self._model.piece_to_id("<|eot_id|>") > 0:
-            self.special_ids.append(self._model.piece_to_id("<|eot_id|>"))
-        if self._model.piece_to_id("<|end|>") > 0:
-            self.special_ids.append(self._model.piece_to_id("<|end|>"))
-        if self.tokenizer._model.piece_to_id("<|im_end|>") > 0:
-            self.special_ids.append(self.tokenizer._model.piece_to_id("<|im_end|>"))
 
     def encode(self,
                s: str,
@@ -148,6 +151,19 @@ class SentencePieceTokenizer(Tokenizer):
 
         return special_tokens_map
     
+    @property
+    def special_ids(self) -> set:
+        """
+        Special token IDs.
+        """
+        special_ids = set([self.bos_id, self.eos_id])
+
+        for s in model_special_tokens:
+            if self._model.piece_to_id(s) > 0:
+                special_ids.add(self._model.piece_to_id(s))
+
+        return special_ids
+    
     def save(self,
             tokenizer_path: str
             ):
@@ -189,8 +205,6 @@ class TransformerTokenizer(Tokenizer):
             self.pad_id = self._model.pad_token_id
         else:
             self.pad_id = args.pad_token_id
-
-        self.special_ids = set([self.bos_id, self.eos_id] + self._model.all_special_ids)
 
         # Manually add special tokens for Llama-3, Phi-3, and Yi
         if "<|eot_id|>" in self._model.vocab:
@@ -264,6 +278,19 @@ class TransformerTokenizer(Tokenizer):
         Special tokens map.
         """
         return self._model.special_tokens_map
+
+    @property
+    def special_ids(self) -> set:
+        """
+        Special token IDs.
+        """
+        special_ids = set([self.bos_id, self.eos_id] + self._model.all_special_ids)
+
+        for s in model_special_tokens:
+            if s in self._model.vocab:
+                special_ids.add(self._model.vocab[s])
+
+        return special_ids
     
     def save(self,
             tokenizer_path: str
