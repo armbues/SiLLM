@@ -81,6 +81,14 @@ class SentencePieceTokenizer(Tokenizer):
 
         self.special_ids = [self.bos_id, self.eos_id, self.pad_id]
 
+        # Manually add special tokens for Llama-3, Phi-3, and Yi
+        if self._model.piece_to_id("<|eot_id|>") > 0:
+            self.special_ids.append(self._model.piece_to_id("<|eot_id|>"))
+        if self._model.piece_to_id("<|end|>") > 0:
+            self.special_ids.append(self._model.piece_to_id("<|end|>"))
+        if self.tokenizer._model.piece_to_id("<|im_end|>") > 0:
+            self.special_ids.append(self.tokenizer._model.piece_to_id("<|im_end|>"))
+
     def encode(self,
                s: str,
                bos: bool = True,
@@ -184,12 +192,13 @@ class TransformerTokenizer(Tokenizer):
 
         self.special_ids = set([self.bos_id, self.eos_id] + self._model.all_special_ids)
 
-        # Hack for Llama-3
+        # Manually add special tokens for Llama-3, Phi-3, and Yi
         if "<|eot_id|>" in self._model.vocab:
             self.special_ids.add(self._model.vocab["<|eot_id|>"])
-        # Hack for Phi-3
         if "<|end|>" in self._model.vocab:
             self.special_ids.add(self._model.vocab["<|end|>"])
+        if "<|im_end|>" in self._model.vocab:
+            self.special_ids.add(self._model.vocab["<|im_end|>"])
 
     def encode(self,
                s: str,
