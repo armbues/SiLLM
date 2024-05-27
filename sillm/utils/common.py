@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 import mlx.core as mx
 
@@ -10,6 +12,7 @@ def seed(seed):
     Args:
         seed: The seed value.
     """
+    random.seed(seed)
     mx.random.seed(seed)
     np.random.seed(seed)
 
