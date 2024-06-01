@@ -1,4 +1,4 @@
-mlx>=0.14.0
+mlx>=0.14.1
 transformers>=4.41.1
 sentencepiece==0.2.0
 protobuf
