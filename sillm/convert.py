@@ -5,7 +5,7 @@ import sillm.utils as utils
 
 if __name__ == "__main__":
     # Parse commandline arguments
-    parser = argparse.ArgumentParser(description="A simple CLI for generating text with SiLLM.")
+    parser = argparse.ArgumentParser(description="Convert a model to a different format.")
     parser.add_argument("input", type=str, help="The input model directory or file")
     parser.add_argument("output", type=str, help="The output model directory or file")
     parser.add_argument("-a", "--input_adapters", default=None, type=str, help="Load LoRA adapter weights from .safetensors file")
