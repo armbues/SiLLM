@@ -365,6 +365,7 @@ def generate(model,
              repetition_penalty: float = None,
              repetition_window: int = 25,
              logprobs: bool = False,
+             token_ids: bool = False,
              flush: int = 5
              ):
     start = time.perf_counter()
@@ -390,6 +391,7 @@ def generate(model,
         "timing": timing,
         "usage": usage,
         "logprobs": [],
+        "token_ids": [],
         "finish_reason": "length"
     }
 
@@ -448,6 +450,9 @@ def generate(model,
         if (len(tokens) % flush) == 0:
             mx.eval(tokens)
 
+            if token_ids:
+                metadata["token_ids"] += tokens
+
             text = tokenizer.decode(tokens)
             window = tokenizer.decode(buffer + tokens)
             if output + " " + text == window:
@@ -463,6 +468,11 @@ def generate(model,
             usage["total_tokens"] = usage["prompt_tokens"] + usage["completion_tokens"]
 
             yield text, metadata
+
+    mx.eval(tokens)
+
+    if token_ids:
+        metadata["token_ids"] += tokens
 
     text = tokenizer.decode(tokens)
     window = tokenizer.decode(buffer + tokens)
