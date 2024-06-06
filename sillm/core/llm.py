@@ -327,43 +327,35 @@ class LLM():
         
             yield mx.exp(mx.mean(losses)).item()
 
-    def generate(self,
-                 prompt: str,
-                 temperature: float = 0.0,
-                 max_tokens: int = 1024,
-                 repetition_penalty: float = None,
-                 repetition_window: int = 50,
-                 flush: int = 5
-                 ):
+    def generate(self, *args, **kwargs):
         """
         Iterator for generating tokens.
         Args:
             prompt: Prompt to start generation.
             temperature: Sampling temperature.
             max_tokens: Max number of tokens to generate.
-            flush: Flush every `flush` tokens.
+            repetition_penalty: Repetition penalty.
+            repetition_window: Repetition window.
+            logprobs: Return logprobs.
+            flush: Flush buffer every n tokens.
         Yields:
             Tuple of generated text and metadata.
         """
-        yield from generate(self.model, self.tokenizer, prompt=prompt, temperature=temperature, repetition_penalty=repetition_penalty, repetition_window=repetition_window, max_tokens=max_tokens, flush=flush)
+        yield from generate(self.model, self.tokenizer, *args, **kwargs)
 
-    def completion(self,
-                   prompt: str,
-                   temperature: float = 0.0,
-                   repetition_penalty: float = None,
-                   repetition_window: int = 25,
-                   max_tokens: int = 1024
-                   ) -> str:
+    def completion(self, *args, **kwargs) -> str:
         """
         Generate a completion and wait for all tokens.
         Args:
             prompt: Prompt to start generation.
             temperature: Sampling temperature.
             max_tokens: Max number of tokens to generate.
+            repetition_penalty: Repetition penalty.
+            repetition_window: Repetition window.
         Returns:
             Generated completion.
         """
-        return ''.join([t[0] for t in generate(self.model, self.tokenizer, prompt=prompt, temperature=temperature, repetition_penalty=repetition_penalty, repetition_window=repetition_window, max_tokens=max_tokens)])
+        return ''.join([t[0] for t in generate(self.model, self.tokenizer, *args, **kwargs)])
 
 def generate(model,
              tokenizer: Tokenizer,
