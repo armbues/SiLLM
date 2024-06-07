@@ -19,4 +19,4 @@ if __name__ == "__main__":
 
     allow_patterns = ["*.json", "model-*.safetensors", "*.model"]
 
-    huggingface_hub.snapshot_download(repo_id=args.model, allow_patterns=allow_patterns, local_dir=model_path, local_dir_use_symlinks=False, resume_download=True)
+    huggingface_hub.snapshot_download(repo_id=args.model, allow_patterns=allow_patterns, local_dir=model_path, local_dir_use_symlinks=False)
