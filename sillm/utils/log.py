@@ -44,10 +44,12 @@ def log_arguments(args):
     for key, value in args.items():
         logger.debug(f"Argument: {key} = {value}")
 
-def log_memory_usage():
+def log_memory_usage(reset=False):
     peak_memory = mx.metal.get_peak_memory()
-    mx.metal.reset_peak_memory()
     system_memory = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
     memory_usage = peak_memory / system_memory
 
     logger.debug(f"Peak memory: {(peak_memory // (1024 ** 2)):,} MB ({memory_usage:.2%} of system memory)")
+
+    if reset:
+        mx.metal.reset_peak_memory()
