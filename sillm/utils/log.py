@@ -46,6 +46,7 @@ def log_arguments(args):
 
 def log_memory_usage():
     peak_memory = mx.metal.get_peak_memory()
+    mx.metal.reset_peak_memory()
     system_memory = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
     memory_usage = peak_memory / system_memory
 
