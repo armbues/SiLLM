@@ -17,6 +17,12 @@ SiLLM simplifies the process of training and running Large Language Models (LLMs
 - Training loss plots using matplotlib
 - Perplexity calculation
 
+## Experimental
+One of the main goals of SiLLM is to enable experimentation with the inner workings of large language models and make new techniques accessible to a wider audience running on Apple Silicon hardware.
+
+### Control vectors and feature ablation
+The control module incorporates techniques based on the paper [Representation Engineering](https://arxiv.org/abs/2310.01405) and the blog [Refusal Ablation](https://www.lesswrong.com/posts/jGuXSZgv6qfdhMCuJ/refusal-in-llms-is-mediated-by-a-single-direction). Representation engineering is a method to calculate control vectors from a model's hidden states during training that can be used to influence the behavior and generated output during inference. Refusal ablation works similarly, but can be used to remove the direction represented by the vector from model weights.
+
 ## Installation
 
 Using pip:
@@ -31,7 +37,7 @@ The web app uses [Chainlit](https://github.com/Chainlit/chainlit) to provide a f
 
 https://github.com/armbues/SiLLM/assets/4117144/ab537795-5020-4241-aa89-3b19b9de263b
 
-To start the web app, clone the repository and start the app using chainlit:
+To use the web app, clone the repository and start the app using chainlit:
 ``` sh
 git clone https://github.com/armbues/SiLLM.git
 cd SiLLM/app
