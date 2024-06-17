@@ -14,6 +14,28 @@ from sillm.core.llm import LLM
 
 logger = logging.getLogger("sillm")
 
+def save_vectors(fpath: str,
+                 vectors: dict,
+                 metadata: dict = {}):
+    """
+    Save control vectors to a file.
+    Args:
+        fpath: File path.
+        vectors: Control vectors.
+        metadata: Metadata.
+    """
+    mx.save_safetensors(fpath, vectors, metadata=metadata)
+
+def load_vectors(fpath: str):
+    """
+    Load control vectors from a file.
+    Args:
+        fpath: File path.
+    Returns:
+        Control vectors.
+    """
+    return mx.load(fpath, return_metadata=True)
+
 class ContrastDataset:
     """
     Contrast dataset for control vector training.
@@ -146,11 +168,6 @@ class ControlModule(nn.Module):
         control = ControlModule()
         control.module = module
         control.name = module.name
-        
-        control.capture = False
-        control.mode = 'output'
-        control.vector = None
-        control.alpha = 1.0
 
         return control
 
@@ -158,7 +175,12 @@ class ControlModule(nn.Module):
         super().__init__()
 
         self.hidden_states = None
+
+        self.capture = False
+        self.mode = 'output'
         self.vector = None
+        self.alpha = 1.0
+        self.beta = -1.0
 
     def hook(self, func, x, *args, **kwargs):
         """
@@ -199,8 +221,9 @@ class ControlModule(nn.Module):
             elif self.mode == 'input':
                 vector = self.vector * self.alpha
                 vector_reshaped = mx.reshape(vector, (-1, 1)).astype(h.dtype)
+                proj = (h @ vector_reshaped) * vector
 
-                h -= (h @ vector_reshaped) * vector
+                h += proj * self.beta
             else:
                 raise ValueError(f"Invalid mode: {self.mode}")
         else:
@@ -236,6 +259,7 @@ class ControlledLLM(LLM):
         for key, module in self.model.named_modules():
             module.name = key
 
+        self._mode = None
         self._control_modules = []
 
     def get_module_index(self,
@@ -307,6 +331,11 @@ class ControlledLLM(LLM):
         Args:
             control_index: Index of control modules.
         """
+        self._mode = mode
+
+        if len(self._control_modules) > 0:
+            logger.warning("Control modules already initialized")
+
         control_modules = {}
         control_tree = []
 
@@ -359,7 +388,8 @@ class ControlledLLM(LLM):
     
     def set_control_vectors(self,
                             control_vectors: dict,
-                            alpha: float = 1.0
+                            alpha: float = 1.0,
+                            beta: float = -1.0
                             ):
         """
         Set control vectors for control modules.
@@ -376,12 +406,14 @@ class ControlledLLM(LLM):
 
                 module.vector = vector
                 module.alpha = alpha
+                module.beta = beta
             else:
                 logger.warning(f"Attempting to set control vector for missing module: {name}")
 
     def set_control_vector(self,
                            control_vector: mx.array,
-                           alpha: float = 1.0
+                           alpha: float = 1.0,
+                           beta: float = -1.0
                            ):
         """
         Set a single control vector for all control modules.
@@ -392,27 +424,69 @@ class ControlledLLM(LLM):
         for module in self._control_modules.values():
             module.vector = control_vector
             module.alpha = alpha
+            module.beta = beta
 
-    def set_alpha(self,
-                  alpha: float
+    def save_control_vectors(self,
+                             fpath: str
+                             ):
+        """
+        Save control vectors to a file.
+        Args:
+            fpath: File path.
+        """
+        vectors = {}
+        for name, module in self._control_modules.items():
+            vectors[name] = module.vector
+
+        metadata = {
+            "mode": self._mode
+        }
+
+        save_vectors(fpath, vectors, metadata)
+
+        logger.debug(f"Saved control vectors to: {fpath}")
+
+    def load_control_vectors(self,
+                             fpath: str
+                             ):
+        """
+        Load control vectors from a file.
+        Args:
+            fpath: File path.
+        """
+        vectors, metadata = load_vectors(fpath)
+        control_index = list(vectors.keys())
+
+        self.init_control(control_index=control_index, mode=metadata["mode"])
+        self.set_control_vectors(vectors)
+
+        logger.debug(f"Loaded control vectors from: {fpath}")
+
+    def set_coeff(self,
+                  alpha: float = 1.0,
+                  beta: float = -1.0
                   ):
         """
-        Set control vector coefficient for all control modules.
+        Set control vector coefficients for all control modules.
         Args:
-            alpha: Control vector coefficient.
+            alpha: Vector coefficient.
+            beta: Projection coefficient.
         """
         for module in self._control_modules.values():
             module.alpha = alpha
+            module.beta = beta
 
-    def orthogonalize_weights(self,
-                              vectors: dict,
-                              alpha: float = 1.0
-                              ):
+    def modify_weights(self,
+                       vectors: dict,
+                       alpha: float = 1.0,
+                       beta: float = -1.0
+                       ):
         """
-        Orthogonalize model weights with the given direction.
+        Modify model weights with the given direction.
         Args:
-            vectors: Orthogonalization vectors.
-            control_index: Index of module weights to orthogonalize.
+            vectors: Modification vectors.
+            alpha: Vector coefficient.
+            beta: Projection coefficient.
         """
         for name, module in tqdm.tqdm(self.model.named_modules()):
             if name in vectors:
@@ -422,9 +496,9 @@ class ControlledLLM(LLM):
                 weight = module.weight.astype(mx.float32)
                 proj = (vector @ weight) * vector_reshaped
 
-                module.weight -= proj.astype(module.weight.dtype)
+                module.weight += proj.astype(module.weight.dtype) * beta
 
-        logger.debug(f"Orthogonalized weights for modules: {', '.join(vectors.keys())}")
+        logger.debug(f"Modified weights for modules: {', '.join(vectors.keys())}")
 
     def train(self,
               dataset: ContrastDataset,
