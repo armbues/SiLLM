@@ -18,12 +18,6 @@ class BaseModel(nn.Module):
                  ):
         raise NotImplementedError("Class model.Model is used for inheritance only")
     
-    def loss(self,
-        inputs: mx.array,
-        targets: mx.array,
-        lengths: mx.array):
-        raise NotImplementedError("Loss function is not implemented for this model")
-    
     ########
     # Based on mlx-examples:
     # https://github.com/ml-explore/mlx-examples/blob/047d4650c4f63d55e5bfbaf8f589c1679cbdd971/lora/lora.py#L151
