@@ -9,6 +9,7 @@ default_templates = {
     "llama": "llama2",
     "mistral": "mistral",
     "gemma": "gemma",
+    "gemma2": "gemma",
     "mixtral": "mistral",
     "phi": "phi2",
     "qwen2": "qwen2",

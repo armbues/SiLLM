@@ -18,6 +18,7 @@ model_map = {
     "llama":        models.llama.Model,
     "mistral":      models.llama.Model,
     "gemma":        models.gemma.Model,
+    "gemma2":       models.gemma2.Model,
     "mixtral":      models.mixtral.Model,   
     "phi":          models.phi.Model,
     "phi3":         models.phi3.Model,

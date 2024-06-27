@@ -6,9 +6,10 @@ from typing import List
 import sillm.models.args as args
 
 model_special_tokens = [
-    "<|eot_id|>",   # Llama-3
-    "<|end|>",      # Phi-3
-    "<|im_end|>",   # Yi
+    "<|eot_id|>",       # Llama-3
+    "<|end|>",          # Phi-3
+    "<|im_end|>",       # Yi
+    "<end_of_turn>"     # Gemma
 ]
 
 class Tokenizer():

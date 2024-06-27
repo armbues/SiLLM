@@ -1,38 +1,12 @@
+from typing import Optional, Tuple
+
 import mlx.core as mx
 import mlx.nn as nn
 
 from sillm.models.base import BaseModel
 from sillm.models.args import ModelArgs
+from sillm.models.gemma import RMSNorm, FeedForward
 import sillm.models.llama as llama
-
-
-class RMSNorm(nn.Module):
-    """
-    Root Mean Square Normalization module.
-    """
-    def __init__(self,
-                 dims: int,
-                 eps: float = 1e-6):
-        super().__init__()
-
-        self.weight = mx.ones((dims,))
-        self.eps = eps
-
-    def __call__(self, x):
-        return mx.fast.rms_norm(x, 1.0 + self.weight, self.eps)
-    
-class FeedForward(llama.FeedForward):
-    """
-    Feed-forward module.
-    """
-    def __call__(self, x) -> mx.array:
-        """
-        Args:
-            x: Input tensor.
-        Returns:
-            Output tensor.
-        """
-        return self.w2(nn.gelu(self.w1(x)) * self.w3(x))
     
 class TransformerBlock(llama.TransformerBlock):
     """
@@ -53,10 +27,41 @@ class TransformerBlock(llama.TransformerBlock):
         self.feed_forward = FeedForward(args=args)
         self.attention_norm = RMSNorm(args.dim, eps=args.norm_eps)
         self.ffn_norm = RMSNorm(args.dim, eps=args.norm_eps)
+        self.pre_feedforward_layernorm = RMSNorm(args.dim, eps=args.norm_eps)
+        self.post_feedforward_layernorm = RMSNorm(args.dim, eps=args.norm_eps)
+
+    def forward(
+            self,
+            x: mx.array,
+            mask: Optional[mx.array] = None,
+            cache: Optional[Tuple[mx.array, mx.array]] = None,
+            ) -> mx.array:
+        """
+        Args:
+            x: Input tensor.
+            mask: Mask tensor.
+            cache: Cache from previous forward pass.
+        Returns:
+            Output tensor and cache.
+        """
+        r = x
+        h = self.attention_norm(x)
+
+        h, cache = self.attention(h, mask, cache)
+        h = self.ffn_norm(h)
+        h = h + r
+
+        r = h
+        h = self.pre_feedforward_layernorm(h)
+        h = self.feed_forward(h)
+        h = self.post_feedforward_layernorm(h)
+        out = h + r
+        
+        return out, cache
 
 ########
 # References:
-# https://github.com/huggingface/transformers/blob/main/src/transformers/models/gemma/modeling_gemma.py
+# https://github.com/huggingface/transformers/blob/main/src/transformers/models/gemma2/modeling_gemma.py
 ########
 class Model(llama.Model):
     """
