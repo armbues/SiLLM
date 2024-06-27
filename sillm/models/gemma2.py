@@ -44,18 +44,11 @@ class TransformerBlock(llama.TransformerBlock):
         Returns:
             Output tensor and cache.
         """
-        r = x
-        h = self.attention_norm(x)
+        h, cache = self.attention(self.attention_norm(x), mask, cache)
+        r = self.ffn_norm(h) + x
 
-        h, cache = self.attention(h, mask, cache)
-        h = self.ffn_norm(h)
-        h = h + r
-
-        r = h
-        h = self.pre_feedforward_layernorm(h)
-        h = self.feed_forward(h)
-        h = self.post_feedforward_layernorm(h)
-        out = h + r
+        h = self.feed_forward(self.pre_feedforward_layernorm(r))
+        out = self.post_feedforward_layernorm(h) + r
         
         return out, cache
 
