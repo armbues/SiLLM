@@ -476,6 +476,8 @@ class ControlledLLM(LLM):
             module.alpha = alpha
             module.beta = beta
 
+        logger.debug(f"Set control vector coefficients: alpha={alpha}, beta={beta}")
+
     def modify_weights(self,
                        vectors: dict,
                        alpha: float = 1.0,
