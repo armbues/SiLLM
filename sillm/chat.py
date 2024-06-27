@@ -82,18 +82,23 @@ if __name__ == "__main__":
     utils.log_memory_usage()
 
     # Input loop
+    prompt = ""
     while True:
-        prompt = input("> ")
+        prompt += input("> ")
 
         if prompt.startswith('.'):
+            # Exit
             break
         elif prompt == "":
-            if conversation:
-                conversation.clear()
+            # Clear conversation
+            conversation.clear()
+            continue
+        elif prompt.endswith('\\'):
+            # Continue prompt after line break
+            prompt = prompt[:-1] + "\n"
             continue
 
-        if conversation:
-            prompt = conversation.add_user(prompt)
+        prompt = conversation.add_user(prompt)
         
         logger.debug(f"Generating {args.max_tokens} tokens with temperature {args.temperature}")
 
@@ -103,8 +108,8 @@ if __name__ == "__main__":
             response += s
         print()
 
-        if conversation:
-            conversation.add_assistant(response)
+        conversation.add_assistant(response)
+        prompt = ""
 
         logger.debug(f"Evaluated {metadata['usage']['prompt_tokens']} prompt tokens in {metadata['timing']['eval_time']:.2f}s ({metadata['usage']['prompt_tokens'] / metadata['timing']['eval_time']:.2f} tok/sec)")
         logger.debug(f"Generated {metadata['usage']['completion_tokens']} tokens in {metadata['timing']['runtime']:.2f}s ({metadata['usage']['completion_tokens'] / metadata['timing']['runtime']:.2f} tok/sec)")
