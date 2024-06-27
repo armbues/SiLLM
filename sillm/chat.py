@@ -1,5 +1,6 @@
 import os
 import argparse
+import readline
 
 import sillm
 import sillm.utils as utils
