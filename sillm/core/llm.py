@@ -406,10 +406,10 @@ def generate(model,
     buffer, output = [], ""
 
     def sample(logits):
-        if temperature > 0:
-            return mx.random.categorical(logits * (1 / temperature))
-        else:
+        if temperature == 0:
             return mx.argmax(logits, axis=-1)
+        else:
+            return mx.random.categorical(logits * (1 / temperature))
         # TODO add top-p sampling
 
     def apply_repetition_penalty(logits):
