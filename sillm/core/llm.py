@@ -353,10 +353,15 @@ class LLM():
             max_tokens: Max number of tokens to generate.
             repetition_penalty: Repetition penalty.
             repetition_window: Repetition window.
+            logprobs: Return logprobs.
         Returns:
             Generated completion.
         """
-        return ''.join([t[0] for t in generate(self.model, self.tokenizer, *args, **kwargs)])
+        result = ""
+        for text, metadata in generate(self.model, self.tokenizer, *args, **kwargs):
+            result += text
+
+        return result, metadata
 
 def generate(model,
              tokenizer: Tokenizer,

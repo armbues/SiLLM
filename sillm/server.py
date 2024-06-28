@@ -48,10 +48,8 @@ def chat_completions(completion: ChatCompletion):
         "temperature": completion.temperature
     }
 
-    content = ""
-    for s, metadata in app.model.generate(prompt, **generate_args):
-        content += s
-
+    content, metadata = app.model.completion(prompt, **generate_args)
+    
     result["choices"] = [{
         "index": 0,
         "message": {
