@@ -9,6 +9,19 @@ from sillm.models.gemma import RMSNorm, FeedForward
 import sillm.models.llama as llama
     
 class Attention(llama.Attention):
+    """
+    Multi-head attention module.
+    """
+    def __init__(self, args: ModelArgs):
+        """
+        Args:
+            args: Model arguments.
+        """
+        super().__init__(args)
+
+        self.attn_logit_softcapping = args.attn_logit_softcapping
+        self.scale = 1.0 / (args.query_pre_attn_scalar**0.5)
+
     def __call__(self,
                  x: mx.array,
                  mask: Optional[mx.array] = None,
@@ -35,16 +48,17 @@ class Attention(llama.Attention):
         output = mx.fast.scaled_dot_product_attention(
             queries, keys, values, scale=self.scale, mask=mask
         )
-        output = output.transpose(0, 2, 1, 3).reshape(B, L, -1)
 
         ########
         # Attention softcapping
         # Reference:
         # https://github.com/huggingface/transformers/blob/b7ee1e80b912c6cdd93b54dd77af061fde151d28/src/transformers/models/gemma2/modeling_gemma2.py#L259
         ########
-        output = output / self.config.attn_logit_softcapping
+        output = output / self.attn_logit_softcapping
         output = mx.tanh(output)
-        output = output * self.config.attn_logit_softcapping
+        output = output * self.attn_logit_softcapping
+
+        output = output.transpose(0, 2, 1, 3).reshape(B, L, -1)
 
         return self.wo(output), (keys, values)
 
@@ -110,6 +124,7 @@ class Model(llama.Model):
 
         self.n_layers = args.n_layers
         self.vocab_size = args.vocab_size
+        self.final_logit_softcapping = args.final_logit_softcapping
         
         self.tok_embeddings = nn.Embedding(args.vocab_size, args.dim)
         self.layers = [TransformerBlock(args=args) for _ in range(args.n_layers)]

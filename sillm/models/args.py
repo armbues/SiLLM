@@ -212,3 +212,4 @@ class Gemma2Args(ModelArgs):
     rope_scaling: dict = None
     attn_logit_softcapping: float = 50.0
     final_logit_softcapping: float = 30.0
+    query_pre_attn_scalar: float = 144.0
