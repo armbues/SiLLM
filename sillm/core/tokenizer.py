@@ -208,14 +208,6 @@ class TransformerTokenizer(Tokenizer):
         else:
             self.pad_id = args.pad_token_id
 
-        # Manually add special tokens for Llama-3, Phi-3, and Yi
-        if "<|eot_id|>" in self._model.vocab:
-            self.special_ids.add(self._model.vocab["<|eot_id|>"])
-        if "<|end|>" in self._model.vocab:
-            self.special_ids.add(self._model.vocab["<|end|>"])
-        if "<|im_end|>" in self._model.vocab:
-            self.special_ids.add(self._model.vocab["<|im_end|>"])
-
     def encode(self,
                s: str,
                bos: bool = True,
