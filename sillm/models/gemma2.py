@@ -8,6 +8,46 @@ from sillm.models.args import ModelArgs
 from sillm.models.gemma import RMSNorm, FeedForward
 import sillm.models.llama as llama
     
+class Attention(llama.Attention):
+    def __call__(self,
+                 x: mx.array,
+                 mask: Optional[mx.array] = None,
+                 cache: Optional[Tuple[mx.array, mx.array]] = None,
+                 ) -> mx.array:
+        B, L, _ = x.shape
+
+        queries, keys, values = self.wq(x), self.wk(x), self.wv(x)
+
+        queries = queries.reshape(B, L, self.n_heads, -1).transpose(0, 2, 1, 3)
+        keys = keys.reshape(B, L, self.n_kv_heads, -1).transpose(0, 2, 1, 3)
+        values = values.reshape(B, L, self.n_kv_heads, -1).transpose(0, 2, 1, 3)
+
+        if cache is not None:
+            key_cache, value_cache = cache
+            queries = self.rope(queries, offset=key_cache.shape[2])
+            keys = self.rope(keys, offset=key_cache.shape[2])
+            keys = mx.concatenate([key_cache, keys], axis=2)
+            values = mx.concatenate([value_cache, values], axis=2)
+        else:
+            queries = self.rope(queries)
+            keys = self.rope(keys)
+
+        output = mx.fast.scaled_dot_product_attention(
+            queries, keys, values, scale=self.scale, mask=mask
+        )
+        output = output.transpose(0, 2, 1, 3).reshape(B, L, -1)
+
+        ########
+        # Attention softcapping
+        # Reference:
+        # https://github.com/huggingface/transformers/blob/b7ee1e80b912c6cdd93b54dd77af061fde151d28/src/transformers/models/gemma2/modeling_gemma2.py#L259
+        ########
+        output = output / self.config.attn_logit_softcapping
+        output = mx.tanh(output)
+        output = output * self.config.attn_logit_softcapping
+
+        return self.wo(output), (keys, values)
+
 class TransformerBlock(llama.TransformerBlock):
     """
     Transformer block.
@@ -101,5 +141,14 @@ class Model(llama.Model):
             h, cache[e] = layer.forward(h, mask, cache[e])
 
         out = self.tok_embeddings.as_linear(self.norm(h))
+
+        ########
+        # Final logit softcapping
+        # Reference:
+        # https://github.com/huggingface/transformers/blob/b7ee1e80b912c6cdd93b54dd77af061fde151d28/src/transformers/models/gemma2/modeling_gemma2.py#L1083
+        ########
+        out = out / self.args.final_logit_softcapping
+        out = mx.tanh(out)
+        out = out * self.args.final_logit_softcapping
 
         return out, cache

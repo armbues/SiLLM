@@ -86,6 +86,8 @@ class ModelArgs:
                 ArgsClass = CohereArgs
             elif config["model_type"] == "phi3":
                 ArgsClass = Phi3Args
+            elif config["model_type"] == "gemma2":
+                ArgsClass = Gemma2Args
             else:
                 ArgsClass = LlamaArgs
         if ArgsClass is None:
@@ -201,3 +203,12 @@ class Phi3Args(ModelArgs):
     """
     rope_scaling: dict = None
     embd_pdrop: float = 0.0
+
+@dataclasses.dataclass
+class Gemma2Args(ModelArgs):
+    """
+    Gemma 2 model arguments.
+    """
+    rope_scaling: dict = None
+    attn_logit_softcapping: float = 50.0
+    final_logit_softcapping: float = 30.0
