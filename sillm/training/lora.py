@@ -378,17 +378,15 @@ class TrainableLoRA(LLM):
         Returns:
             Average loss.
         """
-        all_losses = []
-        num_tokens = 0
+        losses = []
         for _, batch in zip(
             range(num_batches),
             dataset.iterate_batches(batch_size),
         ):
-            losses, _, toks = self.loss(*batch)
-            all_losses.append((losses * toks).item())
-            num_tokens += toks.item()
+            loss_value, _, _ = self.loss(*batch)
+            losses.append(loss_value.item())
 
-        return np.sum(all_losses) / num_tokens
+        return np.mean(losses)
     
     def loss(self, *args, **kwargs):
         """
