@@ -8,3 +8,4 @@ psutil
 pyyaml
 matplotlib
 jinja2
+scikit-learn
