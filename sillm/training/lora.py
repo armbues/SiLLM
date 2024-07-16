@@ -499,11 +499,12 @@ class TrainableLoRA(LLM):
                     else:
                         rewards = np.vstack([rewards, reward])
 
-                # Get peak memory usage
+                # Get memory usage
                 peak_memory = mx.metal.get_peak_memory()
                 memory_usage = peak_memory / system_memory
                 if memory_usage > 0.9:
                     pbar_epochs.write(f"HIGH MEMORY USAGE: {(peak_memory // (1024 ** 2)):,} MB ({memory_usage:.2%} of system memory)")
+                mx.metal.reset_peak_memory()
 
                 # Report training loss if needed
                 if (n + 1) % report_steps == 0:
