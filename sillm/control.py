@@ -65,7 +65,7 @@ if __name__ == "__main__":
     while True:
         prompt += input("> ")
 
-        if prompt.startswith('/'):
+        if prompt.startswith('/') or len(prompt) == 0:
             if prompt == "/exit":
                 # Exit chat
                 break
