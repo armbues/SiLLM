@@ -65,16 +65,23 @@ if __name__ == "__main__":
     while True:
         prompt += input("> ")
 
-        if prompt.startswith('.'):
-            # Exit
-            break
-        elif prompt == "":
-            # Clear conversation
-            conversation.clear()
+        if prompt.startswith('/'):
+            if prompt == "/exit":
+                # Exit chat
+                break
+            elif prompt == "/clear":
+                # Clear conversation
+                conversation.clear()
+            else:
+                print("Commands:")
+                print("/exit - Exit chat")
+                print("/clear - Clear conversation")
+            
+            prompt = ""
             continue
         elif prompt.endswith('\\'):
             # Continue prompt after line break
-            prompt = prompt[:-1] + "\n"
+            prompt = prompt.rstrip('\\') + "\n"
             continue
         elif re.match(r"^[\+\-]+$", prompt):
             # Set control vector coefficients
