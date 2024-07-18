@@ -23,7 +23,9 @@ if __name__ == "__main__":
     parser.add_argument("--layers", default=-1, type=int, help="Layers to use for LoRA (default: -1 for all layers)")
     parser.add_argument("--target_modules", default="query_value", type=str, help="Target modules to use for LoRA: query_value, all_linear")
     parser.add_argument("--rank", default=8, type=int, help="Rank to use for LoRA (default: 8)")
+    parser.add_argument("--optimizer", type=str, default="adam", help="Optimizer type (Adam/AdamW)")
     parser.add_argument("--learning_rate", default=1e-5, type=float, help="Learning rate (default: 1e-5)")
+    parser.add_argument("--learning_decay", default=0.0, type=float, help="Learning decay for AdamW optimizer (default: 0.0)")
     parser.add_argument("--epochs", default=1, type=int, help="Number of epochs (default: 1)")
     parser.add_argument("--iterations", default=0, type=int, help="Number of iterations per epoch (default: dataset size)")
     parser.add_argument("--batch_size", default=4, type=int, help="Size of training batches (default: 4)")
@@ -123,7 +125,9 @@ if __name__ == "__main__":
         training_config = {
             "grad_checkpoint":      args.grad_checkpoint,
             "batch_size":           args.batch_size,
+            "optimizer_type":       args.optimizer,
             "learning_rate":        args.learning_rate,
+            "learning_decay":       args.learning_decay,
             "epochs":               args.epochs,
             "iterations":           args.iterations,
             "report_steps":         args.report_steps,

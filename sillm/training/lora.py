@@ -402,7 +402,9 @@ class TrainableLoRA(LLM):
               dataset_training: Dataset,
               dataset_validation: Dataset,
               batch_size: int = 4,
+              optimizer_type: str = "adam",
               learning_rate: float = 1e-5,
+              learning_decay: float = 0.0,
               compiled_step: bool = True,
               grad_checkpoint: bool = False,
               epochs: int = 1,
@@ -438,7 +440,14 @@ class TrainableLoRA(LLM):
         logger.info(f"Training the model for {epochs} epochs of {iterations} batch iterations with batch size {batch_size}")
         logger.debug(f"Training learning rate: {learning_rate}")
 
-        optimizer = optim.Adam(learning_rate=learning_rate)
+        # Initialize optimizer
+        optimizer_type = optimizer_type.lower()
+        if optimizer_type == "adam":
+            optimizer = optim.Adam(learning_rate=learning_rate)
+        elif optimizer_type == "adamw":
+            optimizer = optim.AdamW(learning_rate=learning_rate, weight_decay=learning_decay)
+        else:
+            raise ValueError(f"Unknown optimizer type: {optimizer_type}")
 
         if grad_checkpoint:
             logger.info(f"Enabled gradient checkpointing")
