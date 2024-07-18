@@ -1,3 +1,4 @@
+import os
 import logging
 
 import jinja2
@@ -24,19 +25,26 @@ class Template(object):
                  template_name: str = "chatml",
                  exception_callback = None
                  ):
+        # Initialize Jinja2 environment
         loader = jinja2.PackageLoader('sillm', 'templates')
         env = jinja2.Environment(loader=loader, trim_blocks=True, lstrip_blocks=True)
 
+        # Set exception callback
         if exception_callback is None:
             env.globals["raise_exception"] = self._raise_exception
         else:
             env.globals["raise_exception"] = exception_callback
 
-        fname_template = template_name + ".jinja"
-        self.template = env.get_template(fname_template)
-
         # Set special tokens map
         self.special_tokens_map = tokenizer.special_tokens_map
+
+        if os.path.isfile(template_name):
+            with open(template_name, "r") as f:
+                template_data = f.read()
+                self.template = env.from_string(template_data)
+        else:
+            fname_template = template_name + ".jinja"
+            self.template = env.get_template(fname_template)
 
         logger.info(f"Initialized conversation template: {template_name}")
 
