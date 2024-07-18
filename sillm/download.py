@@ -17,6 +17,6 @@ if __name__ == "__main__":
     model_path = pathlib.Path(args.output)
     model_path.mkdir(parents=True, exist_ok=True)
 
-    allow_patterns = ["*.json", "model-*.safetensors", "*.model"]
+    allow_patterns = ["*.json", "model.safetensors", "model-*.safetensors", "*.model"]
 
     huggingface_hub.snapshot_download(repo_id=args.model, allow_patterns=allow_patterns, local_dir=model_path)
