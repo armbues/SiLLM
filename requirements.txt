@@ -1,5 +1,5 @@
 mlx>=0.14.1
-transformers>=4.41.1
+transformers>=4.42.4
 sentencepiece==0.2.0
 protobuf
 numpy
