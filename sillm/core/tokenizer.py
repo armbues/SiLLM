@@ -92,6 +92,9 @@ class SentencePieceTokenizer(Tokenizer):
             self.eos_id = self._model.eos_id()
         else:
             self.eos_id = args.eos_token_id
+
+            if isinstance(self.eos_id, list):
+                self.eos_id = self.eos_id[0]
         self.pad_id = self._model.pad_id()
 
     def encode(self,
@@ -203,6 +206,9 @@ class TransformerTokenizer(Tokenizer):
             self.eos_id = self._model.eos_token_id
         else:
             self.eos_id = args.eos_token_id
+
+            if isinstance(self.eos_id, list):
+                self.eos_id = self.eos_id[0]
         if args.pad_token_id is None:
             self.pad_id = self._model.pad_token_id
         else:

@@ -8,6 +8,67 @@ from sillm.models.args import ModelArgs
 
 ########
 # Based on mlx-examples:
+# https://github.com/ml-explore/mlx-examples/blob/85dc76f6e0f2cf3ee3d84c211868a6856e163f3f/llms/mlx_lm/models/llama.py#L49
+########
+class Llama3RoPE(nn.Module):
+    def __init__(self,
+                 head_dim: int,
+                 max_position_embeddings: int = 131072,
+                 traditional: bool = True,
+                 base: float = 10000,
+                 scale: float = 1.0,
+                 rope_scaling: dict = None,
+                 ):
+        self.head_dim = head_dim
+        self.max_position_embeddings = max_position_embeddings
+        self.traditional = traditional
+        self.original_base = base
+        self.scale = scale
+
+        ########
+        # Calculate base frequencies
+        # References:
+        # https://github.com/huggingface/transformers/blob/d5a99dfcee6e94065cb7c83cc8ab6fc5daa0cc4e/src/transformers/modeling_rope_utils.py#L318
+        ########
+        factor = rope_scaling.get("factor", 8.0)
+        low_freq_factor = rope_scaling.get("low_freq_factor", 1.0)
+        high_freq_factor = rope_scaling.get("high_freq_factor", 4.0)
+        old_context_len = rope_scaling.get("original_max_position_embeddings", 8192)
+
+        low_freq_wavelen = old_context_len / low_freq_factor
+        high_freq_wavelen = old_context_len / high_freq_factor
+
+        freqs = self.original_base ** (mx.arange(0, head_dim, 2) / head_dim)
+        wavelens = 2 * mx.pi * freqs
+        new_base_freqs = []
+
+        smooths = (wavelens - high_freq_wavelen) / (low_freq_wavelen - high_freq_wavelen)
+        new_base_freqs = freqs * (1 - smooths) * factor + smooths
+        new_base_freqs = mx.where(wavelens < high_freq_wavelen, freqs, new_base_freqs)
+        new_base_freqs = mx.where(wavelens > low_freq_wavelen, freqs * factor, new_base_freqs)
+
+        self.base = new_base_freqs.mean().item()
+
+            
+    def __call__(self, x, offset: int = 0):
+        seq_len = x.shape[1] + offset
+        base = self.base
+        if self.max_position_embeddings and seq_len > self.max_position_embeddings:
+            base *= (
+                (self.scale * seq_len / self.max_position_embeddings) - (self.scale - 1)
+            ) ** (self.head_dim / (self.head_dim - 2))
+
+        return mx.fast.rope(
+            x,
+            self.head_dim,
+            traditional=self.traditional,
+            base=base,
+            scale=self.scale,
+            offset=offset,
+        )
+
+########
+# Based on mlx-examples:
 # https://github.com/ml-explore/mlx-examples/blob/047d4650c4f63d55e5bfbaf8f589c1679cbdd971/lora/models.py#L151
 ########
 class Attention(nn.Module):
@@ -32,17 +93,28 @@ class Attention(nn.Module):
         self.wv = nn.Linear(args.dim, args.n_kv_heads * args.head_dim, bias=False)
         self.wo = nn.Linear(args.n_heads * args.head_dim, args.dim, bias=False)
 
-        if args.rope_scaling is None:
-            rope_scale = 1
-        elif args.rope_scaling["type"] == "linear":
-            rope_scale = 1 / args.rope_scaling["factor"]
+        rope_type = "default"
+        rope_scale = 1.0
+        if args.rope_scaling is not None:
+            rope_type = (args.rope_scaling.get("type") or args.rope_scaling.get("rope_type") or "default")
+
+            if rope_type == "linear":
+                rope_scale = 1 / args.rope_scaling["factor"]
+
+        if rope_type in ("default", "linear"):
+            self.rope = nn.RoPE(args.head_dim,
+                                traditional=args.rope_traditional,
+                                base=args.rope_theta,
+                                scale=rope_scale)
+        elif rope_type == "llama3":
+            self.rope = Llama3RoPE(args.head_dim,
+                                   max_position_embeddings=args.max_position_embeddings,
+                                   traditional=args.rope_traditional,
+                                   base=args.rope_theta,
+                                   scale=rope_scale,
+                                   rope_scaling=args.rope_scaling)
         else:
-            raise NotImplementedError(f"Unknown scaling type {args.rope_scaling['type']}")
-        
-        self.rope = nn.RoPE(args.head_dim,
-                            traditional=args.rope_traditional,
-                            base=args.rope_theta,
-                            scale=rope_scale)
+            raise NotImplementedError(f"Unknown scaling type {rope_type}")
 
     def __call__(self,
                  x: mx.array,
