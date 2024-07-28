@@ -1,4 +1,5 @@
-from typing import Optional, Tuple
+import math
+from typing import Optional, Tuple, Union, List
 
 import mlx.core as mx
 import mlx.nn as nn
@@ -8,34 +9,74 @@ from sillm.models.args import ModelArgs
 import sillm.models.llama as llama
 
 ########
-# Based on Phi-3 model implementation by Microsoft:
+# Su Scaled Rotary Embedding
+# References:
 # https://huggingface.co/microsoft/Phi-3-mini-128k-instruct/blob/38143357bf52ce57009ecbd58cf9f0b0029cb393/modeling_phi3.py#L142
+# https://github.com/ml-explore/mlx-examples/blob/85dc76f6e0f2cf3ee3d84c211868a6856e163f3f/llms/mlx_lm/models/su_rope.py#L7
 ########
-class SuScaledRotaryEmbedding(nn.RoPE):
+class SuScaledRotaryEmbedding(nn.Module):
     """
     Phi-3 Scaled Uniform RoPE.
     """
     def __init__(self,
-                 args: ModelArgs,
-                 head_dim: int
+                 head_dim: int,
+                 max_position_embeddings: int = 131072,
+                 original_max_position_embeddings: int = 4096,
+                 base: float = 10000,
+                 scale: float = 1.0,
+                 short_factor: Union[List[float], float] = 1.0,
+                 long_factor: Union[List[float], float] = 1.0,
                  ):
         """
         Args:
             head_dim: Head dimension.
             base: Base for the RoPE.
         """
-        super().__init__(head_dim, base=args.rope_theta, traditional=args.rope_traditional)
+        self.original_max_position_embeddings = original_max_position_embeddings
 
-        self.short_factor = args.rope_scaling["short_factor"]
-        self.long_factor = args.rope_scaling["long_factor"]
-        self.original_max_position_embeddings = args.original_max_position_embeddings
+        self._inv_freq_short = 1.0 / (
+            mx.array(short_factor, dtype=mx.float32)
+            * base ** (mx.arange(0, head_dim, 2, dtype=mx.float32) / head_dim)
+        )
+        self._inv_freq_long = 1.0 / (
+            scale
+            * mx.array(long_factor, dtype=mx.float32)
+            * base ** (mx.arange(0, head_dim, 2, dtype=mx.float32) / head_dim)
+        )
+        self.scaling_factor = math.sqrt(
+            1
+            + math.log(max_position_embeddings / self.original_max_position_embeddings)
+            / math.log(self.original_max_position_embeddings)
+        )
 
-        raise NotImplementedError("Scaled Uniform RoPE is not fully implemented")
+    def _get_cos_sin(self, offset, L):
+        position_ids = mx.arange(offset, offset + L, dtype=mx.float32)
+        inv_freq = (
+            self._inv_freq_long
+            if (offset + L) > self.original_max_position_embeddings
+            else self._inv_freq_short
+        )
+        freqs = position_ids[:, None] * inv_freq[None, :]
+        emb = mx.concatenate([freqs, freqs], axis=-1)
+        cos = mx.cos(emb) * self.scaling_factor
+        sin = mx.sin(emb) * self.scaling_factor
+        return cos, sin
+
+    def __call__(self, x, offset: int = 0):
+        def _rotate_half(_x):
+            midpoint = _x.shape[-1] // 2
+            x1, x2 = _x[..., :midpoint], _x[..., midpoint:]
+            return mx.concatenate([-x2, x1], axis=-1)
+
+        cos, sin = self._get_cos_sin(offset, x.shape[2])
+        return (x * cos) + (_rotate_half(x) * sin)
 
 ########
-# Based on Phi-3 model implementation by Microsoft:
+# Yarn Scaled Rotary Embedding
+# References:
 # https://huggingface.co/microsoft/Phi-3-mini-128k-instruct/blob/38143357bf52ce57009ecbd58cf9f0b0029cb393/modeling_phi3.py#L194
 ########
+# TODO implement YarnScaledRotaryEmbedding
 class YarnScaledRotaryEmbedding(nn.RoPE):
     """
     Phi-3 Yarn RoPE.
@@ -55,7 +96,7 @@ class YarnScaledRotaryEmbedding(nn.RoPE):
         self.long_factor = args.rope_scaling["long_factor"]
         self.original_max_position_embeddings = args.original_max_position_embeddings
 
-        raise NotImplementedError("Yarn RoPE is not fully implemented")
+        raise NotImplementedError("Yarn RoPE is not implemented yet")
 
 class Attention(nn.Module):
     """
@@ -81,9 +122,13 @@ class Attention(nn.Module):
         self.wo = nn.Linear(args.n_heads * args.head_dim, args.dim, bias=False)
         
         if args.rope_scaling is not None:
-            # TODO implement Phi3LongScaledRotaryEmbedding & Phi3YarnScaledRotaryEmbedding
-            if args.rope_scaling["type"] == "su":
-                self.rope = SuScaledRotaryEmbedding(args, args.head_dim)
+            if args.rope_scaling["type"] in ("su", "longrope"):
+                self.rope = SuScaledRotaryEmbedding(args.head_dim,
+                                                    max_position_embeddings=args.max_position_embeddings,
+                                                    original_max_position_embeddings=args.original_max_position_embeddings,
+                                                    base=args.rope_theta,
+                                                    short_factor=args.rope_scaling["short_factor"],
+                                                    long_factor=args.rope_scaling["long_factor"])
             elif args.rope_scaling["type"] == "yarn":
                 self.rope = YarnScaledRotaryEmbedding(args, args.head_dim)
             else:

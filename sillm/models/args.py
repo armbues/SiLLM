@@ -203,6 +203,7 @@ class Phi3Args(ModelArgs):
     """
     rope_scaling: dict = None
     embd_pdrop: float = 0.0
+    original_max_position_embeddings: int = 4096
 
 @dataclasses.dataclass
 class Gemma2Args(ModelArgs):
