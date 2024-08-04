@@ -266,6 +266,7 @@ class ControlledLLM(LLM):
                          min_layer: int = 0,
                          max_layer: int = 0,
                          segment: str = None,
+                         transformer: bool = False,
                          attention: bool = False,
                          feed_forward: bool = False,
                          attention_norm: bool = False,
@@ -279,6 +280,7 @@ class ControlledLLM(LLM):
             min_layer: Minimum layer index.
             max_layer: Maximum layer index.
             segment: Segment of layers (all/intermediate/core).
+            transformer: Include transformer modules.
             attention: Include attention modules.
             feed_forward: Include feed forward modules.
             attention_norm: Include attention normalization modules.
@@ -307,6 +309,8 @@ class ControlledLLM(LLM):
         assert max_layer >= 0 and max_layer < len(self.model.layers)
 
         for i in range(min_layer, max_layer+1):
+            if transformer:
+                control_index.append(f"layers.{i}")
             if attention:
                 control_index.append(f"layers.{i}.attention")
             if feed_forward:
