@@ -12,6 +12,7 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--remap", default=False, action="store_true", help="Remap weights keys to native SiLLM format")
     parser.add_argument("-q4", default=False, action="store_true", help="Quantize the model to 4 bits")
     parser.add_argument("-q8", default=False, action="store_true", help="Quantize the model to 8 bits")
+    parser.add_argument("-dtype", type=str, default=None, help="Cast model weights to specified data type")
     parser.add_argument("-v", "--verbose", default=1, action="count", help="Increase output verbosity")
     args = parser.parse_args()
 
@@ -39,11 +40,13 @@ if __name__ == "__main__":
         model.load_adapters(args.input_adapters)
         model.merge_and_unload_lora()
 
-    # Quantize model
+    # Quantize model or cast model weights
     if args.q4 is True:
         model.quantize(bits=4)
     elif args.q8 is True:
         model.quantize(bits=8)
+    elif args.dtype is not None:
+        model.astype(args.dtype)
 
     # Disable mapping to old keys
     if args.remap:

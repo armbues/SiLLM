@@ -242,6 +242,22 @@ class LLM():
 
         logger.info(f"Saved model to {model_path}")
 
+    def astype(self,
+               dtype: str
+               ):
+        """
+        Cast model weights of linear modules to a different data type.
+        """
+        if dtype not in ("float16", "float32", "bfloat16"):
+            raise ValueError(f"Invalid data type {dtype}")
+        
+        dtype = getattr(mx, dtype)
+        for _, module in self.model.named_modules():
+            if isinstance(module, nn.Linear) and module.weight.dtype != dtype:
+                module.weight = module.weight.astype(dtype)
+
+        logger.info(f"Cast model weights to {dtype}")
+        
     def quantize(self,
                  group_size: int = 32,
                  bits: int = 4,
@@ -252,7 +268,7 @@ class LLM():
         Args:
             group_size: Group size for quantization.
             bits: Number of bits for quantization.
-            excluded: List of module names to exclude from quantization.
+            weights: Keys to initialize quantization for existing weights.
         """
         if self._quantization is None:
             quantization = {
