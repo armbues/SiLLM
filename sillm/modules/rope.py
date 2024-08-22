@@ -52,6 +52,8 @@ class Llama3RoPE(nn.Module):
                  scale: float = 1.0,
                  rope_scaling: dict = None,
                  ):
+        super().__init__()
+
         self.head_dim = head_dim
         self.max_position_embeddings = max_position_embeddings
         self.traditional = traditional
@@ -81,7 +83,6 @@ class Llama3RoPE(nn.Module):
         new_base_freqs = mx.where(wavelens > low_freq_wavelen, freqs * factor, new_base_freqs)
 
         self.base = new_base_freqs.mean().item()
-
             
     def __call__(self, x, offset: int = 0):
         seq_len = x.shape[1] + offset
@@ -119,11 +120,8 @@ class SuScaledRotaryEmbedding(nn.Module):
                  short_factor: Union[List[float], float] = 1.0,
                  long_factor: Union[List[float], float] = 1.0,
                  ):
-        """
-        Args:
-            head_dim: Head dimension.
-            base: Base for the RoPE.
-        """
+        super().__init__()
+
         self.original_max_position_embeddings = original_max_position_embeddings
 
         self._inv_freq_short = 1.0 / (
