@@ -355,6 +355,7 @@ class LLM():
             repetition_window: Repetition window.
             logprobs: Return logprobs.
             flush: Flush buffer every n tokens.
+            extra_stop_tokens: Additional stop tokens.
         Yields:
             Tuple of generated text and metadata.
         """
@@ -388,7 +389,8 @@ def generate(model,
              repetition_window: int = 25,
              logprobs: bool = False,
              token_ids: bool = False,
-             flush: int = 5
+             flush: int = 5,
+             extra_stop_tokens: list = None
              ):
     start = time.perf_counter()
 
@@ -397,6 +399,16 @@ def generate(model,
 
     # Define stop tokens
     stop_tokens = tokenizer.special_ids
+    
+    # Add user-defined stop tokens
+    if extra_stop_tokens is not None:
+        for token in extra_stop_tokens:
+            if isinstance(token, str):
+                token_id = tokenizer.encode(token)[0]
+            else:
+                token_id = token
+
+            stop_tokens.add(token_id)
     
     # Initialize metadata
     timing = {
