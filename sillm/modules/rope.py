@@ -6,6 +6,39 @@ import mlx.nn as nn
 
 from sillm.models.args import ModelArgs
 
+def init_rope(args: ModelArgs):
+    rope_type = "default"
+    rope_scale = 1.0
+    if args.rope_scaling is not None:
+        rope_type = (args.rope_scaling.get("type") or args.rope_scaling.get("rope_type") or "default")
+
+        if rope_type == "linear":
+            rope_scale = 1 / args.rope_scaling["factor"]
+
+    if rope_type in ("default", "linear"):
+        return nn.RoPE(args.head_dim,
+                       traditional=args.rope_traditional,
+                       base=args.rope_theta,
+                       scale=rope_scale)
+    elif rope_type == "llama3":
+        return Llama3RoPE(args.head_dim,
+                          max_position_embeddings=args.max_position_embeddings,
+                          traditional=args.rope_traditional,
+                          base=args.rope_theta,
+                          scale=rope_scale,
+                          rope_scaling=args.rope_scaling)
+    elif rope_type in ("su", "longrope"):
+        return SuScaledRotaryEmbedding(args.head_dim,
+                                       max_position_embeddings=args.max_position_embeddings,
+                                       original_max_position_embeddings=args.original_max_position_embeddings,
+                                       base=args.rope_theta,
+                                       short_factor=args.rope_scaling["short_factor"],
+                                       long_factor=args.rope_scaling["long_factor"])
+    elif args.rope_scaling["type"] == "yarn":
+        raise NotImplementedError("Yarn RoPE is not implemented")
+    else:
+        raise NotImplementedError(f"Unknown scaling type {rope_scale}")
+
 ########
 # Based on mlx-examples:
 # https://github.com/ml-explore/mlx-examples/blob/85dc76f6e0f2cf3ee3d84c211868a6856e163f3f/llms/mlx_lm/models/llama.py#L49
@@ -129,29 +162,3 @@ class SuScaledRotaryEmbedding(nn.Module):
 
         cos, sin = self._get_cos_sin(offset, x.shape[2])
         return (x * cos) + (_rotate_half(x) * sin)
-
-########
-# Yarn Scaled Rotary Embedding
-# References:
-# https://huggingface.co/microsoft/Phi-3-mini-128k-instruct/blob/38143357bf52ce57009ecbd58cf9f0b0029cb393/modeling_phi3.py#L194
-########
-class YarnScaledRotaryEmbedding(nn.RoPE):
-    """
-    Yarn RoPE.
-    """
-    def __init__(self,
-                 args: ModelArgs,
-                 head_dim: int
-                 ):
-        """
-        Args:
-            head_dim: Head dimension.
-            base: Base for the RoPE.
-        """
-        super().__init__(head_dim, base=args.rope_theta, traditional=args.rope_traditional)
-
-        self.short_factor = args.rope_scaling["short_factor"]
-        self.long_factor = args.rope_scaling["long_factor"]
-        self.original_max_position_embeddings = args.original_max_position_embeddings
-
-        raise NotImplementedError("Yarn RoPE is not implemented yet")

@@ -5,7 +5,7 @@ import mlx.nn as nn
 
 from sillm.models.base import BaseModel
 from sillm.models.args import ModelArgs
-from sillm.modules.rope import SuScaledRotaryEmbedding, YarnScaledRotaryEmbedding
+from sillm.modules.rope import init_rope
 import sillm.models.llama as llama
 
 class Attention(nn.Module):
@@ -31,22 +31,7 @@ class Attention(nn.Module):
         self.wqkv = nn.Linear(args.dim, op_size, bias=False)
         self.wo = nn.Linear(args.n_heads * args.head_dim, args.dim, bias=False)
         
-        if args.rope_scaling is not None:
-            if args.rope_scaling["type"] in ("su", "longrope"):
-                self.rope = SuScaledRotaryEmbedding(args.head_dim,
-                                                    max_position_embeddings=args.max_position_embeddings,
-                                                    original_max_position_embeddings=args.original_max_position_embeddings,
-                                                    base=args.rope_theta,
-                                                    short_factor=args.rope_scaling["short_factor"],
-                                                    long_factor=args.rope_scaling["long_factor"])
-            elif args.rope_scaling["type"] == "yarn":
-                self.rope = YarnScaledRotaryEmbedding(args, args.head_dim)
-            else:
-                raise NotImplementedError(f"Unknown scaling type {args.rope_scaling['type']}")
-        else:
-            self.rope = nn.RoPE(args.head_dim,
-                                traditional=args.rope_traditional,
-                                base=args.rope_theta)
+        self.rope = init_rope(args)
         
     def __call__(self,
                  x: mx.array,
