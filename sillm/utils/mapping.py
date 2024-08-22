@@ -140,6 +140,7 @@ def map_config(config):
         "norm_eps",
         "vocab_size",
         "max_position_embeddings",
+        "original_max_position_embeddings",
         "rope_theta",
         "rope_scaling",
         "bos_token_id",

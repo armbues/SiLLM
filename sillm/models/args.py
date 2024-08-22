@@ -24,6 +24,7 @@ class ModelArgs:
     rope_theta: float = 10000.0
     rope_traditional: bool = True
     max_position_embeddings: int = 0
+    original_max_position_embeddings: int = 0
     tie_word_embeddings: bool = False
     bos_token_id: int = None
     eos_token_id: int = None
@@ -203,7 +204,6 @@ class Phi3Args(ModelArgs):
     """
     rope_scaling: dict = None
     embd_pdrop: float = 0.0
-    original_max_position_embeddings: int = 4096
 
 @dataclasses.dataclass
 class Gemma2Args(ModelArgs):
