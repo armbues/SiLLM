@@ -46,6 +46,8 @@ class Template(object):
             fname_template = template_name + ".jinja"
             self.template = env.get_template(fname_template)
 
+        self._name = template_name
+
         logger.info(f"Initialized conversation template: {template_name}")
 
     @staticmethod
