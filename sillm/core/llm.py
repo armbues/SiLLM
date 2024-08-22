@@ -404,7 +404,7 @@ def generate(model,
     if extra_stop_tokens is not None:
         for token in extra_stop_tokens:
             if isinstance(token, str):
-                token_id = tokenizer.encode(token)[0]
+                token_id = tokenizer.encode(token, bos=False)[0]
             else:
                 token_id = token
 
