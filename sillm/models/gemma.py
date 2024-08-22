@@ -3,23 +3,8 @@ import mlx.nn as nn
 
 from sillm.models.base import BaseModel
 from sillm.models.args import ModelArgs
+from sillm.modules.norm import RMSNorm
 import sillm.models.llama as llama
-
-
-class RMSNorm(nn.Module):
-    """
-    Root Mean Square Normalization module.
-    """
-    def __init__(self,
-                 dims: int,
-                 eps: float = 1e-6):
-        super().__init__()
-
-        self.weight = mx.ones((dims,))
-        self.eps = eps
-
-    def __call__(self, x):
-        return mx.fast.rms_norm(x, 1.0 + self.weight, self.eps)
     
 class FeedForward(llama.FeedForward):
     """

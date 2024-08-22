@@ -5,7 +5,8 @@ import mlx.nn as nn
 
 from sillm.models.base import BaseModel
 from sillm.models.args import ModelArgs
-from sillm.models.gemma import RMSNorm, FeedForward
+from sillm.modules.norm import RMSNorm
+from sillm.models.gemma import FeedForward
 import sillm.models.llama as llama
     
 class Attention(llama.Attention):

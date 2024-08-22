@@ -5,17 +5,8 @@ import mlx.nn as nn
 
 from sillm.models.base import BaseModel
 from sillm.models.args import ModelArgs
+from sillm.modules.norm import LayerNorm2D
 import sillm.models.llama as llama
-
-class LayerNorm2D(nn.Module):
-    def __init__(self, d1, d2, eps):
-        super().__init__()
-
-        self.weight = mx.zeros((d1, d2))
-        self.eps = eps
-
-    def __call__(self, x):
-        return self.weight * mx.fast.layer_norm(x, None, None, self.eps)
     
 class Attention(nn.Module):
     """
