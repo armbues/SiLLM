@@ -354,6 +354,7 @@ class LLM():
             repetition_penalty: Repetition penalty.
             repetition_window: Repetition window.
             logprobs: Return logprobs.
+            token_ids: Return token IDs.
             flush: Flush buffer every n tokens.
             extra_stop_tokens: Additional stop tokens.
         Yields:
@@ -371,6 +372,9 @@ class LLM():
             repetition_penalty: Repetition penalty.
             repetition_window: Repetition window.
             logprobs: Return logprobs.
+            token_ids: Return token IDs.
+            flush: Flush buffer every n tokens.
+            extra_stop_tokens: Additional stop tokens.
         Returns:
             Generated completion.
         """
@@ -390,7 +394,8 @@ def generate(model,
              logprobs: bool = False,
              token_ids: bool = False,
              flush: int = 5,
-             extra_stop_tokens: list = None
+             extra_stop_tokens: list = None,
+             prompt_cache = None
              ):
     start = time.perf_counter()
 
@@ -450,10 +455,22 @@ def generate(model,
 
     def generate_step(model, inputs):
         y = inputs
+        logits = None
         cache = None
+
+        if prompt_cache is not None:
+            logits, cache = prompt_cache.get(inputs)
+
+            if logits is None:
+                logits, cache = model(y[None])
+                logits = logits[:, -1, :]
+
+                prompt_cache.put(inputs, logits, cache)
+
         while True:
-            logits, cache = model(y[None], cache=cache)
-            logits = logits[:, -1, :]
+            if logits is None:
+                logits, cache = model(y[None], cache=cache)
+                logits = logits[:, -1, :]
 
             if len(tokens) > 0 and repetition_penalty is not None:
                 logits = apply_repetition_penalty(logits)
@@ -465,6 +482,7 @@ def generate(model,
                 p = nn.log_softmax(logits, axis=-1)[0,y].item()
             
             yield y, p
+            logits = None
 
     # Main generation loop
     for (token,p), i in zip(generate_step(model, inputs), range(max_tokens)):

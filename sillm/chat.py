@@ -18,6 +18,7 @@ if __name__ == "__main__":
     parser.add_argument("-w", "--repetition_window", type=int, default=50, help="Window of generated tokens to consider for repetition penalty")
     parser.add_argument("-f", "--flush", type=int, default=5, help="Flush output every n tokens")
     parser.add_argument("-m", "--max_tokens", type=int, default=1024, help="Max. number of tokens to generate")
+    parser.add_argument("--cache", type=int, default=0, help="Prompt cache size")
     parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama2, alpaca, etc.)")
     parser.add_argument("--system_prompt", type=str, default=None, help="System prompt for chat template")
     parser.add_argument("-q4", default=False, action="store_true", help="Quantize the model to 4 bits")
@@ -67,12 +68,18 @@ if __name__ == "__main__":
     elif args.q8 is True:
         model.quantize(bits=8)
 
+    # Initialize prompt cache
+    prompt_cache = None
+    if args.cache > 0:
+        prompt_cache = sillm.PromptCache(max_size=args.cache)
+
     generate_args = {
         "temperature": args.temperature,
         "repetition_penalty": args.repetition_penalty,
         "repetition_window": args.repetition_window,
         "max_tokens": args.max_tokens,
-        "flush": args.flush
+        "flush": args.flush,
+        "prompt_cache": prompt_cache
     }
 
     # Init conversation template
