@@ -4,6 +4,7 @@ import mlx.core as mx
 import mlx.nn as nn
 
 from sillm.models.base import BaseModel
+from sillm.core.cache import KVCache
 from sillm.models.args import ModelArgs
 from sillm.modules.rope import init_rope
 
@@ -38,7 +39,7 @@ class Attention(nn.Module):
     def __call__(self,
                  x: mx.array,
                  mask: Optional[mx.array] = None,
-                 cache: Optional[Tuple[mx.array, mx.array]] = None,
+                 cache: Optional[KVCache] = None,
                  ) -> mx.array:
         B, L, _ = x.shape
 
@@ -49,21 +50,20 @@ class Attention(nn.Module):
         values = values.reshape(B, L, self.n_kv_heads, -1).transpose(0, 2, 1, 3)
 
         if cache is not None:
-            key_cache, value_cache = cache
-            queries = self.rope(queries, offset=key_cache.shape[2])
-            keys = self.rope(keys, offset=key_cache.shape[2])
-            keys = mx.concatenate([key_cache, keys], axis=2)
-            values = mx.concatenate([value_cache, values], axis=2)
+            if cache.offset > 0 and L > 1:
+                mask = BaseModel.create_additive_causal_mask(L, offset=cache.offset)
+                
+            queries = self.rope(queries, offset=cache.offset)
+            keys = self.rope(keys, offset=cache.offset)
+            keys, values = cache.update_and_fetch(keys, values)
         else:
             queries = self.rope(queries)
             keys = self.rope(keys)
 
-        output = mx.fast.scaled_dot_product_attention(
-            queries, keys, values, scale=self.scale, mask=mask
-        )
+        output = mx.fast.scaled_dot_product_attention(queries, keys, values, scale=self.scale, mask=mask)
         output = output.transpose(0, 2, 1, 3).reshape(B, L, -1)
 
-        return self.wo(output), (keys, values)
+        return self.wo(output)
 
 ########
 # Based on mlx-examples:
@@ -121,7 +121,7 @@ class TransformerBlock(nn.Module):
             self,
             x: mx.array,
             mask: Optional[mx.array] = None,
-            cache: Optional[Tuple[mx.array, mx.array]] = None,
+            cache: Optional[KVCache] = None,
             ) -> mx.array:
         """
         Args:
@@ -131,12 +131,12 @@ class TransformerBlock(nn.Module):
         Returns:
             Output tensor and cache.
         """
-        r, cache = self.attention(self.attention_norm(x), mask, cache)
+        r = self.attention(self.attention_norm(x), mask, cache)
         h = x + r
         r = self.feed_forward(self.ffn_norm(h))
         out = h + r
         
-        return out, cache
+        return out
 
 ########
 # Based on mlx-examples:
@@ -177,13 +177,12 @@ class Model(BaseModel):
 
         mask = None
         if h.shape[1] > 1:
-            mask = nn.MultiHeadAttention.create_additive_causal_mask(h.shape[1])
-            mask = mask.astype(h.dtype)
+            mask = nn.MultiHeadAttention.create_additive_causal_mask(h.shape[1]).astype(h.dtype)
 
         if cache is None:
             cache = [None] * len(self.layers)
 
         for e, layer in enumerate(self.layers):
-            h, cache[e] = layer.forward(h, mask, cache[e])
+            h = layer.forward(h, mask, cache[e])
 
-        return self.output(self.norm(h)), cache
+        return self.output(self.norm(h))

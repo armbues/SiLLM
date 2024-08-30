@@ -111,12 +111,12 @@ class TransformerBlock(nn.Module):
                  cache = None,
                  training_loss: bool = False
                  ) -> mx.array:
-        r, cache = self.attention(self.attention_norm(x), mask, cache)
+        r = self.attention(self.attention_norm(x), mask, cache)
         h = x + r
         r, router_loss = self.feed_forward(self.ffn_norm(h), training_loss)
         out = h + r
 
-        return out, cache, router_loss
+        return out, router_loss
     
 ########
 # Based on mlx-examples:
@@ -166,9 +166,9 @@ class Model(BaseModel):
             cache = [None] * len(self.layers)
 
         for e, layer in enumerate(self.layers):
-            h, cache[e], _ = layer.forward(h, mask, cache[e])
+            h, _ = layer.forward(h, mask, cache[e])
 
-        return self.output(self.norm(h)), cache
+        return self.output(self.norm(h))
 
     def loss(self,
              inputs: mx.array,
@@ -194,7 +194,7 @@ class Model(BaseModel):
 
         aux_loss = 0.0
         for layer in self.layers:
-            h, _, router_loss = layer(h, mask, None, training_loss=True)
+            h, router_loss = layer(h, mask, None, training_loss=True)
             aux_loss += router_loss
 
         logits = self.output(self.norm(h))
@@ -207,4 +207,4 @@ class Model(BaseModel):
 
         overall_loss = loss_value + aux_loss * self.router_aux_loss_coef
 
-        return overall_loss, None, num_tokens
+        return overall_loss, num_tokens

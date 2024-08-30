@@ -4,6 +4,7 @@ import mlx.core as mx
 import mlx.nn as nn
 
 from sillm.models.base import BaseModel
+from sillm.core.cache import KVCache
 from sillm.models.args import ModelArgs
 from sillm.modules.norm import RMSNorm
 from sillm.models.gemma import FeedForward
@@ -26,7 +27,7 @@ class Attention(llama.Attention):
     def __call__(self,
                  x: mx.array,
                  mask: Optional[mx.array] = None,
-                 cache: Optional[Tuple[mx.array, mx.array]] = None,
+                 cache: Optional[KVCache] = None,
                  ) -> mx.array:
         B, L, _ = x.shape
 
@@ -37,18 +38,17 @@ class Attention(llama.Attention):
         values = values.reshape(B, L, self.n_kv_heads, -1).transpose(0, 2, 1, 3)
 
         if cache is not None:
-            key_cache, value_cache = cache
-            queries = self.rope(queries, offset=key_cache.shape[2])
-            keys = self.rope(keys, offset=key_cache.shape[2])
-            keys = mx.concatenate([key_cache, keys], axis=2)
-            values = mx.concatenate([value_cache, values], axis=2)
+            if cache.offset > 0 and L > 1:
+                mask = BaseModel.create_additive_causal_mask(L, offset=cache.offset)
+                
+            queries = self.rope(queries, offset=cache.offset)
+            keys = self.rope(keys, offset=cache.offset)
+            keys, values = cache.update_and_fetch(keys, values)
         else:
             queries = self.rope(queries)
             keys = self.rope(keys)
 
-        output = mx.fast.scaled_dot_product_attention(
-            queries, keys, values, scale=self.scale, mask=mask
-        )
+        output = mx.fast.scaled_dot_product_attention(queries, keys, values, scale=self.scale, mask=mask)
 
         ########
         # Attention softcapping
@@ -61,7 +61,7 @@ class Attention(llama.Attention):
 
         output = output.transpose(0, 2, 1, 3).reshape(B, L, -1)
 
-        return self.wo(output), (keys, values)
+        return self.wo(output)
 
 class TransformerBlock(llama.TransformerBlock):
     """
@@ -78,7 +78,7 @@ class TransformerBlock(llama.TransformerBlock):
         self.n_heads = args.n_heads
         self.dim = args.dim
         
-        self.attention = llama.Attention(args=args)
+        self.attention = Attention(args=args)
         self.feed_forward = FeedForward(args=args)
         self.attention_norm = RMSNorm(args.dim, eps=args.norm_eps)
         self.ffn_norm = RMSNorm(args.dim, eps=args.norm_eps)
@@ -89,7 +89,7 @@ class TransformerBlock(llama.TransformerBlock):
             self,
             x: mx.array,
             mask: Optional[mx.array] = None,
-            cache: Optional[Tuple[mx.array, mx.array]] = None,
+            cache: Optional[KVCache] = None,
             ) -> mx.array:
         """
         Args:
@@ -99,13 +99,13 @@ class TransformerBlock(llama.TransformerBlock):
         Returns:
             Output tensor and cache.
         """
-        h, cache = self.attention(self.attention_norm(x), mask, cache)
+        h = self.attention(self.attention_norm(x), mask, cache)
         r = self.ffn_norm(h) + x
 
         h = self.feed_forward(self.pre_feedforward_layernorm(r))
         out = self.post_feedforward_layernorm(h) + r
         
-        return out, cache
+        return out
 
 ########
 # References:
@@ -154,7 +154,7 @@ class Model(llama.Model):
             cache = [None] * len(self.layers)
 
         for e, layer in enumerate(self.layers):
-            h, cache[e] = layer.forward(h, mask, cache[e])
+            h = layer.forward(h, mask, cache[e])
 
         out = self.tok_embeddings.as_linear(self.norm(h))
 
@@ -167,4 +167,4 @@ class Model(llama.Model):
         out = mx.tanh(out)
         out = out * self.args.final_logit_softcapping
 
-        return out, cache
+        return out

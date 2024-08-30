@@ -89,4 +89,4 @@ class Model(llama.Model):
 
         out = self.tok_embeddings.as_linear(self.norm(h))
 
-        return out, cache
+        return out

@@ -102,11 +102,11 @@ class Model(llama.Model):
             cache = [None] * len(self.layers)
 
         for e, layer in enumerate(self.layers):
-            h, cache[e] = layer.forward(h, mask, cache[e])
+            h = layer.forward(h, mask, cache[e])
 
         if self.output is None:
             out = self.tok_embeddings.as_linear(self.norm(h))
         else:
             out = self.output(self.norm(h))
 
-        return out, cache
+        return out

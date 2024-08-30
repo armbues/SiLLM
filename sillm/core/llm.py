@@ -11,6 +11,7 @@ from .tokenizer import Tokenizer
 import sillm.models as models
 import sillm.models.args as args
 from sillm.training.dataset import Dataset
+from sillm.core.cache import KVCache
 
 logger = logging.getLogger("sillm")
 
@@ -456,7 +457,9 @@ def generate(model,
     def generate_step(model, inputs):
         y = inputs
         logits = None
-        cache = None
+
+        # Initialize KV cache
+        cache = KVCache.for_model(model)
 
         if prompt_cache is not None:
             logits, cache = prompt_cache.get(inputs)
@@ -469,7 +472,7 @@ def generate(model,
 
         while True:
             if logits is None:
-                logits, cache = model(y[None], cache=cache)
+                logits = model(y[None], cache=cache)
                 logits = logits[:, -1, :]
 
             if len(tokens) > 0 and repetition_penalty is not None:

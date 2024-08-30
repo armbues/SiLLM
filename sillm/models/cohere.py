@@ -56,11 +56,12 @@ class Attention(nn.Module):
         values = values.reshape(B, L, self.n_kv_heads, -1).transpose(0, 2, 1, 3)
 
         if cache is not None:
-            key_cache, value_cache = cache
-            queries = self.rope(queries, offset=key_cache.shape[2])
-            keys = self.rope(keys, offset=key_cache.shape[2])
-            keys = mx.concatenate([key_cache, keys], axis=2)
-            values = mx.concatenate([value_cache, values], axis=2)
+            if cache.offset > 0 and L > 1:
+                mask = BaseModel.create_additive_causal_mask(L, offset=cache.offset)
+                
+            queries = self.rope(queries, offset=cache.offset)
+            keys = self.rope(keys, offset=cache.offset)
+            keys, values = cache.update_and_fetch(keys, values)
         else:
             queries = self.rope(queries)
             keys = self.rope(keys)
@@ -70,7 +71,7 @@ class Attention(nn.Module):
         )
         output = output.transpose(0, 2, 1, 3).reshape(B, L, -1)
 
-        return self.wo(output), (keys, values)
+        return self.wo(output)
 
 class TransformerBlock(nn.Module):
     """
@@ -106,11 +107,11 @@ class TransformerBlock(nn.Module):
             Output tensor and cache.
         """
         h = self.attention_norm(x)
-        a, cache = self.attention(h, mask, cache)
+        a = self.attention(h, mask, cache)
         r = self.feed_forward(h)
         out = a + r + x
         
-        return out, cache
+        return out
 
 class Model(BaseModel):
     """
@@ -161,4 +162,4 @@ class Model(BaseModel):
 
         out = self.tok_embeddings.as_linear(self.norm(h))
         
-        return out * self.logit_scale, cache
+        return out * self.logit_scale
