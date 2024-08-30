@@ -1,7 +1,5 @@
 import math
 
-from functools import partial
-
 import mlx.core as mx
 import mlx.nn as nn
 
@@ -55,4 +53,4 @@ class BaseModel(nn.Module):
         linds = mx.arange(offset, offset + N) if offset else rinds
         mask = linds[:, None] < rinds[None]
         
-        return mask * -math.inf
+        return mask * -1e9
