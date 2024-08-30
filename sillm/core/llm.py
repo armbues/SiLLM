@@ -402,19 +402,6 @@ def generate(model,
 
     # Tokenize prompt
     inputs = mx.array(tokenizer.encode(prompt))
-
-    # Define stop tokens
-    stop_tokens = tokenizer.special_ids
-    
-    # Add user-defined stop tokens
-    if extra_stop_tokens is not None:
-        for token in extra_stop_tokens:
-            if isinstance(token, str):
-                token_id = tokenizer.encode(token, bos=False)[0]
-            else:
-                token_id = token
-
-            stop_tokens.add(token_id)
     
     # Initialize metadata
     timing = {
@@ -434,6 +421,19 @@ def generate(model,
         "token_ids": [],
         "finish_reason": "length"
     }
+
+    # Define stop tokens
+    stop_tokens = tokenizer.special_ids
+    
+    # Add user-defined stop tokens
+    if extra_stop_tokens is not None:
+        for token in extra_stop_tokens:
+            if isinstance(token, str):
+                token_id = tokenizer.encode(token, bos=False)[0]
+            else:
+                token_id = token
+
+            stop_tokens.add(token_id)
 
     # Initialize token and string buffers
     tokens, text = [], ""
