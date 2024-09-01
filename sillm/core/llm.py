@@ -440,11 +440,20 @@ def generate(model,
     buffer, output = [], ""
 
     def sample(logits):
+        if len(tokens) > 0 and repetition_penalty is not None:
+            logits = apply_repetition_penalty(logits)
+
         if temperature == 0:
-            return mx.argmax(logits, axis=-1)
+            y = mx.argmax(logits, axis=-1)
         else:
-            return mx.random.categorical(logits * (1 / temperature))
+            y = mx.random.categorical(logits * (1 / temperature))
+
+        p = 0.0
+        if logprobs:
+            p = nn.log_softmax(logits, axis=-1)[0,y].item()
         # TODO add top-p sampling
+
+        return y, p
 
     def apply_repetition_penalty(logits):
         indices = mx.array(tokens[-repetition_window:])
@@ -455,37 +464,34 @@ def generate(model,
         return logits
 
     def generate_step(model, inputs):
-        y = inputs
         logits = None
 
-        # Initialize KV cache
-        cache = KVCache.for_model(model)
-
+        # Retrieve cached logits and KV cache
         if prompt_cache is not None:
             logits, cache = prompt_cache.get(inputs)
+        
+        if logits is None:
+            # Initialize KV cache
+            cache = KVCache.for_model(model)
 
-            if logits is None:
-                logits, cache = model(y[None])
-                logits = logits[:, -1, :]
+            # Initial forward pass through model
+            logits = model(inputs[None], cache=cache)
+            logits = logits[:, -1, :]
 
+            # Store logits and KV cache in prompt cache
+            if prompt_cache is not None:
                 prompt_cache.put(inputs, logits, cache)
 
+        y, p = sample(logits)
+        yield y, p
+
         while True:
-            if logits is None:
-                logits = model(y[None], cache=cache)
-                logits = logits[:, -1, :]
+            # Iterative forward pass through model
+            logits = model(y[None], cache=cache)
+            logits = logits[:, -1, :]
 
-            if len(tokens) > 0 and repetition_penalty is not None:
-                logits = apply_repetition_penalty(logits)
-
-            y = sample(logits)
-
-            p = 0.0
-            if logprobs:
-                p = nn.log_softmax(logits, axis=-1)[0,y].item()
-            
+            y, p = sample(logits)
             yield y, p
-            logits = None
 
     # Main generation loop
     for (token,p), i in zip(generate_step(model, inputs), range(max_tokens)):
