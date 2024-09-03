@@ -4,6 +4,7 @@ import mlx.core as mx
 import mlx.nn as nn
 
 from sillm.models.base import BaseModel
+from sillm.core.cache import KVCache
 from sillm.models.args import ModelArgs
 from sillm.modules.rope import init_rope
 import sillm.models.llama as llama
@@ -36,7 +37,7 @@ class Attention(nn.Module):
     def __call__(self,
                  x: mx.array,
                  mask: Optional[mx.array] = None,
-                 cache: Optional[Tuple[mx.array, mx.array]] = None,
+                 cache: Optional[KVCache] = None,
                  ) -> mx.array:
         B, L, _ = x.shape
 

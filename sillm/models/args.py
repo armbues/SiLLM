@@ -89,6 +89,8 @@ class ModelArgs:
                 ArgsClass = Phi3Args
             elif config["model_type"] == "gemma2":
                 ArgsClass = Gemma2Args
+            elif config["model_type"] == "phimoe":
+                ArgsClass = PhiMoEArgs
             else:
                 ArgsClass = LlamaArgs
         if ArgsClass is None:
@@ -214,3 +216,13 @@ class Gemma2Args(ModelArgs):
     attn_logit_softcapping: float = 50.0
     final_logit_softcapping: float = 30.0
     query_pre_attn_scalar: float = 144.0
+
+@dataclasses.dataclass
+class PhiMoEArgs(ModelArgs):
+    """
+    Phi-MoE model arguments.
+    """
+    num_local_experts: int = 16
+    num_experts_per_tok: int = 2
+    rms_norm_eps: float = 1e-5
+    rope_scaling: dict = None

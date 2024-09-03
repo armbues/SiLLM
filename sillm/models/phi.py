@@ -4,7 +4,9 @@ import mlx.core as mx
 import mlx.nn as nn
 
 from sillm.models.base import BaseModel
+from sillm.core.cache import KVCache
 from sillm.models.args import ModelArgs
+from sillm.modules.rope import init_rope
 import sillm.models.llama as llama
 
 class Attention(llama.Attention):
@@ -17,7 +19,6 @@ class Attention(llama.Attention):
             args: Model arguments.
         """
         nn.Module.__init__(self)
-        
         self.args = args
 
         self.n_heads: int = args.n_heads
@@ -32,14 +33,12 @@ class Attention(llama.Attention):
         self.wv = nn.Linear(args.dim, args.n_kv_heads * args.head_dim, bias=True)
         self.wo = nn.Linear(args.n_heads * args.head_dim, args.dim, bias=True)
         
-        self.rope = nn.RoPE(self.rope_dims,
-                            traditional=False,
-                            base=args.rope_theta)
+        self.rope = init_rope(args)
         
     def __call__(self,
                  x: mx.array,
                  mask: Optional[mx.array] = None,
-                 cache: Optional[Tuple[mx.array, mx.array]] = None,
+                 cache: Optional[KVCache] = None,
                  ) -> mx.array:
         B, L, _ = x.shape
 

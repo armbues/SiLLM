@@ -171,7 +171,7 @@ class Model(BaseModel):
             inputs: Input tokens.
             cache: Cache from previous forward pass.
         Returns:
-            Output logits and cache.
+            Output logits.
         """
         h = self.tok_embeddings(inputs)
 

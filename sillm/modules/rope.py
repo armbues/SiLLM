@@ -33,7 +33,10 @@ def init_rope(args: ModelArgs):
                                        original_max_position_embeddings=args.original_max_position_embeddings,
                                        base=args.rope_theta,
                                        short_factor=args.rope_scaling["short_factor"],
-                                       long_factor=args.rope_scaling["long_factor"])
+                                       long_factor=args.rope_scaling["long_factor"],
+                                       short_mscale=args.rope_scaling.get("short_mscale", None),
+                                       long_mscale=args.rope_scaling.get("long_mscale", None)
+                                       )
     elif args.rope_scaling["type"] == "yarn":
         raise NotImplementedError("Yarn RoPE is not implemented")
     else:
@@ -105,7 +108,7 @@ class Llama3RoPE(nn.Module):
 # Su Scaled Rotary Embedding
 # References:
 # https://huggingface.co/microsoft/Phi-3-mini-128k-instruct/blob/38143357bf52ce57009ecbd58cf9f0b0029cb393/modeling_phi3.py#L142
-# https://github.com/ml-explore/mlx-examples/blob/85dc76f6e0f2cf3ee3d84c211868a6856e163f3f/llms/mlx_lm/models/su_rope.py#L7
+# https://github.com/ml-explore/mlx-examples/blob/3c6e8b11af9dda55ee8d38ee9f612a65118f7793/llms/mlx_lm/models/su_rope.py#L10
 ########
 class SuScaledRotaryEmbedding(nn.Module):
     """
@@ -119,6 +122,8 @@ class SuScaledRotaryEmbedding(nn.Module):
                  scale: float = 1.0,
                  short_factor: Union[List[float], float] = 1.0,
                  long_factor: Union[List[float], float] = 1.0,
+                 short_mscale: float = None,
+                 long_mscale: float = None,
                  ):
         super().__init__()
 
@@ -133,11 +138,7 @@ class SuScaledRotaryEmbedding(nn.Module):
             * mx.array(long_factor, dtype=mx.float32)
             * base ** (mx.arange(0, head_dim, 2, dtype=mx.float32) / head_dim)
         )
-        self.scaling_factor = math.sqrt(
-            1
-            + math.log(max_position_embeddings / self.original_max_position_embeddings)
-            / math.log(self.original_max_position_embeddings)
-        )
+        self.scaling_factor = long_mscale or math.sqrt(1 + math.log(max_position_embeddings / self.original_max_position_embeddings) / math.log(self.original_max_position_embeddings))
 
     def _get_cos_sin(self, offset, L):
         position_ids = mx.arange(offset, offset + L, dtype=mx.float32)
