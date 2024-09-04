@@ -438,7 +438,6 @@ def generate(model,
 
     # Initialize token and string buffers
     tokens, text = [], ""
-    buffer, output = [], ""
 
     def sample(logits):
         if len(tokens) > 0 and repetition_penalty is not None:
@@ -512,40 +511,26 @@ def generate(model,
         if (len(tokens) % flush) == 0:
             mx.eval(tokens)
 
+            text_offset = len(text)
+            text = tokenizer.decode(tokens)
+
+            timing["runtime"] = time.perf_counter() - start
+            usage["completion_tokens"] = len(tokens)
+            usage["total_tokens"] = usage["prompt_tokens"] + usage["completion_tokens"]
             if token_ids:
                 metadata["token_ids"] += tokens
 
-            text = tokenizer.decode(tokens)
-            window = tokenizer.decode(buffer + tokens)
-            if output + " " + text == window:
-                output = text
-                text = " " + text
-            else:
-                output = text
-            buffer = tokens
-            tokens = []
-
-            timing["runtime"] = time.perf_counter() - start
-            usage["completion_tokens"] = i+1
-            usage["total_tokens"] = usage["prompt_tokens"] + usage["completion_tokens"]
-
-            yield text, metadata
+            yield text[text_offset:], metadata
 
     mx.eval(tokens)
 
-    if token_ids:
-        metadata["token_ids"] += tokens
-
+    text_offset = len(text)
     text = tokenizer.decode(tokens)
-    window = tokenizer.decode(buffer + tokens)
-    if output + " " + text == window:
-        output = text
-        text = " " + text
-    else:
-        output = text
 
     timing["runtime"] = time.perf_counter() - start
     usage["completion_tokens"] = i+1
     usage["total_tokens"] = usage["prompt_tokens"] + usage["completion_tokens"]
+    if token_ids:
+        metadata["token_ids"] = tokens
 
-    yield text, metadata
+    yield text[text_offset:], metadata
