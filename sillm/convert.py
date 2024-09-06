@@ -13,6 +13,7 @@ if __name__ == "__main__":
     parser.add_argument("-q4", default=False, action="store_true", help="Quantize the model to 4 bits")
     parser.add_argument("-q8", default=False, action="store_true", help="Quantize the model to 8 bits")
     parser.add_argument("-dtype", type=str, default=None, help="Cast model weights to specified data type")
+    parser.add_argument("-m", "--max_shard_size", type=int, default=5368709120, help="Maximum shard size in bytes")
     parser.add_argument("-v", "--verbose", default=1, action="count", help="Increase output verbosity")
     args = parser.parse_args()
 
@@ -53,4 +54,4 @@ if __name__ == "__main__":
         model._mapping = None
 
     # Save model
-    model.save(args.output)
+    model.save(args.output, max_shard_size=args.max_shard_size)
