@@ -16,7 +16,11 @@ class KVCache:
 
         return [KVCache(model.args.head_dim, n) for n in kv_heads]
 
-    def __init__(self, head_dim, n_kv_heads):
+    def __init__(self,
+                 head_dim,
+                 n_kv_heads,
+                 step : int = 256
+                 ):
         self.n_kv_heads = n_kv_heads
         if isinstance(head_dim, int):
             self.k_head_dim = self.v_head_dim = head_dim
@@ -28,9 +32,12 @@ class KVCache:
         self.keys = None
         self.values = None
         self.offset = 0
-        self.step = 256
+        self.step = step
 
-    def update_and_fetch(self, keys, values):
+    def update_and_fetch(self,
+                         keys,
+                         values
+                         ):
         prev = self.offset
         if self.keys is None or (prev + keys.shape[2]) > self.keys.shape[2]:
             B = keys.shape[0]
@@ -54,7 +61,19 @@ class KVCache:
         self.offset += keys.shape[2]
         self.keys[..., prev : self.offset, :] = keys
         self.values[..., prev : self.offset, :] = values
+
         return self.keys[..., : self.offset, :], self.values[..., : self.offset, :]
+    
+    def copy(self):
+        new = KVCache(self.k_head_dim, self.n_kv_heads, self.step)
+        
+        if self.keys is not None:
+            new.keys = self.keys.copy()
+        if self.values is not None:
+            new.values = self.values.copy()
+        new.offset = self.offset
+
+        return new
 
     @property
     def state(self):
@@ -112,7 +131,8 @@ class PromptCache():
         if key in self.lru:
             self.lru.move_to_end(key)
             self.lru[key] += 1
+            kv_cache = self.kv_cache[key].copy()
             
-            return self.logits[key], self.kv_cache[key]
+            return self.logits[key], kv_cache
         
         return None, None
