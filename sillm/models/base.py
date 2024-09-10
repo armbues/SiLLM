@@ -23,10 +23,10 @@ class BaseModel(nn.Module):
     # https://github.com/ml-explore/mlx-examples/blob/047d4650c4f63d55e5bfbaf8f589c1679cbdd971/lora/lora.py#L151
     ########
     def loss(self,
-            inputs: mx.array,
-            targets: mx.array,
-            loss_masks: mx.array
-            ):
+             inputs: mx.array,
+             targets: mx.array,
+             loss_masks: mx.array
+             ):
         """
         Calculate cross-entropy loss.
         Args:
@@ -37,7 +37,7 @@ class BaseModel(nn.Module):
             Cross-entropy loss.
         """
         # Run model on inputs
-        logits, _ = self.__call__(inputs)
+        logits = self.__call__(inputs)
         logits = logits.astype(mx.float32)
 
         # Calculate the loss
