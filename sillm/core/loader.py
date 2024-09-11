@@ -277,7 +277,7 @@ def load_torch_file(weights_path):
         raise ImportError("Please install torch library to load PyTorch weights")
     
     weights = {}
-    for key, value in torch.load(weights_path, map_location="cpu").items():
+    for key, value in torch.load(weights_path, weights_only=True, map_location="cpu").items():
         # Convert to numpy
         if value.dtype == torch.bfloat16:
             value = value.to(dtype=torch.float16).numpy()
