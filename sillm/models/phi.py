@@ -123,10 +123,10 @@ class TransformerBlock(nn.Module):
     def forward(self,
                 x: mx.array,
                 mask: Optional[mx.array] = None,
-                cache: Optional[Tuple[mx.array, mx.array]] = None,
+                cache: Optional[KVCache] = None,
                 ) -> mx.array:
         h = self.attention_norm(x)
-        attn_h, cache = self.attention(h, mask, cache)
+        attn_h = self.attention(h, mask, cache)
         ff_h = self.feed_forward(h)
 
         return attn_h + ff_h + x
