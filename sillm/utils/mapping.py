@@ -143,6 +143,7 @@ def map_config(config):
         "original_max_position_embeddings",
         "rope_theta",
         "rope_scaling",
+        "hidden_act",
         "bos_token_id",
         "eos_token_id",
         "pad_token_id",
@@ -168,6 +169,7 @@ def map_config(config):
         "layer_norm_eps": "norm_eps",
         "norm_epsilon": "norm_eps",
         "layer_norm_bias": "norm_bias",
+        "hidden_activation": "hidden_act",
         # GGUF metadata: https://github.com/ggerganov/ggml/blob/master/docs/gguf.md
         "llama.embedding_length": "dim",
         "llama.block_count": "n_layers",
