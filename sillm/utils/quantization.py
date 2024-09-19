@@ -36,6 +36,11 @@ def quantize_files(input_path: str,
     original_size = 0
     total_size = 0
     for weights_path in weights_files:
+        shard_path = output_path / weights_path.name
+        if shard_path.exists():
+            logger.debug(f"Skipping existing file: {shard_path}")
+            continue
+
         logger.debug(f"Loading model weights file {weights_path}")
 
         weights = mx.load(str(weights_path))
@@ -72,8 +77,7 @@ def quantize_files(input_path: str,
             shard[key] = weight
             weight_map[key] = weights_path.name
 
-        shard_path = str(output_path / weights_path.name)
-        save_shard(shard, shard_path)
+        save_shard(shard, str(shard_path))
         shard = {}
 
     logger.debug(f"Quantization reduced weights size: {original_size//1024//1024:,} MB => {total_size//1024//1024:,} MB")
