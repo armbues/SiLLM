@@ -12,6 +12,7 @@ import sillm.models as models
 import sillm.models.args as args
 from sillm.training.dataset import Dataset
 from sillm.core.cache import KVCache
+from sillm.modules.switch import SwitchLinear
 
 logger = logging.getLogger("sillm")
 
@@ -99,7 +100,7 @@ class LLM():
         """
         if hasattr(self.model, "preprocess_weights"):
             logger.debug(f"Preprocessing model weights")
-            
+
             return self.model.preprocess_weights(weights)
         
         return weights
@@ -294,11 +295,11 @@ class LLM():
             self.args.quantization = quantization
 
             if weights is None:
-                class_predicate = lambda p, m: (isinstance(m, (nn.Linear, nn.Embedding)) and
+                class_predicate = lambda p, m: (isinstance(m, (nn.Linear, nn.Embedding, SwitchLinear)) and
                                                 ".gate." not in p
                                                 )
             else:
-                class_predicate = lambda p, m: (isinstance(m, (nn.Linear, nn.Embedding)) and
+                class_predicate = lambda p, m: (isinstance(m, (nn.Linear, nn.Embedding, SwitchLinear)) and
                                                 f"{p}.scales" in weights
                                                 )
             

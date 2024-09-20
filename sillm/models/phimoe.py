@@ -41,13 +41,11 @@ class FeedForward(nn.Module):
         """
         super().__init__()
 
-        self.args = args
-
         self.num_experts = args.num_local_experts
         self.num_experts_per_tok = args.num_experts_per_tok
 
         self.gate = nn.Linear(args.dim, self.num_experts, bias=False)
-        self.switch_mlp = SwitchGLU(self.args.dim, self.args.hidden_dim, self.num_experts, bias=False)
+        self.switch_mlp = SwitchGLU(args.dim, args.hidden_dim, self.num_experts, bias=False)
 
     def __call__(self,
                  x: mx.array
@@ -111,11 +109,13 @@ class Model(llama.Model):
     def preprocess_weights(self,
                            weights: dict
                            ) -> dict:
+        num_experts = self.args.num_local_experts
+        
         for l in range(self.args.n_layers):
             for k in ("w1", "w2", "w3"):
                 prefix = f"layers.{l}.feed_forward"
 
-                experts_keys = [prefix + f".experts.{i}.{k}.weight" for i in range(self.args.num_local_experts)]
+                experts_keys = [prefix + f".experts.{i}.{k}.weight" for i in range(num_experts)]
                 weights[prefix + f".switch_mlp.{k}.weight"] = mx.stack([weights[key] for key in experts_keys])
 
                 for key in experts_keys:
