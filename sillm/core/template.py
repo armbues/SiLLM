@@ -17,6 +17,7 @@ default_templates = {
     "dbrx": "chatml",
     "cohere": "cohere",
     "phi3": "phi3",
+    "phimoe": "phi3.5",
 }
 
 class Template(object):
@@ -83,6 +84,7 @@ class AutoTemplate(Template):
                  tokenizer
                  ):
         self.tokenizer = tokenizer
+        self._name = "auto"
 
         logger.info(f"Initialized built-in conversation template from tokenizer")
     
