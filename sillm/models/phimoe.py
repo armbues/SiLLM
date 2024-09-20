@@ -113,12 +113,16 @@ class Model(llama.Model):
         
         for l in range(self.args.n_layers):
             for k in ("w1", "w2", "w3"):
-                prefix = f"layers.{l}.feed_forward"
+                for n in ("weight", "scales", "biases"):
+                    prefix = f"layers.{l}.feed_forward"
 
-                experts_keys = [prefix + f".experts.{i}.{k}.weight" for i in range(num_experts)]
-                weights[prefix + f".switch_mlp.{k}.weight"] = mx.stack([weights[key] for key in experts_keys])
+                    if f"{prefix}.experts.0.{k}.{n}" not in weights:
+                        continue
 
-                for key in experts_keys:
-                    del weights[key]
+                    experts_keys = [prefix + f".experts.{i}.{k}.{n}" for i in range(num_experts)]
+                    weights[prefix + f".switch_mlp.{k}.{n}"] = mx.stack([weights[key] for key in experts_keys])
+
+                    for key in experts_keys:
+                        del weights[key]
 
         return weights
