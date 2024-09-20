@@ -4,20 +4,8 @@ import mlx.nn as nn
 from sillm.models.base import BaseModel
 from sillm.models.args import ModelArgs
 from sillm.modules.norm import RMSNorm
+from sillm.modules.act import init_act
 import sillm.models.llama as llama
-    
-class FeedForward(llama.FeedForward):
-    """
-    Feed-forward module.
-    """
-    def __call__(self, x) -> mx.array:
-        """
-        Args:
-            x: Input tensor.
-        Returns:
-            Output tensor.
-        """
-        return self.w2(nn.gelu(self.w1(x)) * self.w3(x))
     
 class TransformerBlock(llama.TransformerBlock):
     """
@@ -35,7 +23,7 @@ class TransformerBlock(llama.TransformerBlock):
         self.dim = args.dim
         
         self.attention = llama.Attention(args=args)
-        self.feed_forward = FeedForward(args=args)
+        self.feed_forward = llama.FeedForward(args=args)
         self.attention_norm = RMSNorm(args.dim, eps=args.norm_eps)
         self.ffn_norm = RMSNorm(args.dim, eps=args.norm_eps)
 
@@ -85,7 +73,7 @@ class Model(llama.Model):
             cache = [None] * len(self.layers)
 
         for e, layer in enumerate(self.layers):
-            h, cache[e] = layer.forward(h, mask, cache[e])
+            h = layer.forward(h, mask, cache[e])
 
         out = self.tok_embeddings.as_linear(self.norm(h))
 

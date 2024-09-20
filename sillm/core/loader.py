@@ -208,6 +208,9 @@ def load_model_dir(model_path: str) -> LLM:
     model = LLM(tokenizer, model_args)
     model.init_description(model_path)
 
+    # Pre-process weights
+    weights = model.preprocess_weights(weights)
+
     # Quantize model
     if model_args.quantization is not None:
         model.quantize(group_size=model_args.quantization["group_size"], bits=model_args.quantization["bits"], weights=weights)

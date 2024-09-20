@@ -7,6 +7,7 @@ from sillm.models.base import BaseModel
 from sillm.core.cache import KVCache
 from sillm.models.args import ModelArgs
 from sillm.modules.rope import init_rope
+from sillm.modules.act import init_act
 import sillm.models.llama as llama
 
 class Attention(nn.Module):
@@ -81,6 +82,8 @@ class FeedForward(nn.Module):
         self.w1 = nn.Linear(args.dim, 2 * args.hidden_dim, bias=False)
         self.w2 = nn.Linear(args.hidden_dim, args.dim, bias=False)
 
+        self.act = init_act(args)
+
     def __call__(self,
                  x: mx.array
                  ) -> mx.array:
@@ -93,7 +96,7 @@ class FeedForward(nn.Module):
         x = self.w1(x)
         gate, x = mx.split(x, 2, axis=-1)
 
-        return self.w2(x * nn.silu(gate))
+        return self.w2(x * self.act(gate))
 
 class TransformerBlock(llama.TransformerBlock):
     """

@@ -90,6 +90,19 @@ class LLM():
                 total_size += module.weight.size
 
         return total_size
+    
+    def preprocess_weights(self,
+                           weights: dict
+                           ) -> dict:
+        """
+        Preprocess model weights.
+        """
+        if hasattr(self.model, "preprocess_weights"):
+            logger.debug(f"Preprocessing model weights")
+            
+            return self.model.preprocess_weights(weights)
+        
+        return weights
 
     def update_weights(self,
                        weights: dict,

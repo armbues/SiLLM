@@ -23,6 +23,7 @@ class ModelArgs:
     vocab_size: int = -1
     rope_theta: float = 10000.0
     rope_traditional: bool = True
+    hidden_act: str = None
     max_position_embeddings: int = 0
     original_max_position_embeddings: int = 0
     tie_word_embeddings: bool = False

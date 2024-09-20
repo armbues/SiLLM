@@ -7,6 +7,7 @@ from sillm.models.base import BaseModel
 from sillm.core.cache import KVCache
 from sillm.models.args import ModelArgs
 from sillm.modules.rope import init_rope
+from sillm.modules.act import init_act
 
 ########
 # Based on mlx-examples:
@@ -84,6 +85,8 @@ class FeedForward(nn.Module):
         self.w2 = nn.Linear(args.hidden_dim, args.dim, bias=False)
         self.w3 = nn.Linear(args.dim, args.hidden_dim, bias=False)
 
+        self.act = init_act(args)
+
     def __call__(self, x) -> mx.array:
         """
         Args:
@@ -91,7 +94,7 @@ class FeedForward(nn.Module):
         Returns:
             Output tensor.
         """
-        return self.w2(nn.silu(self.w1(x)) * self.w3(x))
+        return self.w2(self.act(self.w1(x)) * self.w3(x))
     
 ########
 # Based on mlx-examples:

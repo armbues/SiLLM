@@ -7,6 +7,7 @@ from sillm.models.base import BaseModel
 from sillm.core.cache import KVCache
 from sillm.models.args import ModelArgs
 from sillm.modules.rope import init_rope
+from sillm.modules.act import init_act
 import sillm.models.llama as llama
 
 class Attention(llama.Attention):
@@ -88,6 +89,8 @@ class FeedForward(nn.Module):
 
         self.w1 = nn.Linear(args.dim, args.hidden_dim, bias=True)
         self.w2 = nn.Linear(args.hidden_dim, args.dim, bias=True)
+        
+        self.act = init_act(args)
     
     def __call__(self,
                  x: mx.array
@@ -98,7 +101,7 @@ class FeedForward(nn.Module):
         Returns:
             Output tensor.
         """
-        return self.w2(nn.gelu_approx(self.w1(x)))
+        return self.w2(self.act(self.w1(x)))
     
 class TransformerBlock(nn.Module):
     """

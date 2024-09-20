@@ -4,9 +4,9 @@ import mlx.core as mx
 import mlx.nn as nn
 
 from sillm.models.base import BaseModel
-from sillm.core.cache import KVCache
 from sillm.models.args import ModelArgs
 from sillm.modules.rope import init_rope
+from sillm.modules.switch import SwitchGLU
 import sillm.models.llama as llama
 
 class Attention(llama.Attention):
@@ -41,11 +41,13 @@ class FeedForward(nn.Module):
         """
         super().__init__()
 
+        self.args = args
+
         self.num_experts = args.num_local_experts
         self.num_experts_per_tok = args.num_experts_per_tok
 
         self.gate = nn.Linear(args.dim, self.num_experts, bias=False)
-        self.experts = [llama.FeedForward(args=args) for _ in range(self.num_experts)]
+        self.switch_mlp = SwitchGLU(self.args.dim, self.args.hidden_dim, self.num_experts, bias=False)
 
     def __call__(self,
                  x: mx.array
@@ -56,25 +58,17 @@ class FeedForward(nn.Module):
         Returns:
             Output tensor.
         """
-        top_k = self.num_experts_per_tok
-        orig_shape = x.shape
-        x = x.reshape(-1, x.shape[-1])
+        gates = self.gate(x)
 
-        gate_logits = self.gate(x)
+        k = self.num_experts_per_tok
+        inds = mx.stop_gradient(mx.argpartition(-gates, kth=k - 1, axis=-1)[..., :k])
+        scores = mx.take_along_axis(gates, inds, axis=-1)
+        scores = mx.softmax(scores, axis=-1, precise=True)
 
-        expert_indices = mx.stop_gradient(mx.argpartition(-gate_logits, kth=top_k-1, axis=-1)[..., :top_k])
-        expert_scores = mx.take_along_axis(gate_logits, expert_indices, axis=-1)
-        expert_scores = mx.softmax(expert_scores, axis=-1, precise=True)
+        y = self.switch_mlp(x, inds)
+        y = (y * scores[..., None]).sum(axis=-2)
 
-        y = []
-        for xt, st, it in zip(x, expert_scores, expert_indices.tolist()):
-            yt = mx.concatenate([self.experts[e](xt)[:, None] for e in it], axis=-1)
-            yt = (yt * st).sum(axis=-1)
-
-            y.append(yt[None, :])
-        y = mx.concatenate(y)
-
-        return y.reshape(orig_shape)
+        return y
 
 class TransformerBlock(llama.TransformerBlock):
     def __init__(self, args: ModelArgs):
@@ -113,3 +107,18 @@ class Model(llama.Model):
         self.layers = [TransformerBlock(args=args) for _ in range(args.n_layers)]
         self.norm = nn.LayerNorm(args.dim, eps=args.rms_norm_eps)
         self.output = nn.Linear(args.dim, args.vocab_size, bias=True)
+
+    def preprocess_weights(self,
+                           weights: dict
+                           ) -> dict:
+        for l in range(self.args.n_layers):
+            for k in ("w1", "w2", "w3"):
+                prefix = f"layers.{l}.feed_forward"
+
+                experts_keys = [prefix + f".experts.{i}.{k}.weight" for i in range(self.args.num_local_experts)]
+                weights[prefix + f".switch_mlp.{k}.weight"] = mx.stack([weights[key] for key in experts_keys])
+
+                for key in experts_keys:
+                    del weights[key]
+
+        return weights

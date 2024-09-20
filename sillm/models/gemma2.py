@@ -7,7 +7,6 @@ from sillm.models.base import BaseModel
 from sillm.core.cache import KVCache
 from sillm.models.args import ModelArgs
 from sillm.modules.norm import RMSNorm
-from sillm.models.gemma import FeedForward
 import sillm.models.llama as llama
     
 class Attention(llama.Attention):
@@ -79,7 +78,7 @@ class TransformerBlock(llama.TransformerBlock):
         self.dim = args.dim
         
         self.attention = Attention(args=args)
-        self.feed_forward = FeedForward(args=args)
+        self.feed_forward = llama.FeedForward(args=args)
         self.attention_norm = RMSNorm(args.dim, eps=args.norm_eps)
         self.ffn_norm = RMSNorm(args.dim, eps=args.norm_eps)
         self.pre_feedforward_layernorm = RMSNorm(args.dim, eps=args.norm_eps)
