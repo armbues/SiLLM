@@ -43,14 +43,16 @@ if __name__ == "__main__":
 
     tokenizer = None
     tokenizer_path = None
-    if (input_path / "tokenizer.model").exists():
-        tokenizer_path = input_path / "tokenizer.model"
-        tokenizer = SentencePieceTokenizer(str(tokenizer_path), model_args)
-    elif (input_path / "tokenizer.json").exists():
+    if (input_path / "tokenizer.json").exists():
         tokenizer_path = input_path / "tokenizer.json"
         tokenizer = TransformerTokenizer(str(input_path), model_args)
+    elif (input_path / "tokenizer.model").exists():
+        tokenizer_path = input_path / "tokenizer.model"
+        tokenizer = SentencePieceTokenizer(str(tokenizer_path), model_args)
+    
     if tokenizer is None:
         logger.error(f"No tokenizer found in {input_path}")
+        
     tokenizer.save(str(output_path))
     logger.debug(f"Saved tokenizer to {output_path}")
 
