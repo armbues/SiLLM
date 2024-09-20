@@ -444,11 +444,13 @@ def generate(model,
     if extra_stop_tokens is not None:
         for token in extra_stop_tokens:
             if isinstance(token, str):
-                token_id = tokenizer.encode(token, bos=False)[0]
-            else:
-                token_id = token
+                token_ids = tokenizer.encode(token, bos=False)
 
-            stop_tokens.add(token_id)
+                if len(token_ids) > 1:
+                    logger.warn(f"Extra stop token '{token}' tokenizes to multiple tokens")
+                stop_tokens.add(token_ids[0])
+            else:
+                stop_tokens.add(token)
 
     # Initialize token and string buffers
     tokens, text = [], ""
