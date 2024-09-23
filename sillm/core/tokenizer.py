@@ -336,8 +336,6 @@ class GGUFTokenizer(SentencePieceTokenizer):
             self.pad_id = -1
             pad_token = "<pad>"
         self._sep = "▁"
-
-        self.special_ids = set([self.bos_id, self.eos_id])
         
         if token_types is not None:
             token_types = token_types.tolist()
