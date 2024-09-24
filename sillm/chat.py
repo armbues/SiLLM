@@ -21,6 +21,7 @@ if __name__ == "__main__":
     parser.add_argument("--cache", type=int, default=0, help="Prompt cache size")
     parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama2, alpaca, etc.)")
     parser.add_argument("--system_prompt", type=str, default=None, help="System prompt for chat template")
+    parser.add_argument("--ascii", default=False, action="store_true", help="Force output tokens to ASCII printable characters")
     parser.add_argument("-q4", default=False, action="store_true", help="Quantize the model to 4 bits")
     parser.add_argument("-q8", default=False, action="store_true", help="Quantize the model to 8 bits")
     parser.add_argument("-v", "--verbose", default=1, action="count", help="Increase output verbosity")
@@ -81,6 +82,9 @@ if __name__ == "__main__":
         "flush": args.flush,
         "prompt_cache": prompt_cache
     }
+
+    if args.ascii:
+        generate_args["logit_mask"] = utils.ascii_token_logit_mask(model.tokenizer, model.args.vocab_size)
 
     # Init conversation template
     template = sillm.init_template(model.tokenizer, model.args, args.template)
