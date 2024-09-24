@@ -11,7 +11,7 @@ from .tokenizer import Tokenizer
 import sillm.models as models
 import sillm.models.args as args
 from sillm.training.dataset import Dataset
-from sillm.core.cache import KVCache
+from sillm.core.cache import KVCache, PromptCache
 from sillm.modules.switch import SwitchLinear
 
 logger = logging.getLogger("sillm")
@@ -411,7 +411,8 @@ def generate(model,
              token_ids: bool = False,
              flush: int = 5,
              extra_stop_tokens: list = None,
-             prompt_cache = None
+             prompt_cache: PromptCache = None,
+             logit_mask: list = None
              ):
     start = time.perf_counter()
 
@@ -452,10 +453,21 @@ def generate(model,
             else:
                 stop_tokens.add(token)
 
+    # Initialize logit mask
+    if logit_mask is not None:
+        if len(logit_mask) != tokenizer.vocab_size:
+            logger.warn(f"Logit mask has incorrect size {len(logit_mask)} != {tokenizer.vocab_size}")
+            logit_mask = None
+        else:
+            logit_mask = mx.array(logit_mask)
+
     # Initialize token and string buffers
     tokens, text = [], ""
 
     def sample(logits):
+        if logit_mask is not None:
+            logits = logits * logit_mask
+            
         if len(tokens) > 0 and repetition_penalty is not None:
             logits = apply_repetition_penalty(logits)
 
