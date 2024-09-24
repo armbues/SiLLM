@@ -34,7 +34,11 @@ class Tokenizer():
                             **kwargs
                             ):
         raise NotImplementedError("Tokenizer does not support chat templates - check has_template() first")
-        
+
+    @property
+    def vocab(self) -> dict:
+        raise NotImplementedError("Class tokenizer.Tokenizer is used for inheritance only")
+
     @property
     def vocab_size(self) -> int:
         raise NotImplementedError("Class tokenizer.Tokenizer is used for inheritance only")
@@ -82,7 +86,10 @@ class SentencePieceTokenizer(Tokenizer):
         self._model = sentencepiece.SentencePieceProcessor(model_file=tokenizer_path)
         self._sep = "▁"
 
-        assert self._model.vocab_size() == self._model.get_piece_size()
+        vocab_size = self._model.vocab_size()
+        assert vocab_size == self._model.get_piece_size()
+
+        self._vocab = {self._model.id_to_piece(i): i for i in range(vocab_size)}
 
         if args.bos_token_id is None:
             self.bos_id = self._model.bos_id()
@@ -137,6 +144,13 @@ class SentencePieceTokenizer(Tokenizer):
         
         return s
 
+    @property
+    def vocab(self) -> dict:
+        """
+        Vocabulary.
+        """
+        return self._vocab
+    
     @property
     def vocab_size(self) -> int:
         """
@@ -264,6 +278,13 @@ class TransformerTokenizer(Tokenizer):
         Apply chat template.
         """
         return self._model.apply_chat_template(*args, **kwargs)
+
+    @property
+    def vocab(self) -> dict:
+        """
+        Vocabulary.
+        """
+        return self._model.get_vocab()
 
     @property
     def vocab_size(self) -> int:
