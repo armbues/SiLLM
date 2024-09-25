@@ -13,6 +13,7 @@ import sillm.models.args as args
 from sillm.training.dataset import Dataset
 from sillm.core.cache import KVCache, PromptCache
 from sillm.modules.switch import SwitchLinear
+from sillm.utils.sampling import sample, apply_repetition_penalty
 
 logger = logging.getLogger("sillm")
 
@@ -456,30 +457,11 @@ def generate(model,
     # Initialize token and string buffers
     tokens, text = [], ""
 
-    def sample(logits):
+    def modify_logits(logits):
         if logit_mask is not None:
             logits = logits * logit_mask
-
         if len(tokens) > 0 and repetition_penalty is not None:
             logits = apply_repetition_penalty(logits)
-
-        if temperature == 0:
-            y = mx.argmax(logits, axis=-1)
-        else:
-            y = mx.random.categorical(logits * (1 / temperature))
-
-        p = 0.0
-        if logprobs:
-            p = nn.log_softmax(logits, axis=-1)[0,y].item()
-        # TODO add top-p sampling
-
-        return y, p
-
-    def apply_repetition_penalty(logits):
-        indices = mx.array(tokens[-repetition_window:])
-        repeated_logits = logits[:, indices]
-        repeated_logits = mx.where(repeated_logits < 0, repeated_logits * repetition_penalty, repeated_logits / repetition_penalty)
-        logits[:, indices] = repeated_logits
 
         return logits
 
@@ -502,15 +484,19 @@ def generate(model,
             if prompt_cache is not None:
                 prompt_cache.put(inputs, logits, cache)
 
-        y, p = sample(logits)
+        # Modify logits
+        logits = modify_logits(logits)
+
+        y, p = sample(logits, temperature=temperature, logprobs=logprobs)
         yield y, p
 
         while True:
             # Iterative forward pass through model
             logits = model(y[None], cache=cache)
             logits = logits[:, -1, :]
+            logits = modify_logits(logits)
 
-            y, p = sample(logits)
+            y, p = sample(logits, temperature=temperature, logprobs=logprobs)
             yield y, p
 
     # Main generation loop
