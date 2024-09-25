@@ -40,8 +40,11 @@ def ascii_token_logit_mask(
     """
     mask = mx.zeros(output_size)
 
-    for token, i in tokenizer.vocab.items():
-        if all(c in string.printable for c in token.strip('Ġ')):
+    for i, s in enumerate(tokenizer.vocab_strings):
+        if all(c in string.printable for c in s.strip()):
             mask[i] = 1.0
+
+    for i in tokenizer.special_ids:
+        mask[i] = 1.0
 
     return mask

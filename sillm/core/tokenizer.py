@@ -37,15 +37,19 @@ class Tokenizer():
 
     @property
     def vocab(self) -> dict:
-        raise NotImplementedError("Class tokenizer.Tokenizer is used for inheritance only")
+        raise NotImplementedError("Method 'vocab' is not implemented for this tokenizer")
 
     @property
     def vocab_size(self) -> int:
-        raise NotImplementedError("Class tokenizer.Tokenizer is used for inheritance only")
+        raise NotImplementedError("Method 'vocab_size' is not implemented for this tokenizer")
+    
+    @property
+    def vocab_strings(self) -> list:
+        raise NotImplementedError("Method 'vocab_strings' is not implemented for this tokenizer")
     
     @property
     def special_tokens_map(self) -> dict:
-        raise NotImplementedError("Class tokenizer.Tokenizer is used for inheritance only")
+        raise NotImplementedError("Method 'special_tokens_map' is not implemented for this tokenizer")
     
     @property
     def special_ids(self) -> set:
@@ -57,7 +61,7 @@ class Tokenizer():
     def save(self,
              tokenizer_path: str
              ):
-        raise NotImplementedError("Class tokenizer.Tokenizer is used for inheritance only")
+        raise NotImplementedError("Method 'save' is not implemented for this tokenizer")
     
 ########
 # Based on mlx-examples:
@@ -292,6 +296,13 @@ class TransformerTokenizer(Tokenizer):
         Vocabulary size.
         """
         return self._model.vocab_size
+    
+    @property
+    def vocab_strings(self) -> list:
+        """
+        Vocabulary strings.
+        """
+        return self._model.batch_decode([i for i in range(self._model.vocab_size)])
     
     @property
     def special_tokens_map(self) -> dict:
