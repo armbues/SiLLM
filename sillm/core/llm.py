@@ -516,7 +516,7 @@ def generate(model,
     # Main generation loop
     for (token,p), i in zip(generate_step(model, inputs), range(max_tokens)):
         if i == 0:
-            mx.eval(token)
+            mx.async_eval(token)
             timing["eval_time"] = time.perf_counter() - start
 
         if token.item() in stop_tokens:
@@ -529,7 +529,7 @@ def generate(model,
             metadata["logprobs"].append(p)
 
         if (len(tokens) % flush) == 0:
-            mx.eval(tokens)
+            mx.async_eval(tokens)
 
             text_offset = len(text)
             text = tokenizer.decode(tokens)
@@ -542,7 +542,7 @@ def generate(model,
 
             yield text[text_offset:], metadata
 
-    mx.eval(tokens)
+    mx.async_eval(tokens)
 
     text_offset = len(text)
     text = tokenizer.decode(tokens)
