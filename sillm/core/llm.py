@@ -468,8 +468,8 @@ def generate(model,
     def generate_step(model, inputs):
         logits = None
 
-        # Retrieve cached logits and KV cache
         if prompt_cache is not None:
+            # Retrieve cached logits and KV cache
             logits, cache = prompt_cache.get(inputs)
         
         if logits is None:

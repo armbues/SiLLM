@@ -1,9 +1,12 @@
 import collections
 import hashlib
+import logging
 
 from typing import Optional
 
 import mlx.core as mx
+
+logger = logging.getLogger("sillm")
 
 ########
 # Based on mlx-examples:
@@ -68,9 +71,9 @@ class KVCache:
         new = KVCache(self.k_head_dim, self.n_kv_heads, self.step)
         
         if self.keys is not None:
-            new.keys = self.keys.copy()
+            new.keys = mx.array(self.keys)
         if self.values is not None:
-            new.values = self.values.copy()
+            new.values = mx.array(self.values)
         new.offset = self.offset
 
         return new
@@ -96,8 +99,8 @@ class PromptCache():
         # TODO make multi-thread safe?
 
     def _key(self,
-                inputs: mx.array
-                ):
+             inputs: mx.array
+             ):
         return hashlib.sha256(inputs).hexdigest()
     
     def put(self,
@@ -110,9 +113,11 @@ class PromptCache():
         """
         key = self._key(inputs)
 
+        logger.debug(f"Adding prompt cache entry for key {key}")
+
         if key not in self.lru:
             self.logits[key] = logits
-            self.kv_cache[key] = kv_cache
+            self.kv_cache[key] = [c.copy() for c in kv_cache]
             self.lru[key] = 0
 
         if len(self.lru) > self.max_size:
@@ -121,18 +126,26 @@ class PromptCache():
             self.kv_cache.pop(pop_key)
 
     def get(self,
-            inputs: mx.array
+            inputs: mx.array|str
             ):
         """
         Get cache entry.
         """
-        key = self._key(inputs)
+        if type(inputs) is mx.array:
+            key = self._key(inputs)
+        else:
+            key = inputs
 
         if key in self.lru:
+            # Update LRU
             self.lru.move_to_end(key)
             self.lru[key] += 1
-            kv_cache = self.kv_cache[key].copy()
+
+            logits = self.logits[key]
+            kv_cache = [c.copy() for c in self.kv_cache[key]]
+
+            logger.debug(f"Retrieving prompt cache entry for key {key}")
             
-            return self.logits[key], kv_cache
+            return logits, kv_cache
         
         return None, None
