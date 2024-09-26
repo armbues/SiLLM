@@ -166,7 +166,7 @@ def load_model_dir(model_path: str) -> LLM:
     weights_files_npz = sorted(list(model_path.glob("weights*.npz")))
     weights_files_safetensors = sorted(list(model_path.glob("*.safetensors")))
     weights_files_consolidated = sorted(list(model_path.glob("consolidated.*.pth")))
-    weights_files_bin = sorted(list(model_path.glob("pytorch_model-*.bin")))
+    weights_files_bin = sorted(list(model_path.glob("pytorch_model*.bin")))
 
     if len(weights_files_npz) > 0:
         weights, mapping, model_format = load_weights(weights_files_npz, load_func=mx.load)
