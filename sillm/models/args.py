@@ -23,6 +23,7 @@ class ModelArgs:
     vocab_size: int = -1
     rope_theta: float = 10000.0
     rope_traditional: bool = True
+    partial_rotary_factor: float = None
     hidden_act: str = None
     max_position_embeddings: int = 0
     original_max_position_embeddings: int = 0
@@ -152,7 +153,6 @@ class PhiArgs(ModelArgs):
     Phi model arguments.
     """
     rope_scaling: dict = None
-    partial_rotary_factor: float = 0.4
 
 @dataclasses.dataclass
 class Qwen2Args(ModelArgs):

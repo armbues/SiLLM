@@ -18,6 +18,7 @@ default_templates = {
     "cohere": "cohere",
     "phi3": "phi3",
     "phimoe": "phi3.5",
+    "nemotron": "nemotron"
 }
 
 class Template(object):

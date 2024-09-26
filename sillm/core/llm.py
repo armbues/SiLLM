@@ -30,6 +30,7 @@ model_map = {
     "qwen2":        models.qwen2.Model,
     "dbrx":         models.dbrx.Model,
     "cohere":       models.cohere.Model,
+    "nemotron":     models.nemotron.Model,
 }
 
 class LLM():
