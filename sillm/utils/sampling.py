@@ -1,24 +1,35 @@
 import string
 
+from functools import partial
+
 import mlx.core as mx
 import mlx.nn as nn
 
-def sample(logits: mx.array,
-           temperature: float = 0.0,
-           logprobs: bool = False
-           ):
-    if temperature == 0:
-        y = mx.argmax(logits, axis=-1)
-    else:
-        y = mx.random.categorical(logits * (1 / temperature))
+@partial(mx.compile, inputs=mx.random.state, outputs=mx.random.state)
+def top_k(logits: mx.array,
+          k: int = 1
+          ) -> mx.array:
+    top_k_indices = mx.argpartition(logits, k, axis=-1)[:, -k:]
+    mask = mx.zeros_like(logits)
+    mask[:, top_k_indices] = 1.0
 
-    p = 0.0
-    if logprobs:
-        p = nn.log_softmax(logits, axis=-1)[0,y].item()
-    # TODO add top-p sampling
+    return logits * mask
 
-    return y, p
+@partial(mx.compile, inputs=mx.random.state, outputs=mx.random.state)
+def top_p(logits: mx.array,
+          p: float = 0.9
+          ) -> mx.array:
+    probs = mx.softmax(logits, axis=-1)
+    sorted_indices = mx.argsort(probs, axis=-1).squeeze(0)
+    sorted_probs = probs[..., sorted_indices]
+    cum_probs = mx.cumsum(sorted_probs, axis=-1)
+    
+    mask = cum_probs <= p
+    logits = mx.where(mask[..., sorted_indices], logits, 0.0)
 
+    return logits
+
+@partial(mx.compile, inputs=mx.random.state, outputs=mx.random.state)
 def apply_repetition_penalty(logits: mx.array,
                              tokens: list,
                              repetition_penalty: float = 1.0,

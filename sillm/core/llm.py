@@ -10,10 +10,10 @@ from mlx.utils import tree_flatten, tree_unflatten
 from .tokenizer import Tokenizer
 import sillm.models as models
 import sillm.models.args as args
+import sillm.utils.sampling as sampling
 from sillm.training.dataset import Dataset
 from sillm.core.cache import KVCache, PromptCache
 from sillm.modules.switch import SwitchLinear
-from sillm.utils.sampling import sample, apply_repetition_penalty
 
 logger = logging.getLogger("sillm")
 
@@ -404,8 +404,10 @@ class LLM():
 def generate(model,
              tokenizer: Tokenizer,
              prompt: str,
-             temperature: float = 0.0,
              max_tokens: int = 2048,
+             temperature: float = 0.0,
+             top_k: int = 0,
+             top_p: float = 1.0,
              repetition_penalty: float = None,
              repetition_window: int = 25,
              logprobs: bool = False,
@@ -457,13 +459,32 @@ def generate(model,
     # Initialize token and string buffers
     tokens, text = [], ""
 
-    def modify_logits(logits):
-        if logit_mask is not None:
-            logits = logits * logit_mask
-        if len(tokens) > 0 and repetition_penalty is not None:
-            logits = apply_repetition_penalty(logits)
+    def sample(logits):
+        if temperature == 0:
+            y = mx.argmax(logits, axis=-1)
+        else:
+            # Apply temperature
+            logits = logits * (1 / temperature)
 
-        return logits
+            # Apply logit mask
+            if logit_mask is not None:
+                logits = logits * logit_mask
+            # Apply repetition penalty
+            if len(tokens) > 0 and repetition_penalty is not None:
+                logits = sampling.apply_repetition_penalty(logits, tokens)
+            # Apply top-k sampling
+            if top_k > 0:
+                logits = sampling.top_k(logits, k=top_k)
+            if 0.0 < top_p < 1.0:
+                logits = sampling.top_p(logits, p=top_p)
+    
+            y = mx.random.categorical(logits)
+
+        p = 0.0
+        if logprobs:
+            p = nn.log_softmax(logits, axis=-1)[0,y].item()
+
+        return y, p
 
     def generate_step(model, inputs):
         logits = None
@@ -484,19 +505,15 @@ def generate(model,
             if prompt_cache is not None:
                 prompt_cache.put(inputs, logits, cache)
 
-        # Modify logits
-        logits = modify_logits(logits)
-
-        y, p = sample(logits, temperature=temperature, logprobs=logprobs)
+        y, p = sample(logits)
         yield y, p
 
         while True:
             # Iterative forward pass through model
             logits = model(y[None], cache=cache)
             logits = logits[:, -1, :]
-            logits = modify_logits(logits)
 
-            y, p = sample(logits, temperature=temperature, logprobs=logprobs)
+            y, p = sample(logits)
             yield y, p
 
     # Main generation loop
