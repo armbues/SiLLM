@@ -143,6 +143,7 @@ def map_config(config):
         "original_max_position_embeddings",
         "rope_theta",
         "rope_scaling",
+        "partial_rotary_factor",
         "hidden_act",
         "bos_token_id",
         "eos_token_id",

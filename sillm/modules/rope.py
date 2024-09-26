@@ -15,20 +15,24 @@ def init_rope(args: ModelArgs):
         if rope_type == "linear":
             rope_scale = 1 / args.rope_scaling["factor"]
 
+    rope_dims = args.head_dim
+    if args.partial_rotary_factor is not None:
+        rope_dims = int(rope_dims * args.partial_rotary_factor)
+
     if rope_type in ("default", "linear"):
-        return nn.RoPE(args.head_dim,
+        return nn.RoPE(rope_dims,
                        traditional=args.rope_traditional,
                        base=args.rope_theta,
                        scale=rope_scale)
     elif rope_type == "llama3":
-        return Llama3RoPE(args.head_dim,
+        return Llama3RoPE(rope_dims,
                           max_position_embeddings=args.max_position_embeddings,
                           traditional=args.rope_traditional,
                           base=args.rope_theta,
                           scale=rope_scale,
                           rope_scaling=args.rope_scaling)
     elif rope_type in ("su", "longrope"):
-        return SuScaledRotaryEmbedding(args.head_dim,
+        return SuScaledRotaryEmbedding(rope_dims,
                                        max_position_embeddings=args.max_position_embeddings,
                                        original_max_position_embeddings=args.original_max_position_embeddings,
                                        base=args.rope_theta,
