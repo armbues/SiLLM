@@ -163,7 +163,11 @@ class Model(BaseModel):
         self.tok_embeddings = nn.Embedding(args.vocab_size, args.dim)
         self.layers = [TransformerBlock(args=args) for _ in range(args.n_layers)]
         self.norm = nn.RMSNorm(args.dim, eps=args.norm_eps)
-        self.output = nn.Linear(args.dim, args.vocab_size, bias=False)
+
+        if args.tie_word_embeddings:
+            self.output = None
+        else:
+            self.output = nn.Linear(args.dim, args.vocab_size, bias=False)
 
     def __call__(self,
                  inputs: mx.array,
@@ -188,4 +192,7 @@ class Model(BaseModel):
         for e, layer in enumerate(self.layers):
             h = layer.forward(h, mask, cache[e])
 
-        return self.output(self.norm(h))
+        if self.output is None:
+            return self.tok_embeddings.as_linear(self.norm(h))
+        else:
+            return self.output(self.norm(h))
