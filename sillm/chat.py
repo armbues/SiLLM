@@ -4,6 +4,7 @@ import readline
 
 import sillm
 import sillm.utils as utils
+import sillm.experimental.structure as structure
 
 if __name__ == "__main__":
     # Parse commandline arguments
@@ -88,7 +89,7 @@ if __name__ == "__main__":
     }
 
     if args.ascii:
-        generate_args["logit_mask"] = utils.ascii_token_logit_mask(model.tokenizer, model.args.vocab_size)
+        generate_args["logit_mask"] = structure.ascii_token_logit_mask(model.tokenizer, model.args.vocab_size)
 
     # Init conversation template
     template = sillm.init_template(model.tokenizer, model.args, args.template)
