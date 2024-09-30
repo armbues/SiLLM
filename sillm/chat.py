@@ -4,7 +4,6 @@ import readline
 
 import sillm
 import sillm.utils as utils
-import sillm.experimental.structure as structure
 
 if __name__ == "__main__":
     # Parse commandline arguments
@@ -77,6 +76,11 @@ if __name__ == "__main__":
     if args.cache > 0:
         prompt_cache = sillm.PromptCache(max_size=args.cache)
 
+    # Initialize logit filters
+    logit_filter = None
+    if args.ascii:
+        logit_filter = sillm.experimental.logit_filter.ASCIIFilter(model.tokenizer, model.args.vocab_size)
+
     generate_args = {
         "temperature": args.temperature,
         "top_k": args.top_k,
@@ -85,11 +89,9 @@ if __name__ == "__main__":
         "repetition_window": args.repetition_window,
         "max_tokens": args.max_tokens,
         "flush": args.flush,
-        "prompt_cache": prompt_cache
+        "prompt_cache": prompt_cache,
+        "logit_filter": logit_filter
     }
-
-    if args.ascii:
-        generate_args["logit_mask"] = structure.ascii_token_logit_mask(model.tokenizer, model.args.vocab_size)
 
     # Init conversation template
     template = sillm.init_template(model.tokenizer, model.args, args.template)
