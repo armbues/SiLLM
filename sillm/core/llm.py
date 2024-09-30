@@ -2,6 +2,7 @@ import logging
 import time
 import pathlib
 import json
+import typing
 
 import mlx.core as mx
 import mlx.nn as nn
@@ -14,6 +15,7 @@ import sillm.utils.sampling as sampling
 from sillm.training.dataset import Dataset
 from sillm.core.cache import KVCache, PromptCache
 from sillm.modules.switch import SwitchLinear
+from sillm.experimental.logit_filter import LogitFilter
 
 logger = logging.getLogger("sillm")
 
@@ -416,7 +418,7 @@ def generate(model,
              flush: int = 5,
              extra_stop_tokens: list = None,
              prompt_cache: PromptCache = None,
-             logit_mask: mx.array = None
+             logit_filter: LogitFilter = None
              ):
     start = time.perf_counter()
 
@@ -467,12 +469,12 @@ def generate(model,
             # Apply temperature
             logits = logits * (1 / temperature)
 
-            # Apply logit mask
-            if logit_mask is not None:
-                logits = logits * logit_mask
+            # Apply structure enforcer
+            if logit_filter is not None:
+                logits = logit_filter(logits)
             # Apply repetition penalty
             if len(tokens) > 0 and repetition_penalty is not None:
-                logits = sampling.apply_repetition_penalty(logits, tokens)
+                logits = sampling.apply_repetition_penalty(logits, tokens, repetition_penalty=repetition_penalty, repetition_window=repetition_window)
             # Apply top-k sampling
             if top_k > 0:
                 logits = sampling.top_k(logits, k=top_k)
@@ -520,7 +522,7 @@ def generate(model,
     # Main generation loop
     for (token,p), i in zip(generate_step(model, inputs), range(max_tokens)):
         if i == 0:
-            mx.async_eval(token)
+            mx.eval(token)
             timing["eval_time"] = time.perf_counter() - start
 
         if token.item() in stop_tokens:
@@ -533,7 +535,7 @@ def generate(model,
             metadata["logprobs"].append(p)
 
         if (len(tokens) % flush) == 0:
-            mx.async_eval(tokens)
+            mx.eval(tokens)
 
             text_offset = len(text)
             text = tokenizer.decode(tokens)
