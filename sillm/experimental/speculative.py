@@ -80,7 +80,7 @@ class SpeculativeLLM(LLM):
                 draft_logits = self.draft_model(inputs, cache=draft_cache)
                 target_logits = self.target_model(inputs, cache=target_cache)
 
-                mx.async_eval(draft_logits, target_logits)
+                mx.eval(draft_logits, target_logits)
                 timing["eval_time"] = time.perf_counter() - start
                 
                 tokens = input_tokens
