@@ -9,3 +9,4 @@ from sillm.models import starcoder2
 from sillm.models import dbrx
 from sillm.models import cohere
 from sillm.models import phimoe
+from sillm.models import nemotron

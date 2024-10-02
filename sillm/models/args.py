@@ -72,28 +72,29 @@ class ModelArgs:
     @staticmethod
     def load_config(config):
         ArgsClass = None
+
+        args_map = {
+            "llama": LlamaArgs,
+            "mistral": LlamaArgs,
+            "gemma": LlamaArgs,
+            "mixtral": MixtralArgs,
+            "phi": PhiArgs,
+            "qwen2": Qwen2Args,
+            "starcoder2": Starcoder2Args,
+            "dbrx": DbrxArgs,
+            "cohere": CohereArgs,
+            "phi3": Phi3Args,
+            "gemma2": Gemma2Args,
+            "phimoe": PhiMoEArgs
+        }
+
         if "model_type" in config:
-            if config["model_type"] in ("llama", "mistral", "gemma"):
-                ArgsClass = LlamaArgs
-            elif config["model_type"] == "mixtral":
-                ArgsClass = MixtralArgs
-            elif config["model_type"] == "phi":
-                ArgsClass = PhiArgs
-            elif config["model_type"] == "qwen2":
-                ArgsClass = Qwen2Args
-            elif config["model_type"] == "starcoder2":
-                ArgsClass = Starcoder2Args
-            elif config["model_type"] == "dbrx":
-                ArgsClass = DbrxArgs
-            elif config["model_type"] == "cohere":
-                ArgsClass = CohereArgs
-            elif config["model_type"] == "phi3":
-                ArgsClass = Phi3Args
-            elif config["model_type"] == "gemma2":
-                ArgsClass = Gemma2Args
-            elif config["model_type"] == "phimoe":
-                ArgsClass = PhiMoEArgs
+            model_type = config["model_type"]
+
+            if model_type in args_map:
+                ArgsClass = args_map[model_type]
             else:
+                logger.warn(f"Unknown model type {model_type} - falling back to `llama` config")
                 ArgsClass = LlamaArgs
         if ArgsClass is None:
             ArgsClass = LlamaArgs
