@@ -5,7 +5,7 @@ import enum
 import mlx.core as mx
 
 from .llm import LLM
-from .tokenizer import GGUFTokenizer, TransformerTokenizer, SentencePieceTokenizer, TiktokenTokenizer
+from .tokenizer import Tokenizer, GGUFTokenizer, TransformerTokenizer, SentencePieceTokenizer, TiktokenTokenizer
 from sillm.models.args import ModelArgs
 from sillm.utils.mapping import map_key, map_config
 
@@ -189,20 +189,7 @@ def load_model_dir(model_path: str) -> LLM:
     model_args.log_config()
 
     # Load tokenizer
-    tokenizer = None
-    tokenizer_path = None
-    if (model_path / "tokenizer.json").exists():
-        tokenizer_path = model_path / "tokenizer.json"
-        tokenizer = TransformerTokenizer(str(model_path), model_args)
-    elif (model_path / "tokenizer.model").exists():
-        tokenizer_path = model_path / "tokenizer.model"
-        tokenizer = SentencePieceTokenizer(str(tokenizer_path), model_args)
-    elif model_args.model_type == "dbrx":
-        tokenizer_path = "tiktoken"
-        tokenizer = TiktokenTokenizer(model_args)
-    if tokenizer is None:
-        logger.error(f"No tokenizer found in {model_path}")
-    logger.info(f"Loaded tokenizer from {tokenizer_path}")
+    tokenizer = load_tokenizer(str(model_path), model_args)
 
     # Initialize model
     model = LLM(tokenizer, model_args)
@@ -290,6 +277,29 @@ def load_torch_file(weights_path):
         weights[key] = mx.array(value, dtype=mx.float16)
 
     return weights
+
+def load_tokenizer(model_path: str,
+                   model_args: ModelArgs = None
+                   ) -> Tokenizer:
+    model_path = pathlib.Path(model_path)
+    
+    tokenizer = None
+    tokenizer_path = None
+    if (model_path / "tokenizer.json").exists():
+        tokenizer_path = model_path / "tokenizer.json"
+        tokenizer = TransformerTokenizer(str(model_path), model_args)
+    elif (model_path / "tokenizer.model").exists():
+        tokenizer_path = model_path / "tokenizer.model"
+        tokenizer = SentencePieceTokenizer(str(tokenizer_path), model_args)
+    elif model_args.model_type == "dbrx":
+        tokenizer_path = "tiktoken"
+        tokenizer = TiktokenTokenizer(model_args)
+    
+    if tokenizer is None:
+        logger.error(f"No tokenizer found in {model_path}")
+    logger.info(f"Loaded tokenizer from {tokenizer_path}")
+
+    return tokenizer
 
 ########
 # Based on:
