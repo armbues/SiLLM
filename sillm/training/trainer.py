@@ -132,6 +132,8 @@ class TrainableLLM(LLM):
             optimizer = optim.Adam(learning_rate=learning_rate)
         elif optimizer_type == "adamw":
             optimizer = optim.AdamW(learning_rate=learning_rate, weight_decay=learning_decay)
+        elif optimizer_type == "adafactor":
+            optimizer = optim.Adafactor(learning_rate=learning_rate)
         else:
             raise ValueError(f"Unknown optimizer type: {optimizer_type}")
 
