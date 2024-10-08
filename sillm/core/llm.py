@@ -97,6 +97,13 @@ class LLM():
 
         return total_size
     
+    @property
+    def max_tokens(self):
+        """
+        Get maximum number of tokens.
+        """
+        return self.args.max_position_embeddings
+    
     def preprocess_weights(self,
                            weights: dict
                            ) -> dict:
