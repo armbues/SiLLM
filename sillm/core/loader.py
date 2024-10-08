@@ -134,8 +134,7 @@ def load_gguf_file(model_path: str) -> LLM:
     model.update_weights(weights, mapping=mapping)
 
     # Print model size
-    total_params = model.get_size()
-    logger.info(f"Loaded model weights with {total_params/10**9:.2f}B total parameters")
+    logger.info(f"Loaded model weights with {model.size/10**9:.2f}B total parameters")
 
     return model
 
@@ -209,8 +208,7 @@ def load_model_dir(model_path: str) -> LLM:
     model.update_weights(weights, mapping=mapping)
 
     # Print model size
-    total_params = model.get_size()
-    logger.info(f"Loaded model weights with {total_params/10**9:.2f}B total parameters")
+    logger.info(f"Loaded model weights with {model.size/10**9:.2f}B total parameters")
 
     return model
 

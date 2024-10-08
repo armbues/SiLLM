@@ -83,9 +83,10 @@ class LLM():
         else:
             raise ValueError("Model is missing an ID or creation time")
 
-    def get_size(self):
+    @property
+    def size(self):
         """
-        Get model size.
+        Get model size in bytes.
         """
         total_size = 0
         for module in self.model.modules():
