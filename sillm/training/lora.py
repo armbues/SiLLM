@@ -216,7 +216,7 @@ class TrainableLoRA(TrainableLLM):
             if num_layers > 0:
                 # Apply LoRA to last n layers
                 self._lora_modules = []
-                for layer in self.model.layers[num_layers:]:
+                for layer in self.model.layers[-num_layers:]:
                     self._lora_modules.extend(get_modules(layer))
             else:
                 # Apply LoRA to all layers
