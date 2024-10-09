@@ -182,7 +182,7 @@ class TrainableLoRA(TrainableLLM):
         self._lora_modules = []
 
     def init_lora(self,
-                  num_layers: int = -1,
+                  num_layers: int = 0,
                   target_modules: str = "query_value",
                   rank: int = 8,
                   alpha: float = 16,
@@ -202,9 +202,33 @@ class TrainableLoRA(TrainableLLM):
         if self._lora is None:
             self.model.freeze()
 
-            if num_layers < 0:
-                num_layers = len(self.model.layers)
+            def get_modules(module):
+                # Initialize target modules
+                for key, child in module.named_modules():
+                    if isinstance(child, nn.Linear) or isinstance(child, nn.QuantizedLinear):
+                        key = module._name + "." + key
 
+                        if target_modules == "all_linear":
+                            yield key, LoRALinear.from_linear(child, rank=rank, alpha=alpha, dropout=dropout, scale=scale)
+                        elif target_modules == "query_value" and re.search(r"\.attention\.(wq|wv|wqkv)$", key):
+                            yield key, LoRALinear.from_linear(child, rank=rank, alpha=alpha, dropout=dropout, scale=scale)
+
+            if num_layers > 0:
+                # Apply LoRA to last n layers
+                self._lora_modules = []
+                for layer in self.model.layers[num_layers:]:
+                    self._lora_modules.extend(get_modules(layer))
+            else:
+                # Apply LoRA to all layers
+                self._lora_modules = list(get_modules(self.model))
+
+            if len(self._lora_modules) == 0:
+                logger.error(f"No target modules found for LoRA: {target_modules}")
+
+            # Update model with LoRA layers
+            self.model.update_modules(tree_unflatten(self._lora_modules))
+
+            # Initialize LoRA configuration
             self._lora = {
                 "num_layers": num_layers,
                 "target_modules": target_modules,
@@ -214,26 +238,10 @@ class TrainableLoRA(TrainableLLM):
                 "scale": scale
             }
 
-            if target_modules == "all_linear":
-                self._lora_modules = [
-                    (key, LoRALinear.from_linear(module, rank=rank, alpha=alpha, dropout=dropout, scale=scale))
-                    for key, module in self.model.named_modules()
-                    if isinstance(module, nn.Linear) or isinstance(module, nn.QuantizedLinear)
-                ]
-            elif target_modules == "query_value":
-                self._lora_modules = [
-                    (key, LoRALinear.from_linear(module, rank=rank, alpha=alpha, dropout=dropout, scale=scale))
-                    for key, module in self.model.named_modules()
-                    if re.search(r"\.attention\.(wq|wv|wqkv)$", key)
-                ]
-            if len(self._lora_modules) == 0:
-                logger.error(f"No target modules found for LoRA: {target_modules}")
-            self.model.update_modules(tree_unflatten(self._lora_modules))
-
             # Enable training mode
             self.model.train(mode=True)
 
-            logger.info(f"Initialized LoRA with rank {rank} for {num_layers} layers")
+            logger.info(f"Initialized LoRA with rank {rank} for {'all' if num_layers == 0 else num_layers} layers")
             logger.debug(f"LoRA target modules: {target_modules}")
             logger.debug(f"LoRA parameters: Alpha {alpha}, Dropout {dropout}, Scale {scale}")
 
@@ -241,6 +249,8 @@ class TrainableLoRA(TrainableLLM):
             for _, module in self._lora_modules:
                 trainable_params += module.lora_size
             logger.debug(f"LoRA trainable parameters: {trainable_params/ 10**6:.2f}M")
+        else:
+            logger.warning(f"LoRA already initialized")
 
     def merge_and_unload_lora(self):
         """
@@ -314,6 +324,22 @@ class TrainableLoRA(TrainableLLM):
             "format": "mlx"
         }
         mx.save_safetensors(adapter_path, state, metadata=metadata)
+
+    def load_adapters(self,
+                      adapter_path: str
+                      ):
+        """
+        Load adapter weights.
+        Args:
+            adapter_path: Path to adapter weights.
+        """
+        assert pathlib.Path(adapter_path).exists(), adapter_path
+        if self._lora is not None:
+            self.model.load_weights(adapter_path, strict=False)
+        
+            logger.info(f"Loaded adapter weights from {adapter_path}")
+        else:
+            logger.error(f"LoRA not initialized, cannot load adapter weights")
 
     def save_checkpoint(self,
                         checkpoint_path: str,

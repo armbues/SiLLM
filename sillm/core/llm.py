@@ -59,6 +59,8 @@ class LLM():
             raise NotImplementedError(f"Model type {args.model_type} is not supported")
         self.model.train(mode=False)
 
+        self._update_names()
+
         self.tokenizer = tokenizer
 
     def init_description(self, model_path):
@@ -103,6 +105,13 @@ class LLM():
         Get maximum number of tokens.
         """
         return self.args.max_position_embeddings
+    
+    def _update_names(self):
+        """
+        Update module names.
+        """
+        for name, module in self.model.named_modules():
+            module._name = name
     
     def preprocess_weights(self,
                            weights: dict

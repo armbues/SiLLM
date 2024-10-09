@@ -20,7 +20,7 @@ if __name__ == "__main__":
     parser.add_argument("-g", "--grad_checkpoint", default=False, action="store_true", help="Use gradient checkpointing")
     parser.add_argument("--max_length", default=1024, type=int, help="Max token length per training dataset entry (default: 1024)")
     parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama-2, alpaca, etc.)")
-    parser.add_argument("--layers", default=-1, type=int, help="Layers to use for LoRA (default: -1 for all layers)")
+    parser.add_argument("--layers", default=0, type=int, help="Layers to use for LoRA (default: 0 for all layers)")
     parser.add_argument("--target_modules", default="query_value", type=str, help="Target modules to use for LoRA: query_value, all_linear")
     parser.add_argument("--rank", default=8, type=int, help="Rank to use for LoRA (default: 8)")
     parser.add_argument("--optimizer", type=str, default="adam", help="Optimizer type (default: adam)")
