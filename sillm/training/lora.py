@@ -206,7 +206,8 @@ class TrainableLoRA(TrainableLLM):
                 # Initialize target modules
                 for key, child in module.named_modules():
                     if isinstance(child, nn.Linear) or isinstance(child, nn.QuantizedLinear):
-                        key = module._name + "." + key
+                        if module._name != "":
+                            key = module._name + "." + key
 
                         if target_modules == "all_linear":
                             yield key, LoRALinear.from_linear(child, rank=rank, alpha=alpha, dropout=dropout, scale=scale)
@@ -220,6 +221,7 @@ class TrainableLoRA(TrainableLLM):
                     self._lora_modules.extend(get_modules(layer))
             else:
                 # Apply LoRA to all layers
+                num_layers = 0
                 self._lora_modules = list(get_modules(self.model))
 
             if len(self._lora_modules) == 0:
