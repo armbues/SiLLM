@@ -23,6 +23,8 @@ if __name__ == "__main__":
     parser.add_argument("--layers", default=0, type=int, help="Layers to use for LoRA (default: 0 for all layers)")
     parser.add_argument("--target_modules", default="query_value", type=str, help="Target modules to use for LoRA: query_value, all_linear")
     parser.add_argument("--rank", default=8, type=int, help="Rank to use for LoRA (default: 8)")
+    parser.add_argument("--dropout", default=0.0, type=int, help="Dropout to use for LoRA (default: 0.0)")
+    parser.add_argument("--scale", default=10.0, type=float, help="Scale to use for LoRA (default: 10.0)")
     parser.add_argument("--optimizer", type=str, default="adam", help="Optimizer type (default: adam)")
     parser.add_argument("--learning_rate", default=1e-5, type=float, help="Learning rate (default: 1e-5)")
     parser.add_argument("--learning_decay", default=0.0, type=float, help="Learning decay for AdamW optimizer (default: 0.0)")
@@ -75,7 +77,9 @@ if __name__ == "__main__":
     lora_config = {
         "num_layers":       args.layers,
         "target_modules":   args.target_modules,
-        "rank":             args.rank
+        "rank":             args.rank,
+        "dropout":          args.dropout,
+        "scale":            args.scale
     }
     model.init_lora(**lora_config)
 
