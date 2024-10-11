@@ -10,7 +10,8 @@ model_special_tokens = [
     "<|start_header_id|>", "<|end_header_id|>", "<|eot_id|>",       # Llama-3
     "<|end|>",                                                      # Phi-3
     "<|im_start|>", "<|im_end|>",                                   # Yi / Qwen
-    "<start_of_turn>", "<end_of_turn>"                              # Gemma
+    "<start_of_turn>", "<end_of_turn>",                             # Gemma
+    "<extra_id_1>"                                                  # Mistral-NeMo-Minitron
 ]
 
 class Tokenizer():
@@ -50,13 +51,6 @@ class Tokenizer():
     @property
     def special_tokens_map(self) -> dict:
         raise NotImplementedError("Method 'special_tokens_map' is not implemented for this tokenizer")
-    
-    @property
-    def special_ids(self) -> set:
-        """
-        Special token IDs.
-        """
-        return set([self.bos_id, self.eos_id])
     
     def save(self,
              tokenizer_path: str
@@ -103,9 +97,6 @@ class SentencePieceTokenizer(Tokenizer):
             self.eos_id = self._model.eos_id()
         else:
             self.eos_id = args.eos_token_id
-
-            if isinstance(self.eos_id, list):
-                self.eos_id = self.eos_id[0]
         self.pad_id = self._model.pad_id()
 
     def encode(self,
@@ -179,13 +170,18 @@ class SentencePieceTokenizer(Tokenizer):
         """
         Special token IDs.
         """
-        special_ids = set([self.bos_id, self.eos_id])
+        special_ids = [self.bos_id]
+
+        if isinstance(self.eos_id, list):
+            special_ids += self.eos_id
+        else:
+            special_ids.append(self.eos_id)
 
         for s in model_special_tokens:
             if self._model.piece_to_id(s) > 0:
-                special_ids.add(self._model.piece_to_id(s))
+                special_ids.append(self._model.piece_to_id(s))
 
-        return special_ids
+        return set(special_ids)
     
     def save(self,
             tokenizer_path: str
@@ -310,19 +306,24 @@ class TransformerTokenizer(Tokenizer):
         Special tokens map.
         """
         return self._model.special_tokens_map
-
+    
     @property
     def special_ids(self) -> set:
         """
         Special token IDs.
         """
-        special_ids = set([self.bos_id, self.eos_id] + self._model.all_special_ids)
+        special_ids = [self.bos_id]
+
+        if isinstance(self.eos_id, list):
+            special_ids += self.eos_id
+        else:
+            special_ids.append(self.eos_id)
 
         for s in model_special_tokens:
             if s in self._model.vocab:
-                special_ids.add(self._model.vocab[s])
+                special_ids.append(self._model.vocab[s])
 
-        return special_ids
+        return set(special_ids)
     
     def save(self,
             tokenizer_path: str

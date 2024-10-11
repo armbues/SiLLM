@@ -3,6 +3,8 @@ import json
 import logging
 import dataclasses
 
+from typing import Union
+
 from sillm.utils.mapping import map_config
 
 logger = logging.getLogger("sillm")
@@ -29,7 +31,7 @@ class ModelArgs:
     original_max_position_embeddings: int = 0
     tie_word_embeddings: bool = False
     bos_token_id: int = None
-    eos_token_id: int = None
+    eos_token_id: Union[int, list] = None
     pad_token_id: int = None
     quantization: dict = None
 

@@ -471,7 +471,7 @@ def generate(model,
                 token_ids = tokenizer.encode(token, bos=False)
 
                 if len(token_ids) > 1:
-                    logger.warn(f"Extra stop token '{token}' tokenizes to multiple tokens")
+                    logger.warning(f"Extra stop token '{token}' tokenizes to multiple tokens")
                 stop_tokens.add(token_ids[0])
             else:
                 stop_tokens.add(token)
