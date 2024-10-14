@@ -30,6 +30,8 @@ class ModelArgs:
     max_position_embeddings: int = 0
     original_max_position_embeddings: int = 0
     tie_word_embeddings: bool = False
+    attention_bias: bool = False
+    mlp_bias: bool = False
     bos_token_id: int = None
     eos_token_id: Union[int, list] = None
     pad_token_id: int = None

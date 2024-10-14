@@ -30,10 +30,10 @@ class Attention(nn.Module):
 
         self.scale = self.args.head_dim ** -0.5
 
-        self.wq = nn.Linear(args.dim, args.n_heads * args.head_dim, bias=False)
-        self.wk = nn.Linear(args.dim, args.n_kv_heads * args.head_dim, bias=False)
-        self.wv = nn.Linear(args.dim, args.n_kv_heads * args.head_dim, bias=False)
-        self.wo = nn.Linear(args.n_heads * args.head_dim, args.dim, bias=False)
+        self.wq = nn.Linear(args.dim, args.n_heads * args.head_dim, bias=args.attention_bias)
+        self.wk = nn.Linear(args.dim, args.n_kv_heads * args.head_dim, bias=args.attention_bias)
+        self.wv = nn.Linear(args.dim, args.n_kv_heads * args.head_dim, bias=args.attention_bias)
+        self.wo = nn.Linear(args.n_heads * args.head_dim, args.dim, bias=args.attention_bias)
 
         self.rope = init_rope(args)
 
@@ -81,9 +81,9 @@ class FeedForward(nn.Module):
         """
         super().__init__()
 
-        self.w1 = nn.Linear(args.dim, args.hidden_dim, bias=False)
-        self.w2 = nn.Linear(args.hidden_dim, args.dim, bias=False)
-        self.w3 = nn.Linear(args.dim, args.hidden_dim, bias=False)
+        self.w1 = nn.Linear(args.dim, args.hidden_dim, bias=args.mlp_bias)
+        self.w2 = nn.Linear(args.hidden_dim, args.dim, bias=args.mlp_bias)
+        self.w3 = nn.Linear(args.dim, args.hidden_dim, bias=args.mlp_bias)
 
         self.act = init_act(args)
 

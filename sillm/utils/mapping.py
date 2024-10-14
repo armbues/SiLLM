@@ -154,6 +154,8 @@ def map_config(config):
         "clip_qkv",
         "use_qk_norm",
         "logit_scale",
+        "attention_bias",
+        "mlp_bias",
     ]
     for key in mlx_keys:
         if key in config:
