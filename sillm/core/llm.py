@@ -33,6 +33,7 @@ model_map = {
     "dbrx":         models.dbrx.Model,
     "cohere":       models.cohere.Model,
     "nemotron":     models.nemotron.Model,
+    "pharia-v1":    models.pharia1.Model,
 }
 
 class LLM():

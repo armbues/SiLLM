@@ -89,7 +89,8 @@ class ModelArgs:
             "cohere": CohereArgs,
             "phi3": Phi3Args,
             "gemma2": Gemma2Args,
-            "phimoe": PhiMoEArgs
+            "phimoe": PhiMoEArgs,
+            "pharia-v1": LlamaArgs
         }
 
         if "model_type" in config:

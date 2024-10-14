@@ -18,7 +18,8 @@ default_templates = {
     "cohere": "cohere",
     "phi3": "phi3",
     "phimoe": "phi3.5",
-    "nemotron": "nemotron"
+    "nemotron": "nemotron",
+    "pharia-v1": "llama3"
 }
 
 class Template(object):

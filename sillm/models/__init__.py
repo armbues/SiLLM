@@ -10,3 +10,4 @@ from sillm.models import dbrx
 from sillm.models import cohere
 from sillm.models import phimoe
 from sillm.models import nemotron
+from sillm.models import pharia1
