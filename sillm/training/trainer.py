@@ -33,19 +33,18 @@ class TrainableLLM(LLM):
         """
         return TrainableLLM(llm.model, llm.tokenizer, llm.args)
     
-    def __init__(self,
-                 model,
-                 tokenizer,
-                 args: ModelArgs
-                 ):
+    def __init__(self, llm: LLM):
         """
         Args:
             tokenizer: Tokenizer instance.
             args: Model arguments.
         """
-        self.model = model
-        self.tokenizer = tokenizer
-        self.args = args
+        self.model = llm.model
+        self.tokenizer = llm.tokenizer
+        self.args = llm.args
+
+        self._quantization = llm._quantization
+        self._mapping = llm._mapping
 
     def loss(self, *args, **kwargs):
         """
