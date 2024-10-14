@@ -25,3 +25,20 @@ class RMSNorm(nn.Module):
 
     def __call__(self, x):
         return mx.fast.rms_norm(x, 1.0 + self.weight, self.eps)
+    
+class RMSNormBias(nn.RMSNorm):
+    """
+    Root Mean Square Normalization module with bias.
+    """
+    def __init__(self,
+                 dims,
+                 eps=1e-5
+                 ):
+        super().__init__(dims, eps=eps)
+        
+        self.bias = mx.zeros(dims)
+
+    def __call__(self, x):
+        x = mx.fast.rms_norm(x, 1.0 + self.weight, self.eps)
+
+        return x + self.bias
