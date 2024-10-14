@@ -20,7 +20,7 @@ class ModelArgs:
     head_dim: int
     n_heads: int
     n_kv_heads: int
-    norm_eps: float = None
+    norm_eps: float = 1e-5
     hidden_dim: int = None
     vocab_size: int = -1
     rope_theta: float = 10000.0
