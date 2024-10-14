@@ -10,6 +10,7 @@ import numpy as np
 import mlx.core as mx
 import mlx.nn as nn
 import mlx.optimizers as optim
+from mlx.utils import tree_map
 
 from sillm.core.llm import LLM
 from sillm.models.args import ModelArgs
@@ -92,7 +93,9 @@ class TrainableLLM(LLM):
               learning_rate: float = 1e-5,
               learning_decay: float = 0.0,
               compiled_step: bool = True,
-              grad_checkpoint: bool = False,
+              gradient_checkpointing: bool = False,
+              gradient_accumulation_steps: int = 1,
+              gradient_max_norm: float = 1.0,
               epochs: int = 1,
               iterations: int = 0,
               report_steps: int = 10,
@@ -126,6 +129,9 @@ class TrainableLLM(LLM):
         logger.info(f"Training the model for {epochs} epochs of {iterations} batch iterations with batch size {batch_size}")
         logger.debug(f"Training learning rate: {learning_rate}")
 
+        # Get system memory
+        system_memory = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
+
         # Initialize optimizer
         optimizer_type = optimizer_type.lower()
         if optimizer_type == "adam":
@@ -136,10 +142,23 @@ class TrainableLLM(LLM):
             optimizer = optim.Adafactor(learning_rate=learning_rate)
         else:
             raise ValueError(f"Unknown optimizer type: {optimizer_type}")
+        
+        # Initialize gradient accumulation
+        if gradient_accumulation_steps > 1:
+            accum_grad = None
+            accum_scale = 1 / gradient_accumulation_steps
 
-        if grad_checkpoint:
-            logger.info(f"Enabled gradient checkpointing")
+            if gradient_checkpointing:
+                gradient_checkpointing = False
+                logger.warning(f"Gradient accumulation requires disabling gradient checkpointing")
+            if compiled_step:
+                compiled_step = False
+                logger.warning(f"Gradient accumulation requires disabling compiled step function")
 
+            logger.info(f"Enabled gradient accumulation with {gradient_accumulation_steps} steps")
+
+        # Initialize gradient checkpointing
+        if gradient_checkpointing:
             if not compiled_step:
                 logger.warning(f"Gradient checkpointing requires compiled step function")
                 compiled_step = True
@@ -147,9 +166,12 @@ class TrainableLLM(LLM):
             for layer in self.model.layers:
                 layer.forward = nn.utils.checkpoint(layer, layer.forward)
 
+            logger.info(f"Enabled gradient checkpointing")
+
         # Create value and gradient function for loss
         loss_value_and_grad = nn.value_and_grad(self.model, self.loss)
 
+        # Initialize compiled step function
         if compiled_step:
             state = [self.model.state, optimizer.state]
 
@@ -161,9 +183,7 @@ class TrainableLLM(LLM):
 
                 return loss_value, reward, num_tokens
 
-        # Get system memory
-        system_memory = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
-
+        # Initialize variables for training loop
         losses = []
         rewards = None
         intv_tokens = 0
@@ -181,8 +201,30 @@ class TrainableLLM(LLM):
                     loss_value, reward, num_tokens = step(batch)
                 else:
                     (loss_value, reward, num_tokens), grad = loss_value_and_grad(*batch)
-                    optimizer.update(self.model, grad)
 
+                    if gradient_accumulation_steps > 1:
+                        # Accumulate gradients
+                        if accum_grad is None:
+                            accum_grad = grad
+                        else:
+                            accum_grad = tree_map(mx.add, grad, accum_grad)
+                        mx.eval(accum_grad)
+                        del grad
+
+                        # Update model with accumulated gradients
+                        if (n + 1) % gradient_accumulation_steps == 0:
+                            accum_grad, _ = optim.clip_grad_norm(accum_grad, max_norm=gradient_max_norm)
+                            accum_grad = tree_map(lambda g: g * accum_scale, accum_grad)
+                            optimizer.update(self.model, accum_grad)
+                            mx.eval(optimizer.state)
+                            accum_grad = None
+                    else:
+                        # Update model with gradients
+                        grad, _ = optim.clip_grad_norm(grad, max_norm=gradient_max_norm)
+                        optimizer.update(self.model, grad)
+                        mx.eval(optimizer.state)
+
+                # Evaluate loss & reward
                 mx.eval(loss_value, reward, num_tokens)
 
                 # Record loss and number of tokens
