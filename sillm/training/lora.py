@@ -29,7 +29,8 @@ class LoRALinear(nn.Module):
         rank: int = 8,
         alpha: float = 16,
         dropout: float = 0.0,
-        scale : float = 10.0
+        scale : float = 10.0,
+        dtype: mx.Dtype = None
         ):
         """
         Convert linear layer to LoRA linear layer.
@@ -47,7 +48,10 @@ class LoRALinear(nn.Module):
             input_dims *= 32 // linear.bits
         bias = "bias" in linear
 
-        lora_lin = LoRALinear(input_dims, output_dims, rank, alpha, dropout, scale, bias)
+        if dtype is None:
+            dtype = mx.bfloat16 if isinstance(linear, nn.QuantizedLinear) else linear.weight.dtype
+
+        lora_lin = LoRALinear(input_dims, output_dims, rank, alpha, dropout, scale, bias, dtype)
         lora_lin.linear = linear
 
         return lora_lin
@@ -59,7 +63,8 @@ class LoRALinear(nn.Module):
                  alpha: float = 16,
                  dropout: float = 0.0,
                  scale : float = 10.0,
-                 bias: bool = False
+                 bias: bool = False,
+                 dtype: mx.Dtype = mx.bfloat16
                  ):
         """
         Args:
@@ -84,8 +89,8 @@ class LoRALinear(nn.Module):
         bound = 1 / math.sqrt(input_dims)
         input_shape = (input_dims, rank)
         output_shape = (rank, output_dims)
-        self.lora_a = mx.random.uniform(low=-bound, high=bound, shape=input_shape)
-        self.lora_b = mx.zeros(shape=output_shape)
+        self.lora_a = mx.random.uniform(low=-bound, high=bound, shape=input_shape, dtype=dtype)
+        self.lora_b = mx.zeros(shape=output_shape, dtype=dtype)
 
     @property
     def lora_size(self):
