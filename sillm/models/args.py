@@ -90,7 +90,8 @@ class ModelArgs:
             "phi3": Phi3Args,
             "gemma2": Gemma2Args,
             "phimoe": PhiMoEArgs,
-            "pharia-v1": LlamaArgs
+            "pharia-v1": LlamaArgs,
+            "granite": GraniteArgs,
         }
 
         if "model_type" in config:
@@ -232,4 +233,15 @@ class PhiMoEArgs(ModelArgs):
     num_local_experts: int = 16
     num_experts_per_tok: int = 2
     rms_norm_eps: float = 1e-5
+    rope_scaling: dict = None
+
+@dataclasses.dataclass
+class GraniteArgs(ModelArgs):
+    """
+    Granite model arguments.
+    """
+    embedding_multiplier: float = 1.0
+    residual_multiplier: float = 1.0
+    attention_multiplier: float = 1.0
+    logits_scaling: float = 1.0
     rope_scaling: dict = None

@@ -19,7 +19,8 @@ default_templates = {
     "phi3": "phi3",
     "phimoe": "phi3.5",
     "nemotron": "nemotron",
-    "pharia-v1": "llama3"
+    "pharia-v1": "llama3",
+    "granite": "granite",
 }
 
 class Template(object):

@@ -156,6 +156,10 @@ def map_config(config):
         "logit_scale",
         "attention_bias",
         "mlp_bias",
+        "logits_scaling",
+        "embedding_multiplier",
+        "residual_multiplier",
+        "attention_multiplier",
     ]
     for key in mlx_keys:
         if key in config:

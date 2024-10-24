@@ -11,3 +11,4 @@ from sillm.models import cohere
 from sillm.models import phimoe
 from sillm.models import nemotron
 from sillm.models import pharia1
+from sillm.models import granite
