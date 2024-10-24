@@ -54,7 +54,7 @@ class TransformerBlock(llama.TransformerBlock):
 
 ########
 # References:
-# https://github.com/huggingface/transformers/blob/main/src/transformers/models/gemma/modeling_gemma.py
+# https://github.com/huggingface/transformers/blob/main/src/transformers/models/qwen2/modeling_qwen2.py
 ########
 class Model(llama.Model):
     """
