@@ -134,10 +134,8 @@ class TransformerBlock(nn.Module):
         Returns:
             Output tensor and cache.
         """
-        r = self.attention(self.attention_norm(x), mask, cache)
-        h = x + r
-        r = self.feed_forward(self.ffn_norm(h))
-        out = h + r
+        h = x + self.attention(self.attention_norm(x), mask, cache)
+        out = h + self.feed_forward(self.ffn_norm(h))
         
         return out
 
