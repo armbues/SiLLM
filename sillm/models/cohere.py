@@ -158,7 +158,7 @@ class Model(BaseModel):
             cache = [None] * len(self.layers)
 
         for e, layer in enumerate(self.layers):
-            h, cache[e] = layer.forward(h, mask, cache[e])
+            h = layer.forward(h, mask, cache[e])
 
         out = self.tok_embeddings.as_linear(self.norm(h))
         
