@@ -25,6 +25,7 @@ class ModelArgs:
     vocab_size: int = -1
     rope_theta: float = 10000.0
     rope_traditional: bool = True
+    rope_scaling: dict = None
     partial_rotary_factor: float = None
     hidden_act: str = None
     max_position_embeddings: int = 0
@@ -78,19 +79,19 @@ class ModelArgs:
         ArgsClass = None
 
         args_map = {
-            "llama": LlamaArgs,
-            "mistral": LlamaArgs,
-            "gemma": LlamaArgs,
+            "llama": ModelArgs,
+            "mistral": ModelArgs,
+            "gemma": ModelArgs,
             "mixtral": MixtralArgs,
-            "phi": PhiArgs,
-            "qwen2": Qwen2Args,
-            "starcoder2": Starcoder2Args,
+            "phi": ModelArgs,
+            "qwen2": ModelArgs,
+            "starcoder2": ModelArgs,
             "dbrx": DbrxArgs,
             "cohere": CohereArgs,
             "phi3": Phi3Args,
             "gemma2": Gemma2Args,
             "phimoe": PhiMoEArgs,
-            "pharia-v1": LlamaArgs,
+            "pharia-v1": ModelArgs,
             "granite": GraniteArgs,
         }
 
@@ -100,12 +101,12 @@ class ModelArgs:
             if model_type in args_map:
                 ArgsClass = args_map[model_type]
             else:
-                logger.warn(f"Unknown model type {model_type} - falling back to `llama` config")
-                ArgsClass = LlamaArgs
+                logger.warn(f"Unknown model type {model_type} - falling back to `default` config")
+                ArgsClass = ModelArgs
         if ArgsClass is None:
-            ArgsClass = LlamaArgs
+            ArgsClass = ModelArgs
             config["model_type"] = "llama"
-            logger.warn(f"No model type specified - falling back to `llama` config")
+            logger.warning(f"No model type specified - falling back to `llama` config")
 
         fields = ModelArgs.__annotations__
         fields.update(ArgsClass.__annotations__)
@@ -129,13 +130,6 @@ class ModelArgs:
         config = map_config(config)
 
         return ModelArgs.load_config(config)
-    
-@dataclasses.dataclass
-class LlamaArgs(ModelArgs):
-    """
-    Llama model arguments.
-    """
-    rope_scaling: dict = None
 
 @dataclasses.dataclass
 class MixtralArgs(ModelArgs):
@@ -143,7 +137,6 @@ class MixtralArgs(ModelArgs):
     Mixtral model arguments.
     """
     rope_theta: float = 1000000.0
-    rope_scaling: dict = None
     router_aux_loss_coef: float = 0.001
     moe: dict = None
 
@@ -153,28 +146,6 @@ class MixtralArgs(ModelArgs):
                 "num_experts": 8,
                 "num_experts_per_tok": 2
             }
-
-@dataclasses.dataclass
-class PhiArgs(ModelArgs):
-    """
-    Phi model arguments.
-    """
-    rope_scaling: dict = None
-
-@dataclasses.dataclass
-class Qwen2Args(ModelArgs):
-    """
-    Starcoder2 model arguments.
-    """
-    rope_scaling: dict = None
-
-@dataclasses.dataclass
-class Starcoder2Args(ModelArgs):
-    """
-    Starcoder2 model arguments.
-    """
-    rope_scaling: dict = None
-    tie_word_embeddings: bool = True
 
 @dataclasses.dataclass
 class DbrxArgs(ModelArgs):
@@ -204,15 +175,14 @@ class CohereArgs(ModelArgs):
     Cohere model arguments.
     """
     norm_bias: bool = False
-    logit_scale: float = 0.0625
     use_qk_norm: bool = False
+    logit_scale: float = 0.0625
 
 @dataclasses.dataclass
 class Phi3Args(ModelArgs):
     """
     Phi-3 model arguments.
     """
-    rope_scaling: dict = None
     embd_pdrop: float = 0.0
 
 @dataclasses.dataclass
@@ -220,7 +190,6 @@ class Gemma2Args(ModelArgs):
     """
     Gemma 2 model arguments.
     """
-    rope_scaling: dict = None
     attn_logit_softcapping: float = 50.0
     final_logit_softcapping: float = 30.0
     query_pre_attn_scalar: float = 144.0
@@ -233,7 +202,6 @@ class PhiMoEArgs(ModelArgs):
     num_local_experts: int = 16
     num_experts_per_tok: int = 2
     rms_norm_eps: float = 1e-5
-    rope_scaling: dict = None
 
 @dataclasses.dataclass
 class GraniteArgs(ModelArgs):
@@ -244,4 +212,3 @@ class GraniteArgs(ModelArgs):
     residual_multiplier: float = 1.0
     attention_multiplier: float = 1.0
     logits_scaling: float = 1.0
-    rope_scaling: dict = None
