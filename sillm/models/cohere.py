@@ -6,6 +6,7 @@ import mlx.nn as nn
 from sillm.models.base import BaseModel
 from sillm.models.args import ModelArgs
 from sillm.modules.norm import LayerNorm2D
+from sillm.modules.rope import init_rope
 import sillm.models.llama as llama
     
 class Attention(nn.Module):
@@ -26,16 +27,16 @@ class Attention(nn.Module):
 
         self.scale = self.args.head_dim ** -0.5
 
-        self.wq = nn.Linear(args.dim, args.n_heads * args.head_dim, bias=False)
-        self.wk = nn.Linear(args.dim, args.n_kv_heads * args.head_dim, bias=False)
-        self.wv = nn.Linear(args.dim, args.n_kv_heads * args.head_dim, bias=False)
-        self.wo = nn.Linear(args.n_heads * args.head_dim, args.dim, bias=False)
+        self.wq = nn.Linear(args.dim, args.n_heads * args.head_dim, bias=args.attention_bias)
+        self.wk = nn.Linear(args.dim, args.n_kv_heads * args.head_dim, bias=args.attention_bias)
+        self.wv = nn.Linear(args.dim, args.n_kv_heads * args.head_dim, bias=args.attention_bias)
+        self.wo = nn.Linear(args.n_heads * args.head_dim, args.dim, bias=args.attention_bias)
         
         if self.use_qk_norm:
             self.q_norm = LayerNorm2D(self.n_heads, args.head_dim, eps=args.norm_eps)
             self.k_norm = LayerNorm2D(self.n_kv_heads, args.head_dim, eps=args.norm_eps)
 
-        self.rope = nn.RoPE(args.head_dim, traditional=True, base=args.rope_theta)
+        self.rope = init_rope(args)
 
     def __call__(self,
                  x: mx.array,
@@ -66,9 +67,7 @@ class Attention(nn.Module):
             queries = self.rope(queries)
             keys = self.rope(keys)
 
-        output = mx.fast.scaled_dot_product_attention(
-            queries, keys, values, scale=self.scale, mask=mask
-        )
+        output = mx.fast.scaled_dot_product_attention(queries, keys, values, scale=self.scale, mask=mask)
         output = output.transpose(0, 2, 1, 3).reshape(B, L, -1)
 
         return self.wo(output)
