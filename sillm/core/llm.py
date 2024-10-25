@@ -34,6 +34,7 @@ model_map = {
     "cohere":       models.cohere.Model,
     "nemotron":     models.nemotron.Model,
     "pharia-v1":    models.pharia1.Model,
+    "granite":      models.granite.Model,
 }
 
 class LLM():
