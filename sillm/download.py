@@ -9,6 +9,7 @@ if __name__ == "__main__":
     parser.add_argument("model", type=str, help="The model identifier (e.g. microsoft/Phi-3-medium-4k-instruct)")
     parser.add_argument("output", type=str, help="Output directory for model files")
     parser.add_argument("--token", default=None, type=str, help="Hugging Face API token")
+    parser.add_argument("--proxy", default=None, type=str, help="Proxy URL")
     args = parser.parse_args()
 
     if args.token:
@@ -19,4 +20,11 @@ if __name__ == "__main__":
 
     allow_patterns = ["*.json", "model.safetensors", "model-*.safetensors", "consolidated.safetensors", "*.model"]
 
-    huggingface_hub.snapshot_download(repo_id=args.model, allow_patterns=allow_patterns, local_dir=model_path)
+    if args.proxy:
+        proxies = {
+            "https": args.proxy
+        }
+    else:
+        proxies = None
+
+    huggingface_hub.snapshot_download(repo_id=args.model, allow_patterns=allow_patterns, proxies=proxies, local_dir=model_path)
