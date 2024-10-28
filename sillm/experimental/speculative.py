@@ -192,6 +192,7 @@ class SpeculativeEdit(LLM):
             "total_tokens": 0
         }
         speculative = {
+            "num_drafted": 0,
             "num_accepted": 0,
             "drafted": []
         }
@@ -226,6 +227,7 @@ class SpeculativeEdit(LLM):
         target_tokens = input_tokens[-1:] + self.tokenizer.encode(target, bos=False, eos=True) + [self.tokenizer.eos_id] * lookahead
         spec_offset = 0
         spec_mode = True
+        total_drafted = 0
         total_accepted = 0
 
         # Main generation loop
@@ -261,6 +263,9 @@ class SpeculativeEdit(LLM):
                 # Update speculative mode
                 spec_mode = (num_accepted == lookahead)
                 spec_offset += num_accepted
+
+                # Update draft counter
+                total_drafted += lookahead
             else:
                 # Generate next token
                 inputs = mx.array(tokens[-1:])[None]
@@ -295,6 +300,7 @@ class SpeculativeEdit(LLM):
             usage["completion_tokens"] += len(result_tokens)
             usage["total_tokens"] = len(tokens)
             timing["runtime"] = time.perf_counter() - start
+            speculative["num_drafted"] = total_drafted
             speculative["num_accepted"] = total_accepted
             if token_ids:
                 metadata["token_ids"] = tokens
