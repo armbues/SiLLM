@@ -237,22 +237,24 @@ class TrainableLLM(LLM):
                     else:
                         rewards = np.vstack([rewards, reward])
 
-                # Get memory usage
-                peak_memory = mx.metal.get_peak_memory()
-                memory_usage = peak_memory / system_memory
-                if memory_usage > 0.9:
-                    pbar_epochs.write(f"HIGH MEMORY USAGE: {(peak_memory // (1024 ** 2)):,} MB ({memory_usage:.2%} of system memory)")
-                mx.metal.reset_peak_memory()
-
                 # Report training loss if needed
                 if (n + 1) % report_steps == 0:
                     train_loss = np.mean(losses)
                     stop = time.perf_counter()
 
+                    # Print training loss and timings
                     pbar_epochs.write(f"#{n + 1}:\tTraining loss    {train_loss:.3f}\t{float(intv_tokens) / (stop - start):.3f} tok/sec")
                     if rewards is not None:
                         pbar_epochs.write(f"#{n + 1}:\tTraining reward  {str(np.mean(rewards, axis=0))}")
                         rewards = None
+
+                    # Print memory usage
+                    peak_memory = mx.metal.get_peak_memory()
+                    memory_usage = peak_memory / system_memory
+                    if memory_usage > 0.75:
+                        pbar_epochs.write(f"#{n + 1}:\tPeak memory      {(peak_memory // (1024 ** 2)):,} MB ({memory_usage:.2%} of system memory)")
+                    mx.metal.reset_peak_memory()
+
                     pbar_epochs.refresh()
 
                     if report_callback is not None:
@@ -264,11 +266,11 @@ class TrainableLLM(LLM):
 
                 # Report validation loss if needed
                 if n == 0 or (n + 1) % eval_steps == 0:
+                    # Print validation loss and timings
                     stop = time.perf_counter()
                     val_loss = self.evaluate(dataset_validation, batch_size, validation_batches)
                     start = time.perf_counter()
                     pbar_epochs.write(f"#{n + 1}:\tValidation loss  {val_loss:.3f}\t{(start - stop):.3f} sec")
-                    pbar_epochs.write(f"#{n + 1}:\tPeak memory      {(peak_memory // (1024 ** 2)):,} MB ({memory_usage:.2%} of system memory)")
 
                     # Eval callback
                     if eval_callback is not None:
