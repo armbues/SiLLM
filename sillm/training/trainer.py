@@ -13,7 +13,6 @@ import mlx.optimizers as optim
 from mlx.utils import tree_map
 
 from sillm.core.llm import LLM
-from sillm.models.args import ModelArgs
 from sillm.training.dataset import Dataset
 
 logger = logging.getLogger("sillm")
@@ -91,6 +90,7 @@ class TrainableLLM(LLM):
               optimizer_type: str = "adam",
               learning_rate: float = 1e-5,
               learning_decay: float = 0.0,
+              learning_warmup: int = 0,
               compiled_step: bool = True,
               gradient_checkpointing: bool = False,
               gradient_accumulation_steps: int = 1,
@@ -131,14 +131,27 @@ class TrainableLLM(LLM):
         # Get system memory
         system_memory = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
 
+        # Initialize scheduler
+        if learning_decay > 0.0:
+            scheduler = optim.step_decay(learning_rate, 1-learning_decay, 1)
+
+            logger.debug(f"Training learning decay: {learning_decay}")
+        else:
+            scheduler = optim.linear_schedule(learning_rate, learning_rate, 1)
+        if learning_warmup > 0:
+            warmup = optim.linear_schedule(learning_rate * 0.1, learning_rate, learning_warmup)
+            scheduler = optim.join_schedules([warmup, scheduler], [learning_warmup])
+
+            logger.debug(f"Training learning warmup steps: {learning_warmup}")
+
         # Initialize optimizer
         optimizer_type = optimizer_type.lower()
         if optimizer_type == "adam":
-            optimizer = optim.Adam(learning_rate=learning_rate)
+            optimizer = optim.Adam(learning_rate=scheduler)
         elif optimizer_type == "adamw":
-            optimizer = optim.AdamW(learning_rate=learning_rate, weight_decay=learning_decay)
+            optimizer = optim.AdamW(learning_rate=scheduler, weight_decay=0.0)
         elif optimizer_type == "adafactor":
-            optimizer = optim.Adafactor(learning_rate=learning_rate)
+            optimizer = optim.Adafactor(learning_rate=scheduler, weight_decay=0.0)
         else:
             raise ValueError(f"Unknown optimizer type: {optimizer_type}")
         
@@ -248,12 +261,16 @@ class TrainableLLM(LLM):
                         pbar_epochs.write(f"#{n + 1}:\tTraining reward  {str(np.mean(rewards, axis=0))}")
                         rewards = None
 
-                    # Print memory usage
-                    peak_memory = mx.metal.get_peak_memory()
-                    memory_usage = peak_memory / system_memory
-                    if memory_usage > 0.75:
+                    # Verbose logging using tqdm output
+                    if logger.level <= logging.INFO:
+                        # Print memory usage
+                        peak_memory = mx.metal.get_peak_memory()
+                        memory_usage = peak_memory / system_memory
                         pbar_epochs.write(f"#{n + 1}:\tPeak memory      {(peak_memory // (1024 ** 2)):,} MB ({memory_usage:.2%} of system memory)")
-                    mx.metal.reset_peak_memory()
+                        mx.metal.reset_peak_memory()
+
+                        # Print learning rate
+                        pbar_epochs.write(f"#{n + 1}:\tLearning rate    {optimizer.learning_rate.item():.10f}")
 
                     pbar_epochs.refresh()
 

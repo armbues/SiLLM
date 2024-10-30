@@ -1,8 +1,6 @@
 import os
 import argparse
 
-import mlx.core as mx
-
 import sillm
 import sillm.utils as utils
 
@@ -28,7 +26,8 @@ if __name__ == "__main__":
     parser.add_argument("--grad_checkpoint", default=False, action="store_true", help="Use gradient checkpointing")
     parser.add_argument("--grad_accu_steps", type=int, default=1, help="Gradient accumulation steps (default: 1)")
     parser.add_argument("--learning_rate", default=1e-5, type=float, help="Learning rate (default: 1e-5)")
-    parser.add_argument("--learning_decay", default=0.0, type=float, help="Learning decay for AdamW optimizer (default: 0.0)")
+    parser.add_argument("--learning_decay", default=0.0, type=float, help="Learning decay for optimizer schedule (default: 0.0)")
+    parser.add_argument("--learning_warmup", default=0, type=int, help="Learning warmup for optimizer schedule (default: 0)")
     parser.add_argument("--epochs", default=1, type=int, help="Number of epochs (default: 1)")
     parser.add_argument("--iterations", default=0, type=int, help="Number of iterations per epoch (default: dataset size)")
     parser.add_argument("--batch_size", default=4, type=int, help="Size of training batches (default: 4)")
@@ -138,6 +137,7 @@ if __name__ == "__main__":
             "optimizer_type":               args.optimizer,
             "learning_rate":                args.learning_rate,
             "learning_decay":               args.learning_decay,
+            "learning_warmup":              args.learning_warmup,
             "gradient_checkpointing":       args.grad_checkpoint,
             "gradient_accumulation_steps":  args.grad_accu_steps,
             "epochs":                       args.epochs,
