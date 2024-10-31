@@ -256,7 +256,7 @@ class TrainableLLM(LLM):
                     stop = time.perf_counter()
 
                     # Print training loss and timings
-                    pbar_epochs.write(f"#{n + 1}:\tTraining loss    {train_loss:.3f}\t{float(intv_tokens) / (stop - start):.3f} tok/sec")
+                    pbar_epochs.write(f"#{n + 1}:\tTraining loss    {train_loss:.3f}\t{float(intv_tokens) / (stop - start):.3f} tok/sec (learning rate: {optimizer.learning_rate.item():.10f})")
                     if rewards is not None:
                         pbar_epochs.write(f"#{n + 1}:\tTraining reward  {str(np.mean(rewards, axis=0))}")
                         rewards = None
@@ -268,9 +268,6 @@ class TrainableLLM(LLM):
                         memory_usage = peak_memory / system_memory
                         pbar_epochs.write(f"#{n + 1}:\tPeak memory      {(peak_memory // (1024 ** 2)):,} MB ({memory_usage:.2%} of system memory)")
                         mx.metal.reset_peak_memory()
-
-                        # Print learning rate
-                        pbar_epochs.write(f"#{n + 1}:\tLearning rate    {optimizer.learning_rate.item():.10f}")
 
                     pbar_epochs.refresh()
 
