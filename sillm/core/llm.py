@@ -35,6 +35,7 @@ model_map = {
     "nemotron":     models.nemotron.Model,
     "pharia-v1":    models.pharia1.Model,
     "granite":      models.granite.Model,
+    "mobilellm":    models.llama.Model,
 }
 
 class LLM():

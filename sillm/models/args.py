@@ -93,6 +93,7 @@ class ModelArgs:
             "phimoe": PhiMoEArgs,
             "pharia-v1": ModelArgs,
             "granite": GraniteArgs,
+            "mobilellm": ModelArgs,
         }
 
         if "model_type" in config:
@@ -106,7 +107,7 @@ class ModelArgs:
         if ArgsClass is None:
             ArgsClass = ModelArgs
             config["model_type"] = "llama"
-            logger.warning(f"No model type specified - falling back to `llama` config")
+            logger.warning(f"No model type specified - falling back to `default` config")
 
         fields = ModelArgs.__annotations__
         fields.update(ArgsClass.__annotations__)
