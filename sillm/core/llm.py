@@ -416,7 +416,7 @@ class LLM():
             flush: Flush buffer every n tokens.
             extra_stop_tokens: Additional stop tokens.
         Returns:
-            Generated completion.
+            Tuple of generated text and metadata.
         """
         result = ""
         for text, metadata in generate(self.model, self.tokenizer, *args, **kwargs):
