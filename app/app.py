@@ -139,6 +139,7 @@ async def on_message(message: cl.Message):
     for s, _ in model.generate(prompt, **generate_args):
         await msg.stream_token(s)
         response += s
+    await msg.send()
 
     # Add assistant message to conversation
     conversation.add_assistant(response)
