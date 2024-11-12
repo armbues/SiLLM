@@ -43,6 +43,8 @@ class Conversation(object):
         Load messages into conversation.
         Args:
             messages: List of messages.
+        Returns:
+            Formatted conversation string and formatted context.
         """
         self.messages = messages
 
@@ -51,13 +53,15 @@ class Conversation(object):
                     role: str,
                     add_generation_prompt: bool = True
                     ):
+        # Add system message
         if len(self.messages) == 0 and self.system_prompt is not None:
-            # Add system message
             msg_system = {
                 "role": "system",
                 "content": self.system_prompt
             }
             self.messages.append(msg_system)
+        
+        # Add message
         msg = {
             "role": role,
             "content": content
@@ -76,7 +80,7 @@ class Conversation(object):
             content: User prompt.
             add_generation_prompt: Whether to add generation prompt.
         Returns:
-            Formatted conversation string.
+            Formatted conversation string and formatted context.
         """
         return self.add_message(content=content, role="user", add_generation_prompt=add_generation_prompt)
     
@@ -88,7 +92,7 @@ class Conversation(object):
         Args:
             content: Assistant response.
         Returns:
-            Formatted conversation string.
+            Formatted conversation string and formatted context.
         """
         return self.add_message(content=content, role="assistant", add_generation_prompt=False)
     

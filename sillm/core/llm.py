@@ -442,7 +442,7 @@ def generate(model,
              ):
     start = time.perf_counter()
 
-    # Tokenize prompt
+    # Tokenize inputs
     inputs = mx.array(tokenizer.encode(prompt))
     
     # Initialize metadata
@@ -510,16 +510,17 @@ def generate(model,
         return y, p
 
     def generate_step(model, inputs):
-        logits = None
+        logits, cache = None, None
 
         if prompt_cache is not None:
             # Retrieve cached logits and KV cache
             logits, cache = prompt_cache.get(inputs)
         
-        if logits is None:
+        if cache is None:
             # Initialize KV cache
             cache = KVCache.for_model(model)
 
+        if logits is None:
             # Initial forward pass through model
             logits = model(inputs[None], cache=cache)
             logits = logits[:, -1, :]
