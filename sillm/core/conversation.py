@@ -90,7 +90,7 @@ class Conversation(object):
         Returns:
             Formatted conversation string.
         """
-        return self.add_message(content=content, role="assistant")
+        return self.add_message(content=content, role="assistant", add_generation_prompt=False)
     
 class AutoConversation(Conversation):
     """
