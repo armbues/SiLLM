@@ -78,9 +78,10 @@ class Template(object):
 
     def apply_chat_template(self,
                             messages: list,
-                            add_generation_prompt: bool = False
+                            add_generation_prompt: bool = False,
+                            tools: dict = None,
                             ):
-        return self.template.render(messages=messages, add_generation_prompt=add_generation_prompt, **self.special_tokens_map)
+        return self.template.render(messages=messages, add_generation_prompt=add_generation_prompt, tools=tools, **self.special_tokens_map)
     
 class AutoTemplate(Template):
     def __init__(self,
@@ -93,9 +94,10 @@ class AutoTemplate(Template):
     
     def apply_chat_template(self,
                             messages: list,
-                            add_generation_prompt: bool = False
+                            add_generation_prompt: bool = False,
+                            tools: dict = None,
                             ):
-        return self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=add_generation_prompt)
+        return self.tokenizer.apply_chat_template(messages, tokenize=False, tools=tools, add_generation_prompt=add_generation_prompt)
 
 def init_template(tokenizer,
                   args,
