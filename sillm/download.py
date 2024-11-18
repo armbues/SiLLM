@@ -18,7 +18,7 @@ if __name__ == "__main__":
     model_path = pathlib.Path(args.output)
     model_path.mkdir(parents=True, exist_ok=True)
 
-    allow_patterns = ["*.json", "model.safetensors", "model-*.safetensors", "consolidated.safetensors", "*.model"]
+    allow_patterns = ["*.json", "model.safetensors", "model-*.safetensors", "consolidated.safetensors", "consolidated-*.safetensors", "*.model"]
 
     if args.proxy:
         proxies = {
