@@ -99,7 +99,7 @@ if __name__ == "__main__":
 
     # Set conversation template
     if args.template:
-        template = sillm.Template(model.tokenizer, template_name=args.template)
+        template = sillm.Template(model.tokenizer, model.args, template_name=args.template)
     else:
         template = None
 
