@@ -245,6 +245,8 @@ class TrainableLLM(LLM):
 
                 # Record rewards
                 if reward is not None:
+                    reward = reward.tolist()
+                    
                     if rewards is None:
                         rewards = reward
                     else:
