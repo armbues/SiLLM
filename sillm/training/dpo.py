@@ -5,11 +5,11 @@ import mlx.nn as nn
 
 from sillm.core.llm import LLM, generate
 from sillm.models.args import ModelArgs
-from sillm.training.trainer import TrainableLLM
+from sillm.training.lora import TrainableLoRA
 
 logger = logging.getLogger("sillm")
 
-class TrainableDPO(TrainableLLM):
+class TrainableDPO(TrainableLoRA):
     """
     Trainable DPO model wrapper.
     """
