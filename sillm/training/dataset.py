@@ -33,6 +33,11 @@ class Dataset:
     def __len__(self):
         return len(self._data)
     
+    def iterate_batches(self,
+                        batch_size: int,
+                        train: bool = False):
+        raise NotImplementedError("Class Dataset is used for inheritance only")
+    
 class DatasetCompletion(Dataset):
     """
     Completion dataset wrapper.
