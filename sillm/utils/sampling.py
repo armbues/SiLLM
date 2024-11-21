@@ -27,6 +27,20 @@ def top_p(logits: mx.array,
 
     return logits
 
+########
+# References:
+# Chenxia Tang, Jianchun Liu, Hongli Xu, Liusheng Huang. Top-nσ: Not All Logits Are You Need. https://arxiv.org/abs/2411.07641
+########
+@partial(mx.compile, inputs=mx.random.state, outputs=mx.random.state)
+def top_nsigma(logits: mx.array,
+               n: float = 1.0
+               ) -> mx.array:
+    threshold = logits.max(axis=-1, keepdims=True) - n * logits.std(axis=-1)
+    mask = logits >= threshold
+    logits = mx.where(mask, logits, 0.0)
+
+    return logits
+
 @partial(mx.compile, inputs=mx.random.state, outputs=mx.random.state)
 def apply_repetition_penalty(logits: mx.array,
                              tokens: list,

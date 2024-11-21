@@ -431,6 +431,7 @@ def generate(model,
              temperature: float = 0.0,
              top_k: int = 0,
              top_p: float = 1.0,
+             top_nsigma: float = 0.0,
              repetition_penalty: float = None,
              repetition_window: int = 25,
              logprobs: bool = False,
@@ -498,8 +499,10 @@ def generate(model,
             # Apply top-k sampling
             if top_k > 0:
                 logits = sampling.top_k(logits, k=top_k)
-            if 0.0 < top_p < 1.0:
+            elif 0.0 < top_p < 1.0:
                 logits = sampling.top_p(logits, p=top_p)
+            elif top_nsigma > 0.0:
+                logits = sampling.top_nsigma(logits, n=top_nsigma)
     
             y = mx.random.categorical(logits)
 

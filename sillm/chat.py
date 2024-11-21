@@ -16,6 +16,7 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--temperature", type=float, default=0.7, help="Sampling temperature")
     parser.add_argument("-k", "--top_k", type=int, default=0, help="Top-k sampling")
     parser.add_argument("-p", "--top_p", type=float, default=1.0, help="Top-p sampling")
+    parser.add_argument("-n", "--top_nsigma", type=float, default=0.0, help="Top-nsigma sampling")
     parser.add_argument("-r", "--repetition_penalty", type=float, default=None, help="Repetition penalty")
     parser.add_argument("-w", "--repetition_window", type=int, default=50, help="Window of generated tokens to consider for repetition penalty")
     parser.add_argument("-f", "--flush", type=int, default=5, help="Flush output every n tokens")
@@ -88,6 +89,7 @@ if __name__ == "__main__":
         "temperature": args.temperature,
         "top_k": args.top_k,
         "top_p": args.top_p,
+        "top_nsigma": args.top_nsigma,
         "repetition_penalty": args.repetition_penalty,
         "repetition_window": args.repetition_window,
         "max_tokens": args.max_tokens,
