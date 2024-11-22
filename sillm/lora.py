@@ -98,10 +98,7 @@ if __name__ == "__main__":
         plot = utils.Plot()
 
     # Set conversation template
-    if args.template:
-        template = sillm.Template(model.tokenizer, model.args, template_name=args.template)
-    else:
-        template = None
+    template = sillm.init_template(model.tokenizer, model.args, args.template)
 
     # Log memory usage
     utils.log_memory_usage()
