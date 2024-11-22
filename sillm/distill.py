@@ -6,7 +6,7 @@ from sillm.experimental.distillation import Distillation
 
 if __name__ == "__main__":
     # Parse commandline arguments
-    parser = argparse.ArgumentParser(description="A simple CLI for generating text with SiLLM using speculative decoding.")
+    parser = argparse.ArgumentParser(description="A simple CLI for distilling a model with LoRA.")
     parser.add_argument("draft", type=str, help="The input model directory or file")
     parser.add_argument("target", type=str, help="The output model directory or file")
     parser.add_argument("-c", "--config", default=None, type=str, help="Load YAML configuration file for training")
