@@ -4,6 +4,9 @@ import re
 import mlx.core as mx
 
 class LogitFilter:
+    """
+    Logit mask filter.
+    """
     def __init__(self,
                  tokenizer,
                  output_size: int
@@ -17,7 +20,7 @@ class LogitFilter:
     def __call__(self,
                  logits: mx.array
                  ) -> mx.array:
-        raise NotImplementedError("Class structure.StructureEnforcer is used for inheritance only")
+        raise NotImplementedError("Class LogitFilter is used for inheritance only")
 
 class ASCIIFilter(LogitFilter):
     """

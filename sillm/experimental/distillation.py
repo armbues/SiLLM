@@ -11,11 +11,12 @@ from sillm.training.lora import TrainableLoRA
 
 logger = logging.getLogger("sillm")
 
-########
-# References:
-# Geoffrey Hinton, Oriol Vinyals and Jeff Dean. Distilling the Knowledge in a Neural Network. https://arxiv.org/abs/1503.02531
-########
 class Distillation(TrainableLoRA):
+    """
+    Trainable distillation LLM.
+    References:
+    https://arxiv.org/abs/1503.02531
+    """
     @staticmethod
     def from_model(target_llm: LLM, draft_llm: LLM, **kwargs):
         """
