@@ -2,7 +2,7 @@ import argparse
 
 import sillm
 import sillm.utils as utils
-from sillm.experimental.distillation import Distillation
+from sillm.experimental.distillation import DistillationLoRA
 
 if __name__ == "__main__":
     # Parse commandline arguments
@@ -62,7 +62,7 @@ if __name__ == "__main__":
     distillation_config = {
         "loss_alpha": args.loss_alpha
     }
-    target_model = Distillation.from_model(target_model, draft_model, **distillation_config)
+    target_model = DistillationLoRA.from_model(target_model, draft_model, **distillation_config)
     
     # Initialize LoRA layers
     lora_config = {

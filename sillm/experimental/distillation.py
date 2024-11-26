@@ -11,7 +11,7 @@ from sillm.training.lora import TrainableLoRA
 
 logger = logging.getLogger("sillm")
 
-class Distillation(TrainableLoRA):
+class DistillationLoRA(TrainableLoRA):
     """
     Trainable distillation LLM.
     References:
@@ -26,7 +26,7 @@ class Distillation(TrainableLoRA):
         Returns:
             Trainable distillation LLM.
         """
-        model = Distillation(target_llm.model, draft_llm.model, target_llm.tokenizer, draft_llm.tokenizer, target_llm.args, **kwargs)
+        model = DistillationLoRA(target_llm.model, draft_llm.model, target_llm.tokenizer, draft_llm.tokenizer, target_llm.args, **kwargs)
         model._quantization = target_llm._quantization
 
         return model
