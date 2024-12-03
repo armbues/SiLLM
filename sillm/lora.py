@@ -15,6 +15,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output_dir", default=None, type=str, help="Output directory for adapter weights")
     parser.add_argument("-s", "--save_checkpoints", default=False, action="store_true", help="Save model checkpoints to output directory")
     parser.add_argument("-m", "--save_merge", default=None, type=str, help="Save merged model weights to .safetensors file")
+    parser.add_argument("--max_entries", default=None, type=int, help="Max number of entries to load from training dataset (default: unlimited)")
     parser.add_argument("--max_length", default=1024, type=int, help="Max token length per training dataset entry (default: 1024)")
     parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama-2, alpaca, etc.)")
     parser.add_argument("--lora_layers", default=0, type=int, help="Layers to use for LoRA (default: 0 for all layers)")
@@ -107,6 +108,7 @@ if __name__ == "__main__":
         # Load training dataset
         dataset_config = {
             "template": template,
+            "max_entries": args.max_entries,
             "max_length": args.max_length
         }
         dataset_training, dataset_validation, dataset_test = sillm.load_dataset(model.tokenizer, args.train, **dataset_config)

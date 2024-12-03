@@ -370,6 +370,7 @@ class DatasetDPO(Dataset):
                 break
     
 def load_jsonl(fpath,
+               max_entries: int = None,
                shuffle: bool = True
                ):
     entries = []
@@ -381,7 +382,23 @@ def load_jsonl(fpath,
     if shuffle:
         np.random.shuffle(entries)
 
+    if max_entries is not None:
+        entries = entries[:max_entries]
+
     return entries
+    
+def guess_type(entry):
+    if "text" in entry:
+        return DatasetCompletion
+    elif "messages" in entry:
+        return DatasetMessages
+    elif "prompt" in entry and "chosen" in entry and "rejected" in entry:
+        return DatasetDPO
+    elif "prompt" in entry and "response" in entry:
+        return DatasetInstruct
+    else:
+        entry_keys = list(entry.keys())
+        raise ValueError(f"Unknown dataset type with keys: {', '.join(entry_keys)}")
     
 def load_dataset(tokenizer,
                  dataset_path,
@@ -389,26 +406,14 @@ def load_dataset(tokenizer,
                  valid_split: float = 0.05,
                  test_split: float = 0.05,
                  template = None,
+                 max_entries: int = None,
                  max_length: int = 4096,
                  shuffle: bool = True
                  ):
     dataset_path = pathlib.Path(dataset_path)
 
-    def guess_type(entry):
-        if "text" in entry:
-            return DatasetCompletion
-        elif "messages" in entry:
-            return DatasetMessages
-        elif "prompt" in entry and "chosen" in entry and "rejected" in entry:
-            return DatasetDPO
-        elif "prompt" in entry and "response" in entry:
-            return DatasetInstruct
-        else:
-            entry_keys = list(entry.keys())
-            raise ValueError(f"Unknown dataset type with keys: {', '.join(entry_keys)}")
-
     if dataset_path.is_file():
-        entries = load_jsonl(dataset_path, shuffle=shuffle)
+        entries = load_jsonl(dataset_path, max_entries=max_entries, shuffle=shuffle)
 
         assert train_split + valid_split + test_split == 1.0, "Dataset splits must sum to 1.0"
         ix_train = int(len(entries) * train_split)
@@ -426,7 +431,7 @@ def load_dataset(tokenizer,
         for name in ("train", "valid", "test"):
             dataset_file = dataset_path / f"{name}.jsonl"
             if dataset_file.exists():
-                entries_split[name] = load_jsonl(dataset_file)
+                entries_split[name] = load_jsonl(dataset_file, max_entries=max_entries, shuffle=shuffle)
             else:
                 raise FileNotFoundError(f"Dataset file not found: {dataset_file}")
     else:

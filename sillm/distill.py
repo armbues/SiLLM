@@ -12,13 +12,14 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--config", default=None, type=str, help="Load YAML configuration file for training")
     parser.add_argument("-t", "--train", default=None, type=str, help="Train the model with training dataset in the file/directory")
     parser.add_argument("-s", "--seed", type=int, default=-1, help="Seed for randomization")
+    parser.add_argument("--max_entries", default=None, type=int, help="Max number of entries to load from training dataset (default: unlimited)")
     parser.add_argument("--max_length", default=1024, type=int, help="Max token length per training dataset entry (default: 1024)")
     parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama2, alpaca, etc.)")
-    parser.add_argument("--layers", default=0, type=int, help="Layers to use for LoRA (default: 0 for all layers)")
-    parser.add_argument("--target_modules", default="query_value", type=str, help="Target modules to use for LoRA: query_value, all_linear")
-    parser.add_argument("--rank", default=8, type=int, help="Rank to use for LoRA (default: 8)")
-    parser.add_argument("--dropout", default=0.0, type=int, help="Dropout to use for LoRA (default: 0.0)")
-    parser.add_argument("--scale", default=10.0, type=float, help="Scale to use for LoRA (default: 10.0)")
+    parser.add_argument("--lora_layers", default=0, type=int, help="Layers to use for LoRA (default: 0 for all layers)")
+    parser.add_argument("--lora_modules", default="query_value", type=str, help="Target modules to use for LoRA: query_value, all_linear")
+    parser.add_argument("--lora_rank", default=8, type=int, help="Rank to use for LoRA (default: 8)")
+    parser.add_argument("--lora_dropout", default=0.0, type=int, help="Dropout to use for LoRA (default: 0.0)")
+    parser.add_argument("--lora_scale", default=10.0, type=float, help="Scale to use for LoRA (default: 10.0)")
     parser.add_argument("--optimizer", type=str, default="adam", help="Optimizer type (default: adam)")
     parser.add_argument("--grad_checkpoint", default=False, action="store_true", help="Use gradient checkpointing")
     parser.add_argument("--grad_accu_steps", type=int, default=1, help="Gradient accumulation steps (default: 1)")
@@ -66,11 +67,11 @@ if __name__ == "__main__":
     
     # Initialize LoRA layers
     lora_config = {
-        "num_layers":       args.layers,
-        "target_modules":   args.target_modules,
-        "rank":             args.rank,
-        "dropout":          args.dropout,
-        "scale":            args.scale
+        "num_layers":       args.lora_layers,
+        "target_modules":   args.lora_modules,
+        "rank":             args.lora_rank,
+        "dropout":          args.lora_dropout,
+        "scale":            args.lora_scale
     }
     target_model.init_lora(**lora_config)
 
@@ -81,6 +82,7 @@ if __name__ == "__main__":
         # Load training dataset
         dataset_config = {
             "template": template,
+            "max_entries": args.max_entries,
             "max_length": args.max_length
         }
         dataset_training, dataset_validation, dataset_test = sillm.load_dataset(draft_model.tokenizer, args.train, **dataset_config)
