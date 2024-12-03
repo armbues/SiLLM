@@ -70,18 +70,23 @@ class DistillationLoRA(TrainableLoRA):
              ):
         num_tokens = loss_masks.sum()
 
-        # Calculate student loss
+        # Forward pass for student model
         student_logits = self.model(inputs)[:, :, :self.vocab_size]
+        student_probs = nn.softmax(student_logits)
+
+        # Calculate student loss
         student_loss = nn.losses.cross_entropy(student_logits, targets) * loss_masks
         student_loss = student_loss.sum() / num_tokens
 
-        # Calculate distillation loss
-        student_probs = nn.softmax(student_logits)
+        # Forward pass for teacher model
         teacher_logits = self.draft_model(inputs)[:, :, :self.vocab_size]
         teacher_probs = nn.softmax(teacher_logits)
+
+        # Calculate distillation loss
         distill_loss = nn.losses.cross_entropy(student_probs, teacher_probs) * loss_masks
         distill_loss = distill_loss.sum() / num_tokens
 
+        # Combine losses
         loss_value = self.alpha * student_loss + self.beta * distill_loss
         reward = mx.stack([student_loss, distill_loss])
         
