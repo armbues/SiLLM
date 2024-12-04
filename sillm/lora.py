@@ -147,6 +147,7 @@ if __name__ == "__main__":
         }
         model.train(dataset_training,
                     dataset_validation,
+                    dataset_test,
                     report_callback=report_callback,
                     eval_callback=eval_callback,
                     **training_config)

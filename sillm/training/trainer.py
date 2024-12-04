@@ -86,6 +86,7 @@ class TrainableLLM(LLM):
     def train(self, 
               dataset_training: Dataset,
               dataset_validation: Dataset,
+              dataset_test: Dataset = None,
               batch_size: int = 4,
               optimizer_type: str = "adam",
               learning_rate: float = 1e-5,
@@ -246,7 +247,7 @@ class TrainableLLM(LLM):
                 # Record rewards
                 if reward is not None:
                     reward = reward.tolist()
-                    
+
                     if rewards is None:
                         rewards = reward
                     else:
@@ -295,3 +296,12 @@ class TrainableLLM(LLM):
                             pbar_epochs.write(f"#{n + 1}:\t" + msg)
 
                     start = time.perf_counter()
+
+        # Evaluate test dataset
+        if dataset_test is not None:
+            test_batches = validation_samples // batch_size
+
+            stop = time.perf_counter()
+            test_loss = self.evaluate(dataset_test, batch_size, test_batches)
+            start = time.perf_counter()
+            logger.info(f"Test loss: {test_loss:.3f}\t{start - stop:.3f} sec")

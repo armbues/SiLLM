@@ -104,4 +104,5 @@ if __name__ == "__main__":
         }
         target_model.train(dataset_training,
                         dataset_validation,
+                        dataset_test,
                         **training_config)
