@@ -113,7 +113,7 @@ class SentencePieceTokenizer(Tokenizer):
         Returns:
             Encoded tokens.
         """
-        if bos:
+        if bos and self.bos_id is not None:
             tokens = [self.bos_id, *self._model.encode(s)]
         else:
             tokens = self._model.encode(s)
@@ -242,7 +242,7 @@ class TransformerTokenizer(Tokenizer):
         Returns:
             Encoded tokens.
         """
-        if bos:
+        if bos and self.bos_id is not None:
             tokens = [self.bos_id, *self._model.encode(s, add_special_tokens=False)]
         else:
             tokens = self._model.encode(s, add_special_tokens=False)
