@@ -42,16 +42,16 @@ def map_key(k):
         k = re.sub(r"\.block_sparse_moe\.experts\.(\d+)\.w2.", r".feed_forward.experts.\1.w2.", k)
         k = re.sub(r"\.block_sparse_moe\.experts\.(\d+)\.w3.", r".feed_forward.experts.\1.w3.", k)
 
-        # Phi mapping
+        # Phi
         k = re.sub(r"\.self_attn\.dense\.", ".attention.wo.", k)
         k = re.sub(r"\.mlp\.fc1\.", ".feed_forward.w1.", k)
         k = re.sub(r"\.mlp\.fc2\.", ".feed_forward.w2.", k)
 
-        # Starcoder2 mapping
+        # Starcoder2
         k = re.sub(r"\.mlp\.c_fc\.", ".feed_forward.w1.", k)
         k = re.sub(r"\.mlp\.c_proj\.", ".feed_forward.w2.", k)
 
-        # Phi-3 mapping
+        # Phi-3
         k = re.sub(r"\.mlp\.gate_up_proj\.", ".feed_forward.w1.", k)
         k = re.sub(r"\.self_attn\.qkv_proj\.", r".attention.wqkv.", k)
 
@@ -106,6 +106,23 @@ def map_key(k):
         k = re.sub(r"\.norm_attn_norm\.norm_2\.", ".ffn_norm.", k)
 
         return k
+    elif k.startswith("transformer.h."):
+        layer = k.split(".")[2]
+
+        k = re.sub(r"^transformer\.h\.", "layers.", k)
+        
+        # Exaone
+        k = re.sub(r"\.ln_1\.", ".attention_norm.", k)
+        k = re.sub(r"\.ln_2\.", ".ffn_norm.", k)
+        k = re.sub(r"\.mlp\.c_fc_0\.", ".feed_forward.w1.", k)
+        k = re.sub(r"\.mlp\.c_fc_1\.", ".feed_forward.w3.", k)
+        k = re.sub(r"\.mlp\.c_proj\.", ".feed_forward.w2.", k)
+        k = re.sub(r"\.attn\.attention\.(q|k|v)_proj\.", r".attention.w\1.", k)
+        k = re.sub(r"\.attn\.attention\.out_proj\.", r".attention.wo.", k)
+
+        return k
+    elif k.startswith("transformer.ln_f."):
+        return re.sub(r"^transformer\.ln_f\.", "norm.", k)
     
     return None
 
@@ -168,6 +185,7 @@ def map_config(config):
     key_map = {
         "hidden_size": "dim",
         "num_hidden_layers": "n_layers",
+        "num_layers": "n_layers",
         "num_attention_heads": "n_heads",
         "intermediate_size": "hidden_dim",
         "num_key_value_heads": "n_kv_heads",
@@ -177,6 +195,7 @@ def map_config(config):
         "norm_epsilon": "norm_eps",
         "layer_norm_bias": "norm_bias",
         "hidden_activation": "hidden_act",
+        "activation_function": "hidden_act",
         # GGUF metadata: https://github.com/ggerganov/ggml/blob/master/docs/gguf.md
         "llama.embedding_length": "dim",
         "llama.block_count": "n_layers",

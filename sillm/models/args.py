@@ -94,6 +94,7 @@ class ModelArgs:
             "pharia-v1": ModelArgs,
             "granite": GraniteArgs,
             "mobilellm": ModelArgs,
+            "exaone": ModelArgs,
         }
 
         if "model_type" in config:
@@ -102,7 +103,7 @@ class ModelArgs:
             if model_type in args_map:
                 ArgsClass = args_map[model_type]
             else:
-                logger.warn(f"Unknown model type {model_type} - falling back to `default` config")
+                logger.warning(f"Unknown model type {model_type} - falling back to `default` config")
                 ArgsClass = ModelArgs
         if ArgsClass is None:
             ArgsClass = ModelArgs

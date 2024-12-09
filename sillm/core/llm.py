@@ -36,6 +36,7 @@ model_map = {
     "pharia-v1":    models.pharia1.Model,
     "granite":      models.granite.Model,
     "mobilellm":    models.llama.Model,
+    "exaone":       models.llama.Model,
 }
 
 class LLM():
