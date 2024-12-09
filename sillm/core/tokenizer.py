@@ -8,6 +8,7 @@ import sillm.models.args as args
 model_special_tokens = [
     "[INST]", "[/INST]",                                            # Llama-2 / Mistral
     "<|start_header_id|>", "<|end_header_id|>", "<|eot_id|>",       # Llama-3
+    "<|eom_id|>",                                                   # Llama-3.1
     "<|end|>",                                                      # Phi-3
     "<|im_start|>", "<|im_end|>",                                   # Yi / Qwen
     "<start_of_turn>", "<end_of_turn>",                             # Gemma
