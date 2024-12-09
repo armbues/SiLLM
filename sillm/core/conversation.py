@@ -10,17 +10,19 @@ class Conversation(object):
     """
     def __init__(self,
                 template: Template,
-                system_prompt: str = None
+                system_prompt: str = None,
+                tools: list = None
                 ):
         self.template = template
         self.system_prompt = system_prompt
+        self.tools = tools
 
         self.messages = []
 
     def apply_chat_template(self,
                             add_generation_prompt: bool = False
                             ):
-        return self.template.apply_chat_template(messages=self.messages, add_generation_prompt=add_generation_prompt)
+        return self.template.apply_chat_template(messages=self.messages, tools=self.tools, add_generation_prompt=add_generation_prompt)
 
     def __str__(self):
         """
