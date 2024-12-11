@@ -103,7 +103,7 @@ class LLM():
         total_size = 0
         for module in self.model.modules():
             if isinstance(module, nn.QuantizedLinear):
-                total_size += module.weight.size * (32 // module.bits)
+                total_size += int(module.weight.size * 32 / module.bits)
             elif isinstance(module, nn.Linear):
                 total_size += module.weight.size
 
