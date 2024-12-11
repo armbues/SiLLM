@@ -132,6 +132,13 @@ if __name__ == "__main__":
             
             prompt = ""
             continue
+        elif prompt.startswith('@'):
+            # Load prompt from file
+            fpath = prompt.lstrip('@')
+            if not os.path.isfile(fpath):
+                continue
+            with open(fpath, "r") as f:
+                prompt = f.read()
         elif prompt.endswith('\\'):
             # Continue prompt after line break
             prompt = prompt.rstrip('\\') + "\n"
