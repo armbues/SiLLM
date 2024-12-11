@@ -67,6 +67,12 @@ class LLM():
 
         self.tokenizer = tokenizer
 
+    def init_kv_cache(self):
+        """
+        Initialize KV cache for this model type.
+        """
+        return KVCache.for_model(self)
+
     def init_description(self, model_path):
         """
         Set model description.
@@ -428,6 +434,7 @@ class LLM():
 def generate(model,
              tokenizer: Tokenizer,
              prompt: str,
+             cache: KVCache = None,
              max_tokens: int = 2048,
              temperature: float = 0.0,
              top_k: int = 0,
@@ -514,7 +521,8 @@ def generate(model,
         return y, p
 
     def generate_step(model, inputs):
-        logits, cache = None, None
+        nonlocal cache
+        logits = None
 
         if prompt_cache is not None:
             # Retrieve cached logits and KV cache

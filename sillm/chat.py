@@ -104,9 +104,10 @@ if __name__ == "__main__":
         "logit_filter": logit_filter
     }
 
-    # Init conversation template
+    # Initialize generator variables
     template = sillm.init_template(model.tokenizer, model.args, args.template)
     conversation = sillm.Conversation(template, system_prompt=args.system_prompt)
+    cache = model.init_kv_cache()
 
     # Log memory usage
     utils.log_memory_usage()
@@ -123,6 +124,7 @@ if __name__ == "__main__":
             elif prompt == "/clear":
                 # Clear conversation
                 conversation.clear()
+                cache = model.init_kv_cache()
             else:
                 print("Commands:")
                 print("/exit - Exit chat")
@@ -135,12 +137,12 @@ if __name__ == "__main__":
             prompt = prompt.rstrip('\\') + "\n"
             continue
 
-        prompt = conversation.add_user(prompt)
-        
-        logger.debug(f"Generating {args.max_tokens} tokens with temperature {args.temperature}")
+        # Add user message to conversation and get prompt string
+        request = conversation.add_user(prompt)
 
+        logger.debug(f"Generating {args.max_tokens} tokens with temperature {args.temperature}")
         response = ""
-        for s, metadata in model.generate(prompt, **generate_args):
+        for s, metadata in model.generate(request, cache=cache, **generate_args):
             print(s, end="", flush=True)
             response += s
         print()

@@ -17,7 +17,7 @@ class Conversation(object):
         self.system_prompt = system_prompt
         self.tools = tools
 
-        self.messages = []
+        self.clear()
 
     def apply_chat_template(self,
                             add_generation_prompt: bool = False
@@ -37,6 +37,7 @@ class Conversation(object):
         Clear conversation.
         """
         self.messages = []
+        self.text = ""
 
     def load_messages(self,
                       messages: list
@@ -70,7 +71,10 @@ class Conversation(object):
         }
         self.messages.append(msg)
 
-        return self.apply_chat_template(add_generation_prompt=add_generation_prompt)
+        len_text = len(self.text)
+        self.text = self.apply_chat_template(add_generation_prompt=add_generation_prompt)
+
+        return self.text[len_text:]
 
     def add_user(self,
                  content: str,

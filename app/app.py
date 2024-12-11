@@ -122,11 +122,17 @@ async def on_message(message: cl.Message):
             template_name = None
 
         template = sillm.init_template(model.tokenizer, model.args, template_name)
-        conversation = sillm.Conversation(template)            
+        conversation = sillm.Conversation(template)
         cl.user_session.set("conversation", conversation)
 
+    # Initialize cache
+    cache = cl.user_session.get("cache")
+    if cache is None:
+        cache = model.init_kv_cache()
+        cl.user_session.set("cache", cache)
+
     # Add user message to conversation and get prompt string
-    prompt = conversation.add_user(message.content)
+    request = conversation.add_user(message.content)
     
     # Get model generation arguments
     generate_args = cl.user_session.get("generate_args")
@@ -136,7 +142,7 @@ async def on_message(message: cl.Message):
     # Generate response
     msg = cl.Message(author=model_id, content="")
     response = ""
-    for s, _ in model.generate(prompt, **generate_args):
+    for s, _ in model.generate(request, cache=cache, **generate_args):
         await msg.stream_token(s)
         response += s
     await msg.send()
