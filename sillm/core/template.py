@@ -109,14 +109,14 @@ def init_template(tokenizer,
             template = AutoTemplate(tokenizer)
         else:
             template = Template(tokenizer, template_name=template_name)
+    elif tokenizer.has_template:
+            # Use built-in template
+            template = AutoTemplate(tokenizer)
     else:
         # Guess template
         template_name = Template.guess_template(args)
         if template_name:
             template = Template(tokenizer, template_name=template_name)
-        elif tokenizer.has_template:
-            # Fall back to built-in template
-            template = AutoTemplate(tokenizer)
         else:
             # Fall back to empty template
             template = Template(tokenizer, template_name="empty")
