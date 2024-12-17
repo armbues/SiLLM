@@ -14,24 +14,14 @@ logger = logging.getLogger("sillm")
 ########
 class KVCache:
     @staticmethod
-    def for_model(model):
-        kv_heads = ([model.args.n_kv_heads] * model.args.n_layers)
-
-        return [KVCache(model.args.head_dim, n) for n in kv_heads]
+    def for_model(model,
+                  step : int = 256
+                  ):
+        return [KVCache(step) for _ in range(model.args.n_layers)]
 
     def __init__(self,
-                 head_dim,
-                 n_kv_heads,
                  step : int = 256
                  ):
-        self.n_kv_heads = n_kv_heads
-        if isinstance(head_dim, int):
-            self.k_head_dim = self.v_head_dim = head_dim
-        elif isinstance(head_dim, tuple) and len(head_dim) == 2:
-            self.k_head_dim, self.v_head_dim = head_dim
-        else:
-            raise ValueError("head_dim must be an int or a tuple of two ints")
-        
         self.keys = None
         self.values = None
         self.offset = 0
@@ -41,34 +31,37 @@ class KVCache:
                          keys,
                          values
                          ):
-        prev = self.offset
-        if self.keys is None or (prev + keys.shape[2]) > self.keys.shape[2]:
-            B = keys.shape[0]
-            n_steps = (self.step + keys.shape[2] - 1) // self.step
+        B, n_kv_heads, num_steps, k_head_dim = keys.shape
+        v_head_dim = values.shape[-1]
+        prev_offset = self.offset
+        
+        if self.keys is None or (prev_offset + num_steps) > self.keys.shape[2]:
+            new_steps = (self.step + num_steps - 1) // self.step
 
-            k_shape = (B, self.n_kv_heads, n_steps * self.step, self.k_head_dim)
-            v_shape = (B, self.n_kv_heads, n_steps * self.step, self.v_head_dim)
+            k_shape = (B, n_kv_heads, new_steps * self.step, k_head_dim)
+            v_shape = (B, n_kv_heads, new_steps * self.step, v_head_dim)
 
             new_k = mx.zeros(k_shape, keys.dtype)
             new_v = mx.zeros(v_shape, values.dtype)
             
             if self.keys is not None:
-                if prev % self.step != 0:
-                    self.keys = self.keys[..., :prev, :]
-                    self.values = self.values[..., :prev, :]
+                if prev_offset % self.step != 0:
+                    self.keys = self.keys[..., :prev_offset, :]
+                    self.values = self.values[..., :prev_offset, :]
                 self.keys = mx.concatenate([self.keys, new_k], axis=2)
                 self.values = mx.concatenate([self.values, new_v], axis=2)
             else:
                 self.keys, self.values = new_k, new_v
 
-        self.offset += keys.shape[2]
-        self.keys[..., prev : self.offset, :] = keys
-        self.values[..., prev : self.offset, :] = values
+        self.offset += num_steps
+
+        self.keys[..., prev_offset : self.offset, :] = keys
+        self.values[..., prev_offset : self.offset, :] = values
 
         return self.keys[..., : self.offset, :], self.values[..., : self.offset, :]
     
     def copy(self):
-        new = KVCache(self.k_head_dim, self.n_kv_heads, self.step)
+        new = KVCache(self.step)
         
         if self.keys is not None:
             new.keys = mx.array(self.keys)
