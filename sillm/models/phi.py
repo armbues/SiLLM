@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 import mlx.core as mx
 import mlx.nn as nn
 
-from sillm.models.base import BaseModel
+from sillm.models.base import BaseModel, scaled_dot_product_attention
 from sillm.core.cache import KVCache
 from sillm.models.args import ModelArgs
 from sillm.modules.rope import init_rope
@@ -61,7 +61,7 @@ class Attention(llama.Attention):
             keys = self.rope(keys)
 
         scale = math.sqrt(1 / queries.shape[-1])
-        output = mx.fast.scaled_dot_product_attention(queries.astype(mx.float32), keys, values, scale=scale, mask=mask).astype(values.dtype)
+        output = scaled_dot_product_attention(queries.astype(mx.float32), keys, values, cache=cache, scale=self.scale, mask=mask)
         output = output.moveaxis(2, 1).reshape(B, L, -1)
 
         return self.wo(output)

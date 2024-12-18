@@ -21,15 +21,12 @@ if __name__ == "__main__":
     parser.add_argument("-w", "--repetition_window", type=int, default=50, help="Window of generated tokens to consider for repetition penalty")
     parser.add_argument("-f", "--flush", type=int, default=5, help="Flush output every n tokens")
     parser.add_argument("-m", "--max_tokens", type=int, default=1024, help="Max. number of tokens to generate")
+    parser.add_argument("-q", "--quantize", type=int, default=None, help="Quantize the model weights to the specified number of bits")
+    parser.add_argument("--qkv", type=int, default=None, help="Quantize the KV cache to the specified number of bits")
     parser.add_argument("--cache", type=int, default=0, help="Prompt cache size")
     parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama2, alpaca, etc.)")
     parser.add_argument("--system_prompt", type=str, default=None, help="System prompt for chat template")
     parser.add_argument("--ascii", default=False, action="store_true", help="Force output tokens to ASCII printable characters")
-    parser.add_argument("-q2", default=False, action="store_true", help="Quantize the model to 2 bits")
-    parser.add_argument("-q3", default=False, action="store_true", help="Quantize the model to 3 bits")
-    parser.add_argument("-q4", default=False, action="store_true", help="Quantize the model to 4 bits")
-    parser.add_argument("-q6", default=False, action="store_true", help="Quantize the model to 6 bits")
-    parser.add_argument("-q8", default=False, action="store_true", help="Quantize the model to 8 bits")
     parser.add_argument("-v", "--verbose", default=1, action="count", help="Increase output verbosity")
     args = parser.parse_args()
 
@@ -70,17 +67,9 @@ if __name__ == "__main__":
         model.merge_and_unload_lora()
 
     # Quantize model
-    if args.q2 is True:
-        model.quantize(bits=2)
-    elif args.q3 is True:
-        model.quantize(bits=3)
-    elif args.q4 is True:
-        model.quantize(bits=4)
-    elif args.q6 is True:
-        model.quantize(bits=6)
-    elif args.q8 is True:
-        model.quantize(bits=8)
-
+    if args.quantize is not None:
+        model.quantize(bits=args.quantize)
+    
     # Initialize prompt cache
     prompt_cache = None
     if args.cache > 0:
@@ -104,10 +93,15 @@ if __name__ == "__main__":
         "logit_filter": logit_filter
     }
 
+    kv_cache_args = {
+        "quantized": args.qkv is not None,
+        "bits": args.qkv
+    }
+
     # Initialize generator variables
     template = sillm.init_template(model.tokenizer, model.args, args.template)
     conversation = sillm.Conversation(template, system_prompt=args.system_prompt)
-    cache = model.init_kv_cache()
+    cache = model.init_kv_cache(**kv_cache_args)
 
     # Log memory usage
     utils.log_memory_usage()
@@ -124,7 +118,7 @@ if __name__ == "__main__":
             elif prompt == "/clear":
                 # Clear conversation
                 conversation.clear()
-                cache = model.init_kv_cache()
+                cache = model.init_kv_cache(**kv_cache_args)
             else:
                 print("Commands:")
                 print("/exit - Exit chat")

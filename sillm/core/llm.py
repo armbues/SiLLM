@@ -13,7 +13,7 @@ import sillm.models as models
 import sillm.models.args as args
 import sillm.utils.sampling as sampling
 from sillm.training.dataset import Dataset
-from sillm.core.cache import KVCache, PromptCache
+from sillm.core.cache import KVCache, QuantizedKVCache, PromptCache
 from sillm.modules.switch import SwitchLinear
 from sillm.experimental.logit_filter import LogitFilter
 
@@ -67,11 +67,23 @@ class LLM():
 
         self.tokenizer = tokenizer
 
-    def init_kv_cache(self):
+    def init_kv_cache(self,
+                      step: int = 256,
+                      quantized: bool = False,
+                      group_size: int = 32,
+                      bits: int = 4,
+                      ):
         """
         Initialize KV cache for this model type.
         """
-        return KVCache.for_model(self)
+        if quantized:
+            logger.debug(f"Initializing quantized KV cache ({bits} bits / group size {group_size}) with step size {step}")
+
+            return QuantizedKVCache.for_model(self, step, group_size, bits)
+        else:
+            logger.debug(f"Initializing KV cache with step size {step}")
+
+            return KVCache.for_model(self, step)
 
     def init_description(self, model_path):
         """

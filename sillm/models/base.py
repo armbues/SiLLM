@@ -2,8 +2,10 @@ import math
 
 import mlx.core as mx
 import mlx.nn as nn
+from mlx.utils import tree_map
 
 from sillm.models.args import ModelArgs
+from sillm.core.cache import KVCache, QuantizedKVCache
 
 class BaseModel(nn.Module):
     """
@@ -54,3 +56,52 @@ class BaseModel(nn.Module):
         mask = linds[:, None] < rinds[None]
         
         return mask * -1e9
+    
+########
+# Based on mlx-examples:
+# https://github.com/ml-explore/mlx-examples/blob/dfa4dd6c93c4c2f81bfed6becb8af5cc3a89ae61/llms/mlx_lm/models/base.py#L56
+########
+def quantized_scaled_dot_product_attention(queries: mx.array,
+                                           keys: mx.array,
+                                           values: mx.array,
+                                           cache: QuantizedKVCache = None,
+                                           scale: float = 1.0,
+                                           mask: mx.array = None
+                                           ) -> mx.array:
+    """
+    Scaled dot-product attention with quantized KV cache.
+    """
+    B, n_q_heads, L, D = queries.shape
+    n_kv_heads = keys[0].shape[-3]
+    n_repeats = n_q_heads // n_kv_heads
+    queries *= scale
+
+    if n_repeats > 1:
+        queries = mx.reshape(queries, (B, n_kv_heads, n_repeats, L, D))
+        keys = tree_map(lambda x: mx.expand_dims(x, axis=-3), keys)
+        values = tree_map(lambda x: mx.expand_dims(x, axis=-3), values)
+    scores = mx.quantized_matmul(queries, *keys, transpose=True, group_size=cache.group_size, bits=cache.bits)
+
+    if mask is not None:
+        scores += mask
+    scores = mx.softmax(scores, axis=-1, precise=True)
+    out = mx.quantized_matmul(scores, *values, transpose=False, group_size=cache.group_size, bits=cache.bits)
+    if n_repeats > 1:
+        out = mx.reshape(out, (B, n_q_heads, L, D))
+
+    return out
+
+def scaled_dot_product_attention(queries: mx.array,
+                                 keys: mx.array,
+                                 values: mx.array,
+                                 cache: KVCache = None,
+                                 scale: float = 1.0,
+                                 mask: mx.array = None
+                                 ) -> mx.array:
+    """
+    Scaled dot-product attention that transparently handles quantized KV cache.
+    """
+    if isinstance(cache, QuantizedKVCache):
+        return quantized_scaled_dot_product_attention(queries, keys, values, cache=cache, scale=scale, mask=mask)
+    else:
+        return mx.fast.scaled_dot_product_attention(queries, keys, values, scale=scale, mask=mask)

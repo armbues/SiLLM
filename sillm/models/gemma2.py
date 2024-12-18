@@ -3,7 +3,7 @@ from typing import Optional, Tuple
 import mlx.core as mx
 import mlx.nn as nn
 
-from sillm.models.base import BaseModel
+from sillm.models.base import BaseModel, scaled_dot_product_attention
 from sillm.core.cache import KVCache
 from sillm.models.args import ModelArgs
 from sillm.modules.norm import RMSNorm
@@ -47,7 +47,7 @@ class Attention(llama.Attention):
             queries = self.rope(queries)
             keys = self.rope(keys)
 
-        output = mx.fast.scaled_dot_product_attention(queries, keys, values, scale=self.scale, mask=mask)
+        output = scaled_dot_product_attention(queries, keys, values, cache=cache, scale=self.scale, mask=mask)
 
         ########
         # Attention softcapping
