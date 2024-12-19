@@ -23,7 +23,7 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--max_tokens", type=int, default=1024, help="Max. number of tokens to generate")
     parser.add_argument("-q", "--quantize", type=int, default=None, help="Quantize the model weights to the specified number of bits")
     parser.add_argument("--qkv", type=int, default=None, help="Quantize the KV cache to the specified number of bits")
-    parser.add_argument("--cache", type=int, default=0, help="Prompt cache size")
+    parser.add_argument("--cache", type=int, default=0, help="Create a prompt cache with the specified size")
     parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama2, alpaca, etc.)")
     parser.add_argument("--system_prompt", type=str, default=None, help="System prompt for chat template")
     parser.add_argument("--ascii", default=False, action="store_true", help="Force output tokens to ASCII printable characters")
