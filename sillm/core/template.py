@@ -69,6 +69,10 @@ class Template(object):
             if args.model_type == "llama" and args.vocab_size == 128256:
                 template_name = "llama3"
 
+            # Hack for Mistral-Large
+            if args.model_type == "mistral" and args.n_layers == 88:
+                template_name = "mistral-large"
+
             return template_name
 
         return None
@@ -109,14 +113,14 @@ def init_template(tokenizer,
             template = AutoTemplate(tokenizer)
         else:
             template = Template(tokenizer, template_name=template_name)
-    elif tokenizer.has_template:
-            # Use built-in template
-            template = AutoTemplate(tokenizer)
     else:
         # Guess template
         template_name = Template.guess_template(args)
         if template_name:
             template = Template(tokenizer, template_name=template_name)
+        elif tokenizer.has_template:
+            # Use built-in template
+            template = AutoTemplate(tokenizer)
         else:
             # Fall back to empty template
             template = Template(tokenizer, template_name="empty")
