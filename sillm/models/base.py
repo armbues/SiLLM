@@ -50,12 +50,16 @@ class BaseModel(nn.Module):
         return loss_value, None, num_tokens
 
     @staticmethod    
-    def create_additive_causal_mask(N: int, offset: int = 0):
+    def create_additive_causal_mask(N: int,
+                                    offset: int = 0,
+                                    dtype: mx.Dtype = mx.float32
+                                    ):
         rinds = mx.arange(offset + N)
         linds = mx.arange(offset, offset + N) if offset else rinds
         mask = linds[:, None] < rinds[None]
+        mask = mask.astype(dtype) * mx.finfo(dtype).min
         
-        return mask * -1e9
+        return mask
     
 ########
 # Based on mlx-examples:

@@ -53,7 +53,7 @@ class Attention(nn.Module):
 
         if cache is not None:
             if cache.offset > 0 and L > 1:
-                mask = BaseModel.create_additive_causal_mask(L, offset=cache.offset)
+                mask = BaseModel.create_additive_causal_mask(L, offset=cache.offset, dtype=queries.dtype)
                 
             queries = self.rope(queries, offset=cache.offset)
             keys = self.rope(keys, offset=cache.offset)
