@@ -445,7 +445,7 @@ class LLM():
 
 def generate(model,
              tokenizer: Tokenizer,
-             prompt: str,
+             prompt: str | list | mx.array,
              cache: KVCache = None,
              max_tokens: int = 2048,
              temperature: float = 0.0,
@@ -463,8 +463,15 @@ def generate(model,
              ):
     start = time.perf_counter()
 
-    # Tokenize inputs
-    inputs = mx.array(tokenizer.encode(prompt))
+    # Pre-process inputs
+    if isinstance(prompt, str):
+        inputs = mx.array(tokenizer.encode(prompt))
+    elif isinstance(prompt, list):
+        inputs = mx.array(prompt)
+    elif isinstance(prompt, mx.array):
+        inputs = prompt
+    else:
+        raise ValueError("Prompt must be a string, list of tokens, or MX array")
     
     # Initialize metadata
     timing = {
