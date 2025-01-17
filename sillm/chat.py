@@ -25,7 +25,7 @@ if __name__ == "__main__":
     parser.add_argument("--qkv", type=int, default=None, help="Quantize the KV cache to the specified number of bits")
     parser.add_argument("--cache", type=int, default=0, help="Create a prompt cache with the specified size")
     parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama2, alpaca, etc.)")
-    parser.add_argument("--system_prompt", type=str, default=None, help="System prompt for chat template")
+    parser.add_argument("--system", type=str, default=None, help="System prompt for chat template")
     parser.add_argument("--ascii", default=False, action="store_true", help="Force output tokens to ASCII printable characters")
     parser.add_argument("-v", "--verbose", default=1, action="count", help="Increase output verbosity")
     args = parser.parse_args()
@@ -98,9 +98,15 @@ if __name__ == "__main__":
         "bits": args.qkv
     }
 
+    if args.system is not None:
+        if os.path.isfile(args.system):
+            system_prompt = open(args.system, "r").read()
+        else:
+            system_prompt = args.system
+
     # Initialize generator variables
     template = sillm.init_template(model.tokenizer, model.args, args.template)
-    conversation = sillm.Conversation(template, system_prompt=args.system_prompt)
+    conversation = sillm.Conversation(template, system_prompt=system_prompt)
     cache = model.init_kv_cache(**kv_cache_args)
 
     # Log memory usage
@@ -131,8 +137,7 @@ if __name__ == "__main__":
             fpath = prompt.lstrip('@')
             if not os.path.isfile(fpath):
                 continue
-            with open(fpath, "r") as f:
-                prompt = f.read()
+            prompt = open(fpath, "r").read()
         elif prompt.endswith('\\'):
             # Continue prompt after line break
             prompt = prompt.rstrip('\\') + "\n"
