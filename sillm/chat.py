@@ -98,11 +98,10 @@ if __name__ == "__main__":
         "bits": args.qkv
     }
 
+    system_prompt = args.system
     if args.system is not None:
         if os.path.isfile(args.system):
             system_prompt = open(args.system, "r").read()
-        else:
-            system_prompt = args.system
 
     # Initialize generator variables
     template = sillm.init_template(model.tokenizer, model.args, args.template)
