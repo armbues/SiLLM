@@ -28,8 +28,8 @@ class LoRALinear(nn.Module):
         linear: nn.Linear,
         rank: int = 8,
         alpha: float = 16,
+        stabilize: bool = False,
         dropout: float = 0.0,
-        scale : float = 10.0,
         dtype: mx.Dtype = None
         ):
         """
@@ -51,7 +51,7 @@ class LoRALinear(nn.Module):
         if dtype is None:
             dtype = mx.bfloat16 if isinstance(linear, nn.QuantizedLinear) else linear.weight.dtype
 
-        lora_lin = LoRALinear(input_dims, output_dims, rank, alpha, dropout, scale, bias, dtype)
+        lora_lin = LoRALinear(input_dims, output_dims, rank=rank, alpha=alpha, stabilize=stabilize, dropout=dropout, bias=bias, dtype=dtype)
         lora_lin.linear = linear
 
         return lora_lin
@@ -61,8 +61,8 @@ class LoRALinear(nn.Module):
                  output_dims: int,
                  rank: int = 8,
                  alpha: float = 16,
+                 stabilize: bool = False,
                  dropout: float = 0.0,
-                 scale : float = 10.0,
                  bias: bool = False,
                  dtype: mx.Dtype = mx.bfloat16
                  ):
@@ -85,7 +85,13 @@ class LoRALinear(nn.Module):
         self.lora_dropout = nn.Dropout(p=dropout)
 
         # Initialize LoRA weights
-        self.scale = scale * (alpha / rank)
+        if stabilize is True:
+            ########
+            # References:
+            # Damjan Kalajdzievski. A Rank Stabilization Scaling Factor for Fine-Tuning with LoRA https://arxiv.org/pdf/2312.03732
+            self.scale = alpha / math.sqrt(rank)
+        else:
+            self.scale = alpha / rank
         bound = 1 / math.sqrt(input_dims)
         input_shape = (input_dims, rank)
         output_shape = (rank, output_dims)
@@ -191,8 +197,8 @@ class TrainableLoRA(TrainableLLM):
                   target_modules: str = "query_value",
                   rank: int = 8,
                   alpha: float = 16,
-                  dropout: float = 0.0,
-                  scale : float = 10.0
+                  stabilize: bool = False,
+                  dropout: float = 0.0
                   ):
         """
         Initialize LoRA for model.
@@ -215,9 +221,9 @@ class TrainableLoRA(TrainableLLM):
                             key = module._name + "." + key
 
                         if target_modules == "all_linear":
-                            yield key, LoRALinear.from_linear(child, rank=rank, alpha=alpha, dropout=dropout, scale=scale)
+                            yield key, LoRALinear.from_linear(child, rank=rank, alpha=alpha, stabilize=stabilize, dropout=dropout)
                         elif target_modules == "query_value" and re.search(r"\.attention\.(wq|wv|wqkv)$", key):
-                            yield key, LoRALinear.from_linear(child, rank=rank, alpha=alpha, dropout=dropout, scale=scale)
+                            yield key, LoRALinear.from_linear(child, rank=rank, alpha=alpha,  stabilize=stabilize, dropout=dropout)
 
             if num_layers > 0:
                 # Apply LoRA to last n layers
@@ -241,8 +247,8 @@ class TrainableLoRA(TrainableLLM):
                 "target_modules": target_modules,
                 "rank": rank,
                 "alpha": alpha,
-                "dropout": dropout,
-                "scale": scale
+                "stabilize": stabilize,
+                "dropout": dropout
             }
 
             # Enable training mode
@@ -250,7 +256,7 @@ class TrainableLoRA(TrainableLLM):
 
             logger.info(f"Initialized LoRA with rank {rank} for {'all' if num_layers == 0 else num_layers} layers")
             logger.debug(f"LoRA target modules: {target_modules}")
-            logger.debug(f"LoRA parameters: Alpha {alpha}, Dropout {dropout}, Scale {scale}")
+            logger.debug(f"LoRA parameters: Alpha {alpha}, rsLoRA {stabilize}, Dropout {dropout}")
 
             trainable_params = 0
             for _, module in self._lora_modules:
