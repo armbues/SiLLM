@@ -159,6 +159,7 @@ class SpeculativeEdit(LLM):
         return SpeculativeEdit(llm)
 
     def __init__(self, model: LLM):
+        self.target_model = model
         self.model = model.model
         self.tokenizer = model.tokenizer
         self.args = model.args
@@ -202,6 +203,14 @@ class SpeculativeEdit(LLM):
             "speculative": speculative,
             "token_ids": []
         }
+
+        # Handle non-speculative generation
+        if lookahead <= 1:
+            for s, metadata in self.target_model.generate(prompt, temperature=temperature, max_tokens=max_tokens, token_ids=token_ids):
+                metadata["speculative"] = speculative
+                yield s, metadata
+
+            return
 
         # Define stop tokens
         stop_tokens = self.tokenizer.special_ids
