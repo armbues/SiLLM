@@ -37,6 +37,9 @@ if __name__ == "__main__":
     parser.add_argument("-q4", default=False, action="store_true", help="Quantize the model to 4 bits")
     parser.add_argument("-q8", default=False, action="store_true", help="Quantize the model to 8 bits")
     parser.add_argument("-v", "--verbose", default=1, action="count", help="Increase output verbosity")
+    parser.add_argument("--wandb", default=False, action="store_true", help="Log training to Weights & Biases")
+    parser.add_argument("--wandb_project", default=None, type=str, help="Weights & Biases project name")
+    parser.add_argument("--wandb_report_steps", default=5, type=int, help="Number of batch iterations per Weights & Biases report (default: 5)")
     args = parser.parse_args()
 
     # Change working directory
@@ -133,6 +136,9 @@ if __name__ == "__main__":
             "report_steps":         args.report_steps,
             "eval_steps":           args.eval_steps,
             "validation_samples":   args.validation_samples,
+            "wandb":                args.wandb,
+            "wandb_project":        args.wandb_project,
+            "wandb_report_steps":   args.wandb_report_steps,
         }
         model.train(dataset_training,
                     dataset_validation,
