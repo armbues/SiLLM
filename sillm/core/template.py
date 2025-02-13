@@ -13,7 +13,7 @@ default_templates = {
     "gemma2": "gemma",
     "mixtral": "mistral",
     "phi": "phi2",
-    "qwen2": "qwen2",
+    "qwen2": "qwen2.5",
     "dbrx": "chatml",
     "cohere": "cohere",
     "phi3": "phi3",
