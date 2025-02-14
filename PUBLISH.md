@@ -8,7 +8,7 @@ Upload package to testpypi:
 `python -m twine upload --repository testpypi dist/*`
 
 Test installation from testpypi:
-`python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple sillm`
+`python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple sillm-mlx`
 
 Upload package to pypi:
 `python -m twine upload dist/*`
