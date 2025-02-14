@@ -1,10 +1,9 @@
-mlx>=0.14.1
-transformers>=4.42.4
+mlx>=0.22.1
+transformers>=4.47.1
 sentencepiece==0.2.0
 protobuf
 numpy
 tqdm
-psutil
 pyyaml
 matplotlib
 jinja2

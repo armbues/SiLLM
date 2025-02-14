@@ -6,13 +6,14 @@ SiLLM simplifies the process of training and running Large Language Models (LLMs
 - **LLM Loading**: load LLMs for chat and training in different formats (Huggingface, Torch, GGUF, MLX)
 - **LoRA Training**: train LLMs using *Low-rank Adaptation*
 - **DPO Training**: train LLMs with *Direct Preference Optimization*
+- **Experimental Features**: speculative decoding, beam search, logit distillation, ...
 
 ## Features
 
 - Web app for a seamless chat experience running on local hardware
 - API server with OpenAI compatible chat endpoints
-- Model architectures: Llama, Mistral, Mixtral, Phi-2, Phi-3, Gemma, Qwen2, Starcoder2, DBRX, Cohere Command-R
-- Conversation templates: llama-2, chatml, alpaca, vicuna, gemma, phi, openchat
+- Model architecture support for all major model types
+- Conversation templates for all major model types
 - Loss functions for DPO: sigmoid, hinge, IPO, DPOP
 - Training loss plots using matplotlib
 - Perplexity calculation
@@ -20,8 +21,11 @@ SiLLM simplifies the process of training and running Large Language Models (LLMs
 ## Experimental
 One of the main goals of SiLLM is to enable experimentation with the inner workings of large language models and make new techniques accessible to a wider audience running on Apple Silicon hardware.
 
-### Control vectors and feature ablation
-The control module incorporates techniques based on the paper [Representation Engineering](https://arxiv.org/abs/2310.01405) and the blog [Refusal Ablation](https://www.lesswrong.com/posts/jGuXSZgv6qfdhMCuJ/refusal-in-llms-is-mediated-by-a-single-direction). Representation engineering is a method to calculate control vectors from a model's hidden states during training that can be used to influence the behavior and generated output during inference. Refusal ablation works similarly, but can be used to remove the direction represented by the vector from model weights.
+- Speculative Decoding
+- Beam search
+- Training using logit distillation
+- Logit filters
+- Control vectors and feature ablation
 
 ## Installation
 
@@ -117,28 +121,11 @@ Implementation of the "Massive Multitask Language Understanding" benchmark using
 Calculating perplexity scores for a sample [dataset](https://huggingface.co/datasets/Cohere/wikipedia-2023-11-embed-multilingual-v3) of entry paragraphs from Wikipedia articles.
 
 ## Model Support
-SiLLM generally supports loading LLMs of the following model architectures/families: *Llama 2*, *Mistral*, *Mixtral*, *Gemma*, *Phi*, *Qwen 2*, *StarCoder2*.
-
-Here is a list of significant models that were successfully tested with SiLLM:
-
-| Model Family | Models/Sizes |
-| --- | --- |
-| Llama-3 | [8B-Instruct](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct), [70B-Instruct](https://huggingface.co/meta-llama/Meta-Llama-3-70B-Instruct/) |
-| Phi-3 | [medium-4k-instruct](https://huggingface.co/microsoft/Phi-3-medium-4k-instruct) |
-| Phi-3.5 | [mini-instruct](https://huggingface.co/microsoft/Phi-3.5-mini-instruct), [MoE-instruct](https://huggingface.co/microsoft/Phi-3.5-MoE-instruct) |
-| Gemma-2 | [2b-it](https://huggingface.co/google/gemma-2-2b-it), [9b-it](https://huggingface.co/google/gemma-2-9b-it), [27b-it](https://huggingface.co/google/gemma-2-27b-it) |
-| Mistral | [7b-instruct-v0.3](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3), [Nemo-Instruct](https://huggingface.co/mistralai/Mistral-Nemo-Instruct-2407), [Small-Instruct](https://huggingface.co/mistralai/Mistral-Small-Instruct-2409), [Large-Instruct](https://huggingface.co/mistralai/Mistral-Large-Instruct-2407) |
-| Mixtral | [8x22B-Instruct-v0.1](https://huggingface.co/mistralai/Mixtral-8x22B-Instruct-v0.1) |
-| Codestral | [22b-v0.1](https://huggingface.co/mistralai/Codestral-22B-v0.1) |
-| Qwen 2 | [7b-instruct](https://huggingface.co/Qwen/Qwen2-7B-Instruct), [72b-instruct](https://huggingface.co/Qwen/Qwen2-72B-Instruct) |
-| StarCoder2 | [3b](https://huggingface.co/bigcode/starcoder2-3b), [7b](https://huggingface.co/bigcode/starcoder2-7b), [15b](https://huggingface.co/bigcode/starcoder2-15b) |
+SiLLM generally supports loading LLMs of major open weights model architectures/families, including: *Llama 2/3*, *Mistral*, *Mixtral*, *Gemma*, *Phi*, *Qwen*.
 
 ## Roadmap
 
-- Learning rate schedulers for training
-- Merging models
-- Saving models to GGUF
-- Fine tuning with ORPO
+- Fine tuning with GRPO
 
 ## License
 This project uses the [MIT License](LICENSE).
