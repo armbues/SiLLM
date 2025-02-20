@@ -27,6 +27,18 @@ def top_p(logits: mx.array,
 
     return logits
 
+@partial(mx.compile, inputs=mx.random.state, outputs=mx.random.state)
+def min_p(logits: mx.array,
+          p: float = 0.1
+          ) -> mx.array:
+    probs = mx.softmax(logits, axis=-1)
+    scaled_min_p = probs.max(axis=-1) - p
+    
+    mask = logits >= scaled_min_p
+    logits = mx.where(mask, logits, 0.0)
+
+    return logits
+
 ########
 # References:
 # Chenxia Tang, Jianchun Liu, Hongli Xu, Liusheng Huang. Top-nσ: Not All Logits Are You Need. https://arxiv.org/abs/2411.07641
