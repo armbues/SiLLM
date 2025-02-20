@@ -54,7 +54,8 @@ class Conversation(object):
     def add_message(self,
                     content: str,
                     role: str,
-                    add_generation_prompt: bool = True
+                    add_generation_prompt: bool = True,
+                    add_generation_prefix: str = None
                     ):
         # Add system message
         if len(self.messages) == 0 and self.system_prompt is not None:
@@ -74,11 +75,15 @@ class Conversation(object):
         len_text = len(self.text)
         self.text = self.apply_chat_template(add_generation_prompt=add_generation_prompt)
 
+        if add_generation_prefix is not None:
+            self.text += add_generation_prefix
+
         return self.text[len_text:]
 
     def add_user(self,
                  content: str,
-                 add_generation_prompt: bool = True
+                 add_generation_prompt: bool = True,
+                 add_generation_prefix: str = None
                  ):
         """
         Add user message to the conversation.
@@ -88,7 +93,7 @@ class Conversation(object):
         Returns:
             Formatted conversation string and formatted context.
         """
-        return self.add_message(content=content, role="user", add_generation_prompt=add_generation_prompt)
+        return self.add_message(content=content, role="user", add_generation_prompt=add_generation_prompt, add_generation_prefix=add_generation_prefix)
     
     def add_assistant(self,
                      content: str
