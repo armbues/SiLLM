@@ -136,4 +136,8 @@ class Model(llama.Model):
         # TODO add optional dropout layer with embd_pdrop parameter
         self.layers = [TransformerBlock(args=args) for _ in range(args.n_layers)]
         self.norm = nn.RMSNorm(args.dim, eps=args.norm_eps)
-        self.output = nn.Linear(args.dim, args.vocab_size, bias=False)
+
+        if args.tie_word_embeddings:
+            self.output = None
+        else:
+            self.output = nn.Linear(args.dim, args.vocab_size, bias=False)

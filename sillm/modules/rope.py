@@ -111,8 +111,7 @@ class Llama3RoPE(nn.Module):
 ########
 # Su Scaled Rotary Embedding
 # References:
-# https://huggingface.co/microsoft/Phi-3-mini-128k-instruct/blob/38143357bf52ce57009ecbd58cf9f0b0029cb393/modeling_phi3.py#L142
-# https://github.com/ml-explore/mlx-examples/blob/3c6e8b11af9dda55ee8d38ee9f612a65118f7793/llms/mlx_lm/models/su_rope.py#L10
+# https://github.com/ml-explore/mlx-examples/blob/00a73790702991075b80f9facf219ae397e1eb15/llms/mlx_lm/models/su_rope.py#L10
 ########
 class SuScaledRotaryEmbedding(nn.Module):
     """
@@ -123,7 +122,6 @@ class SuScaledRotaryEmbedding(nn.Module):
                  max_position_embeddings: int = 131072,
                  original_max_position_embeddings: int = 4096,
                  base: float = 10000,
-                 scale: float = 1.0,
                  short_factor: Union[List[float], float] = 1.0,
                  long_factor: Union[List[float], float] = 1.0,
                  short_mscale: float = None,
@@ -131,37 +129,22 @@ class SuScaledRotaryEmbedding(nn.Module):
                  ):
         super().__init__()
 
+        self.head_dim = head_dim
         self.original_max_position_embeddings = original_max_position_embeddings
 
-        self._inv_freq_short = 1.0 / (
-            mx.array(short_factor, dtype=mx.float32)
-            * base ** (mx.arange(0, head_dim, 2, dtype=mx.float32) / head_dim)
-        )
-        self._inv_freq_long = 1.0 / (
-            scale
-            * mx.array(long_factor, dtype=mx.float32)
-            * base ** (mx.arange(0, head_dim, 2, dtype=mx.float32) / head_dim)
-        )
-        self.scaling_factor = long_mscale or math.sqrt(1 + math.log(max_position_embeddings / self.original_max_position_embeddings) / math.log(self.original_max_position_embeddings))
-
-    def _get_cos_sin(self, offset, L):
-        position_ids = mx.arange(offset, offset + L, dtype=mx.float32)
-        inv_freq = (
-            self._inv_freq_long
-            if (offset + L) > self.original_max_position_embeddings
-            else self._inv_freq_short
-        )
-        freqs = position_ids[:, None] * inv_freq[None, :]
-        emb = mx.concatenate([freqs, freqs], axis=-1)
-        cos = mx.cos(emb) * self.scaling_factor
-        sin = mx.sin(emb) * self.scaling_factor
-        return cos, sin
+        freqs = base ** (mx.arange(0, head_dim, 2, dtype=mx.float32) / head_dim)
+        self._freqs = mx.array(long_factor, dtype=mx.float32) * freqs
+        self.scale = long_mscale or math.sqrt(1 + math.log(max_position_embeddings / self.original_max_position_embeddings) / math.log(self.original_max_position_embeddings))
 
     def __call__(self, x, offset: int = 0):
-        def _rotate_half(_x):
-            midpoint = _x.shape[-1] // 2
-            x1, x2 = _x[..., :midpoint], _x[..., midpoint:]
-            return mx.concatenate([-x2, x1], axis=-1)
+        x[..., : self.head_dim] = self.scale * x[..., : self.head_dim]
 
-        cos, sin = self._get_cos_sin(offset, x.shape[2])
-        return (x * cos) + (_rotate_half(x) * sin)
+        return mx.fast.rope(
+            x,
+            self.head_dim,
+            traditional=False,
+            base=None,
+            scale=1.0,
+            offset=offset,
+            freqs=self._freqs
+        )
