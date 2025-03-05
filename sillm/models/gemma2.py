@@ -37,9 +37,6 @@ class Attention(llama.Attention):
         values = values.reshape(B, L, self.n_kv_heads, -1).transpose(0, 2, 1, 3)
 
         if cache is not None:
-            if cache.offset > 0 and L > 1:
-                mask = BaseModel.create_additive_causal_mask(L, offset=cache.offset, dtype=queries.dtype)
-                
             queries = self.rope(queries, offset=cache.offset)
             keys = self.rope(keys, offset=cache.offset)
             keys, values = cache.update_and_fetch(keys, values)
@@ -144,11 +141,8 @@ class Model(llama.Model):
         h = self.tok_embeddings(inputs)
         h = h * (self.args.dim**0.5)
 
-        mask = None
-        if h.shape[1] > 1:
-            mask = nn.MultiHeadAttention.create_additive_causal_mask(h.shape[1])
-            mask = mask.astype(h.dtype)
-
+        mask = BaseModel.create_attention_mask(h, cache)
+        
         if cache is None:
             cache = [None] * len(self.layers)
 

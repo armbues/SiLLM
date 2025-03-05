@@ -50,9 +50,6 @@ class Attention(llama.Attention):
         values = values.reshape(B, L, self.n_kv_heads, -1).moveaxis(1, 2)
 
         if cache is not None:
-            if cache.offset > 0 and L > 1:
-                mask = BaseModel.create_additive_causal_mask(L, offset=cache.offset, dtype=queries.dtype)
-                
             queries = self.rope(queries, offset=cache.offset)
             keys = self.rope(keys, offset=cache.offset)
             keys, values = cache.update_and_fetch(keys, values)

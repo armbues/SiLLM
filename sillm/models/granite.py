@@ -118,9 +118,7 @@ class Model(llama.Model):
         """
         h = self.tok_embeddings(inputs) * self.embedding_multiplier
 
-        mask = None
-        if h.shape[1] > 1:
-            mask = nn.MultiHeadAttention.create_additive_causal_mask(h.shape[1]).astype(h.dtype)
+        mask = BaseModel.create_attention_mask(h, cache)
 
         if cache is None:
             cache = [None] * len(self.layers)

@@ -7,6 +7,14 @@ from mlx.utils import tree_map
 from sillm.models.args import ModelArgs
 from sillm.core.cache import KVCache, QuantizedKVCache
 
+def create_additive_causal_mask(N: int, offset: int = 0, dtype: mx.Dtype = mx.float32):
+    rinds = mx.arange(offset + N)
+    linds = mx.arange(offset, offset + N) if offset else rinds
+    mask = linds[:, None] < rinds[None]
+    mask = mask.astype(dtype) * mx.finfo(dtype).min
+    
+    return mask
+
 class BaseModel(nn.Module):
     """
     Base class for LLM models.
@@ -48,17 +56,29 @@ class BaseModel(nn.Module):
         loss_value = cross_entropy_loss.sum() / num_tokens
 
         return loss_value, None, num_tokens
+    
+    @staticmethod
+    def create_attention_mask(h: mx.array,
+                              cache = None
+                              ):
+        """
+        Create attention mask.
+        Args:
+            h: Input tensor.
+            cache: Cache from previous forward pass.
+        Returns:
+            Attention mask.
+        """
+        L = h.shape[1]
+        dtype = h.dtype
 
-    @staticmethod    
-    def create_additive_causal_mask(N: int,
-                                    offset: int = 0,
-                                    dtype: mx.Dtype = mx.float32
-                                    ):
-        rinds = mx.arange(offset + N)
-        linds = mx.arange(offset, offset + N) if offset else rinds
-        mask = linds[:, None] < rinds[None]
-        mask = mask.astype(dtype) * mx.finfo(dtype).min
-        
+        mask = None
+        if L > 1:
+            if cache is not None and cache[0] is not None:
+                mask = create_additive_causal_mask(L, cache[0].offset, dtype=dtype)
+            else:
+                mask = create_additive_causal_mask(L, dtype=dtype)
+
         return mask
     
 ########
