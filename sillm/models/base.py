@@ -7,6 +7,18 @@ from mlx.utils import tree_map
 from sillm.models.args import ModelArgs
 from sillm.core.cache import KVCache, QuantizedKVCache
 
+########
+# Based on mlx-examples:
+# https://github.com/ml-explore/mlx-examples/blob/32d10036de94af07733c247ca44702e8135d068a/llms/mlx_lm/models/base.py#L26
+########
+def create_bool_causal_mask(N: int, offset: int = 0):
+    rinds = mx.arange(offset + N)[None]
+    linds = mx.arange(offset, offset + N) if offset else rinds
+    linds = linds[:, None]
+    mask = linds >= rinds
+
+    return mask
+
 def create_additive_causal_mask(N: int, offset: int = 0, dtype: mx.Dtype = mx.float32):
     rinds = mx.arange(offset + N)
     linds = mx.arange(offset, offset + N) if offset else rinds
@@ -70,14 +82,13 @@ class BaseModel(nn.Module):
             Attention mask.
         """
         L = h.shape[1]
-        dtype = h.dtype
-
+        
         mask = None
         if L > 1:
             if cache is not None and cache[0] is not None:
-                mask = create_additive_causal_mask(L, cache[0].offset, dtype=dtype)
+                mask = create_bool_causal_mask(L, cache[0].offset)
             else:
-                mask = create_additive_causal_mask(L, dtype=dtype)
+                mask = create_bool_causal_mask(L)
 
         return mask
     
