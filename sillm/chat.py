@@ -21,7 +21,7 @@ if __name__ == "__main__":
     parser.add_argument("-rp", "--repetition_penalty", type=float, default=None, help="Repetition penalty")
     parser.add_argument("-rw", "--repetition_window", type=int, default=50, help="Window of generated tokens to consider for repetition penalty")
     parser.add_argument("-f", "--flush", type=int, default=5, help="Flush output every n tokens")
-    parser.add_argument("-m", "--max_tokens", type=int, default=1024, help="Max. number of tokens to generate")
+    parser.add_argument("-m", "--max_tokens", type=int, default=4096, help="Max. number of tokens to generate")
     parser.add_argument("-q", "--quantize", type=int, default=None, help="Quantize the model weights to the specified number of bits")
     parser.add_argument("--qkv", type=int, default=None, help="Quantize the KV cache to the specified number of bits")
     parser.add_argument("--cache", type=int, default=0, help="Create a prompt cache with the specified size")
