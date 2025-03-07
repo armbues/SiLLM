@@ -524,15 +524,15 @@ def generate(model,
             # Apply repetition penalty
             if len(tokens) > 0 and repetition_penalty is not None:
                 logits = sampling.apply_repetition_penalty(logits, tokens, repetition_penalty=repetition_penalty, repetition_window=repetition_window)
-            # Apply top-k sampling
+            
+            if 0.0 < top_p < 1.0:
+                logits = sampling.top_p(logits, p=top_p)
+            if min_p > 0.0:
+                logits = sampling.min_p(logits, p=min_p)
+            if top_nsigma > 0.0:
+                logits = sampling.top_nsigma(logits, n=top_nsigma)
             if top_k > 0:
                 logits = sampling.top_k(logits, k=top_k)
-            elif 0.0 < top_p < 1.0:
-                logits = sampling.top_p(logits, p=top_p)
-            elif min_p > 0.0:
-                logits = sampling.min_p(logits, p=min_p)
-            elif top_nsigma > 0.0:
-                logits = sampling.top_nsigma(logits, n=top_nsigma)
     
             y = mx.random.categorical(logits)
 
