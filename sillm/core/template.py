@@ -107,24 +107,24 @@ def init_template(tokenizer,
                   args,
                   template_name: str = None
                   ):
-    if template_name is not None:
-        # Template name is provided
-        if template_name == "auto" and tokenizer.has_template:
-            template = AutoTemplate(tokenizer)
-        else:
-            template = Template(tokenizer, template_name=template_name)
-    else:
+    if template_name is None:
+        if tokenizer.has_template:
+            # Use built-in template
+            return AutoTemplate(tokenizer)
+        
         # Guess template
         template_name = Template.guess_template(args)
-        if template_name:
-            template = Template(tokenizer, template_name=template_name)
-        elif tokenizer.has_template:
-            # Use built-in template
-            template = AutoTemplate(tokenizer)
+
+        if template_name is not None:
+            return Template(tokenizer, template_name=template_name)
+    else:
+        # Template name is provided
+        if template_name == "auto" and tokenizer.has_template:
+            return AutoTemplate(tokenizer)
         else:
-            # Fall back to empty template
-            template = Template(tokenizer, template_name="empty")
+            return Template(tokenizer, template_name=template_name)
 
-            logger.warning("No conversation template found - falling back to empty template.")
-
-    return template
+    # Fall back to empty template
+    logger.warning("No conversation template found - falling back to empty template.")
+    
+    return Template(tokenizer, template_name="empty")
