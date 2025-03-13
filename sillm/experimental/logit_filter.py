@@ -79,7 +79,7 @@ class MinCompletionFilter(LogitFilter):
         self.stop_tokens = [tokenizer.encode(token, bos=False)[0] if isinstance(token, str) else token for token in stop_tokens]
 
         mask = mx.ones(output_size)
-        for token in stop_tokens:
+        for token in self.stop_tokens:
             mask[token] = 0.0
 
         self.mask = mask
