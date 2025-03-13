@@ -518,9 +518,10 @@ def generate(model,
             # Apply temperature
             logits = logits * (1 / temperature)
 
-            # Apply structure enforcer
+            # Apply custom logit filter
             if logit_filter is not None:
                 logits = logit_filter(logits)
+
             # Apply repetition penalty
             if len(tokens) > 0 and repetition_penalty is not None:
                 logits = sampling.apply_repetition_penalty(logits, tokens, repetition_penalty=repetition_penalty, repetition_window=repetition_window)
@@ -600,6 +601,9 @@ def generate(model,
             usage["total_tokens"] = usage["prompt_tokens"] + usage["completion_tokens"]
             if token_ids:
                 metadata["token_ids"] += tokens
+
+            if logit_filter is not None:
+                logit_filter.update(metadata, tokens)
 
             yield text[text_offset:], metadata
 

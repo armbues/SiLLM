@@ -28,6 +28,7 @@ if __name__ == "__main__":
     parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama2, alpaca, etc.)")
     parser.add_argument("--system", type=str, default=None, help="System prompt for chat template")
     parser.add_argument("--ascii", default=False, action="store_true", help="Force output tokens to ASCII printable characters")
+    parser.add_argument("--min_reason", type=int, default=None, help="Force a minimum completion length before allowing </think> tag")
     parser.add_argument("-v", "--verbose", default=1, action="count", help="Increase output verbosity")
     args = parser.parse_args()
 
@@ -80,6 +81,8 @@ if __name__ == "__main__":
     logit_filter = None
     if args.ascii:
         logit_filter = sillm.experimental.logit_filter.ASCIIFilter(model.tokenizer, model.args.vocab_size)
+    elif args.min_reason is not None:
+        logit_filter = sillm.experimental.logit_filter.MinReasoningFilter(model.tokenizer, model.args.vocab_size, args.min_reason)
 
     generate_args = {
         "temperature": args.temperature,
