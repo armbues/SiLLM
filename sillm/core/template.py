@@ -108,7 +108,7 @@ def init_template(tokenizer,
                   template_name: str = None
                   ):
     if template_name is None:
-        if tokenizer.has_template:
+        if tokenizer.has_template():
             # Use built-in template
             return AutoTemplate(tokenizer)
         
@@ -119,7 +119,7 @@ def init_template(tokenizer,
             return Template(tokenizer, template_name=template_name)
     else:
         # Template name is provided
-        if template_name == "auto" and tokenizer.has_template:
+        if template_name == "auto" and tokenizer.has_template():
             return AutoTemplate(tokenizer)
         else:
             return Template(tokenizer, template_name=template_name)

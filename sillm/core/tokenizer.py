@@ -265,7 +265,7 @@ class TransformerTokenizer(Tokenizer):
         """
         return self._model.decode(t)
     
-    def has_chat_template(self) -> bool:
+    def has_template(self) -> bool:
         """
         Check if tokenizer has chat template.
         """
