@@ -128,10 +128,30 @@ if __name__ == "__main__":
                 # Clear conversation
                 conversation.clear()
                 cache = model.init_kv_cache(**kv_cache_args)
+            elif prompt.startswith('/save '):
+                fpath = prompt.split(' ')[-1]
+                if fpath.endswith('.json'):
+                    conversation.save_json(fpath)
+                    logger.debug(f"Saved conversation to {fpath}")
+                else:
+                    logger.warning(f"Invalid file path: {fpath}")
+            elif prompt.startswith('/load '):
+                fpath = prompt.split(' ')[-1]
+                if os.path.isfile(fpath):
+                    conversation.load_json(fpath)
+                    cache = model.init_kv_cache(**kv_cache_args)
+                    logger.debug(f"Loaded conversation from {fpath}")
+
+                    metadata = model.eval(conversation.text, cache)
+                    logger.debug(f"Evaluated {metadata['usage']['prompt_tokens']} prompt tokens in {metadata['timing']['eval_time']:.2f}s ({metadata['usage']['prompt_tokens'] / metadata['timing']['eval_time']:.2f} tok/sec)")
+                else:
+                    logger.warning(f"File not found: {fpath}")
             else:
                 print("Commands:")
                 print("/exit - Exit chat")
                 print("/clear - Clear conversation")
+                print("/save <file.json> - Save conversation to JSON file")
+                print("/load <file.json> - Load conversation from JSON file")
             
             prompt = ""
             continue

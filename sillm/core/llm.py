@@ -442,6 +442,19 @@ class LLM():
             result += text
 
         return result, metadata
+    
+    def eval(self,
+             prompt: str | list | mx.array,
+             cache: KVCache = None,
+             ):
+        """
+        Evaluate model.
+        Args:
+            prompt: Prompt to evaluate.
+        Returns:
+            Metadata.
+        """
+        return eval(self.model, self.tokenizer, prompt, cache)
 
 def generate(model,
              tokenizer: Tokenizer,
@@ -607,7 +620,7 @@ def generate(model,
 
             yield text[text_offset:], metadata
 
-    mx.async_eval(tokens)
+    mx.eval(tokens)
 
     text_offset = len(text)
     text = tokenizer.decode(tokens)
@@ -619,3 +632,45 @@ def generate(model,
         metadata["token_ids"] = tokens
 
     yield text[text_offset:], metadata
+
+def eval(model,
+         tokenizer: Tokenizer,
+         prompt: str | list | mx.array,
+         cache: KVCache = None
+         ):
+    start = time.perf_counter()
+
+    # Pre-process inputs
+    if isinstance(prompt, str):
+        inputs = mx.array(tokenizer.encode(prompt))
+    elif isinstance(prompt, list):
+        inputs = mx.array(prompt)
+    elif isinstance(prompt, mx.array):
+        inputs = prompt
+    else:
+        raise ValueError("Prompt must be a string, list of tokens, or MX array")
+    
+    # Initialize metadata
+    timing = {
+        "runtime": 0.0,
+        "eval_time": 0.0,
+        "tokenizer_time": time.perf_counter() - start
+    }
+    usage = {
+        "prompt_tokens": len(inputs),
+    }
+    metadata = {
+        "timing": timing,
+        "usage": usage,
+        "finish_reason": "length"
+    }
+
+    # Evaluate input
+    logits = model(inputs[None], cache=cache)
+    mx.eval(logits)
+
+    # Update metadata
+    timing["eval_time"] = time.perf_counter() - start
+    timing["runtime"] = timing["eval_time"]
+
+    return metadata

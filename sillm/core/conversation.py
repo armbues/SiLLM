@@ -1,4 +1,5 @@
 import logging
+import json
 
 from sillm.core.template import Template, AutoTemplate
 
@@ -39,17 +40,28 @@ class Conversation(object):
         self.messages = []
         self.text = ""
 
-    def load_messages(self,
-                      messages: list
-                      ):
+    def save_json(self,
+                  fpath: str
+                  ):
         """
-        Load messages into conversation.
+        Save conversation to JSON file.
         Args:
-            messages: List of messages.
-        Returns:
-            Formatted conversation string and formatted context.
+            fpath: File path.
         """
-        self.messages = messages
+        with open(fpath, "w") as f:
+            json.dump(self.messages, f)
+
+    def load_json(self,
+                  fpath: str
+                  ):
+        """
+        Load conversation from JSON file.
+        Args:
+            fpath: File path.
+        """
+        with open(fpath, "r") as f:
+            self.messages = json.load(f)
+            self.text = self.apply_chat_template(add_generation_prompt=False)
 
     def add_message(self,
                     content: str,
