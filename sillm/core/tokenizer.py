@@ -269,7 +269,7 @@ class TransformerTokenizer(Tokenizer):
         """
         Check if tokenizer has chat template.
         """
-        return hasattr(self._model, "apply_chat_template")
+        return self._model.chat_template is not None
     
     def apply_chat_template(self,
                             *args,
