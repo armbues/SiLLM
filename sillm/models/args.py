@@ -90,6 +90,7 @@ class ModelArgs:
             "cohere": CohereArgs,
             "phi3": Phi3Args,
             "gemma2": Gemma2Args,
+            "gemma3_text": Gemma3Args,
             "phimoe": PhiMoEArgs,
             "pharia-v1": ModelArgs,
             "granite": GraniteArgs,
@@ -197,6 +198,21 @@ class Gemma2Args(ModelArgs):
     attn_logit_softcapping: float = 50.0
     final_logit_softcapping: float = 30.0
     query_pre_attn_scalar: float = 144.0
+    
+@dataclasses.dataclass
+class Gemma3Args(ModelArgs):
+    """
+    Gemma 3 model arguments.
+    """
+    head_dim: int = 256
+    n_heads: int = 8
+    n_kv_heads: int = 4
+    vocab_size: int = 262208
+    rms_norm_eps: float = 1e-6
+    sliding_window: int = 1024
+    sliding_window_pattern: int = 6
+    rope_local_base_freq: float = 10000.0
+    rope_global_base_freq: float = 1000000.0
 
 @dataclasses.dataclass
 class PhiMoEArgs(ModelArgs):
