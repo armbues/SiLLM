@@ -34,7 +34,7 @@ class ModelFormat(enum.Enum):
                 return ModelFormat.MLX
             elif k.startswith("blk."):
                 return ModelFormat.GGUF
-            elif k.startswith("model.layers.") or k.startswith("transformer."):
+            elif k.startswith("model.layers.") or k.startswith("language_model.model.layers.") or k.startswith("transformer."):
                 return ModelFormat.HUGGINGFACE
             
         return ModelFormat.UNKNOWN
@@ -237,16 +237,16 @@ def load_weights(weights_files,
 
         for key, value in weights_shard.items():
             mlx_key = map_key(key)
-            mapping[mlx_key] = key
-            
-            mx.eval(value)
 
             if mlx_key is None:
-                logger.warning(f"Unknown key: {key}")
+                logger.debug(f"Unused key: {key}")
             else:
+                mapping[mlx_key] = key
+                
                 if mlx_key in weights:
                     logger.warning(f"Duplicate key: {mlx_key} {value.shape}")
 
+                mx.eval(value)
                 weights[mlx_key] = value
 
     return weights, mapping, format
