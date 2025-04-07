@@ -8,6 +8,15 @@ def map_key(k):
     Args:
         k: Key to map.
     """
+    # Multi-modal
+    if k.startswith("language_model."):
+        k = re.sub(r"^language_model\.", "", k)
+    elif k.startswith("vision_tower.") or k.startswith("vision_model."):
+        return None
+    elif k.startswith("multi_modal_projector."):
+        return None
+
+    # Transformers
     if k.startswith("layers."):
         return k
     elif k.startswith("output."):
@@ -224,7 +233,7 @@ def map_config(config):
             result["model_type"] = "mixtral"
     if "tokenizer.ggml.tokens" in config:
         result["vocab_size"] = len(config["tokenizer.ggml.tokens"])
-    if result["vocab_size"] <= 0:
+    if "vocab_size" in result and result["vocab_size"] <= 0:
         del(result["vocab_size"])
     if "llama.expert_count" in config and "llama.expert_used_count" in config:
         result["moe"] = {
