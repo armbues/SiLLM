@@ -129,6 +129,8 @@ class ModelArgs:
 
         with open(config_path, "r") as f:
             config = json.loads(f.read())
+        if "text_config" in config:
+            config = config["text_config"]
         config = map_config(config)
 
         return ModelArgs.load_config(config)
