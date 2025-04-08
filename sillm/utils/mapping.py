@@ -186,6 +186,10 @@ def map_config(config):
         "embedding_multiplier",
         "residual_multiplier",
         "attention_multiplier",
+        "sliding_window",
+        "sliding_window_pattern",
+        "rope_local_base_freq",
+        "rope_global_base_freq",
     ]
     for key in mlx_keys:
         if key in config:
