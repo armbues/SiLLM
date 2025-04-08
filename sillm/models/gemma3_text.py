@@ -141,6 +141,11 @@ class TransformerBlock(llama.TransformerBlock):
         
         return out
 
+########
+# References:
+# https://github.com/huggingface/transformers/blob/v4.51.0/src/transformers/models/gemma3/modeling_gemma3.py
+# https://github.com/ml-explore/mlx-lm/blob/main/mlx_lm/models/gemma3_text.py
+########
 class Model(llama.Model):
     """
     Gemma model wrapper.
