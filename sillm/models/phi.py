@@ -58,7 +58,7 @@ class Attention(llama.Attention):
             keys = self.rope(keys)
 
         scale = math.sqrt(1 / queries.shape[-1])
-        output = scaled_dot_product_attention(queries.astype(mx.float32), keys, values, cache=cache, scale=self.scale, mask=mask)
+        output = scaled_dot_product_attention(queries.astype(mx.float32), keys, values, cache=cache, scale=scale, mask=mask)
         output = output.moveaxis(2, 1).reshape(B, L, -1)
 
         return self.wo(output)
