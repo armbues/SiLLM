@@ -19,7 +19,7 @@ class ModelArgs:
     n_layers: int
     head_dim: int
     n_heads: int
-    n_kv_heads: int
+    n_kv_heads: int = None
     norm_eps: float = 1e-5
     hidden_dim: int = None
     vocab_size: int = -1
@@ -57,6 +57,8 @@ class ModelArgs:
             self.hidden_dim = weights["layers.0.feed_forward.w1.weight"].shape[0]
         if self.vocab_size <= 0 and "output.weight" in weights:
             self.vocab_size = weights["output.weight"].shape[0]
+        if self.n_kv_heads is None:
+            self.n_kv_heads = self.n_heads
 
     def save_config(self, config_path):
         """

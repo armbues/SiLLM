@@ -130,9 +130,6 @@ class Model(llama.Model):
         Args:
             args: Model arguments.
         """
-        if args.n_kv_heads is None:
-            args.n_kv_heads = args.n_heads
-            
         BaseModel.__init__(self, args)
         self.args = args
 
