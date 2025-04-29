@@ -87,6 +87,7 @@ class ModelArgs:
             "mixtral": MixtralArgs,
             "phi": ModelArgs,
             "qwen2": ModelArgs,
+            "qwen3": Qwen3Args,
             "starcoder2": ModelArgs,
             "dbrx": DbrxArgs,
             "cohere": CohereArgs,
@@ -234,3 +235,9 @@ class GraniteArgs(ModelArgs):
     residual_multiplier: float = 1.0
     attention_multiplier: float = 1.0
     logits_scaling: float = 1.0
+
+class Qwen3Args(ModelArgs):
+    """
+    Qwen 3 model arguments.
+    """
+    rms_norm_eps: float = 1e-6

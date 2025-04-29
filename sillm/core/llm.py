@@ -31,6 +31,7 @@ model_map = {
     "phimoe":       models.phimoe.Model,
     "starcoder2":   models.starcoder2.Model,
     "qwen2":        models.qwen2.Model,
+    "qwen3":        models.qwen3.Model,
     "dbrx":         models.dbrx.Model,
     "cohere":       models.cohere.Model,
     "nemotron":     models.nemotron.Model,
