@@ -31,8 +31,8 @@ class Attention(nn.Module):
         self.wv = nn.Linear(args.dim, args.n_kv_heads * args.head_dim, bias=args.attention_bias)
         self.wo = nn.Linear(args.n_heads * args.head_dim, args.dim, bias=args.attention_bias)
 
-        self.q_norm = RMSNorm(dims=args.head_dim, eps=args.rms_norm_eps)
-        self.k_norm = RMSNorm(dims=args.head_dim, eps=args.rms_norm_eps)
+        self.q_norm = RMSNorm(dims=args.head_dim, eps=args.norm_eps)
+        self.k_norm = RMSNorm(dims=args.head_dim, eps=args.norm_eps)
 
         layer_sliding = (layer_index + 1) % self.args.sliding_window_pattern != 0
         if layer_sliding:
