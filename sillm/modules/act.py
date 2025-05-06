@@ -16,7 +16,7 @@ def relu2(x):
 def init_act(args: ModelArgs):
     if args.hidden_act is None:
         logger.debug("No hidden activation specified. Using SiLU.")
-        return nn.SiLU()
+        return nn.silu
 
     if args.hidden_act == "silu":
         return nn.silu
@@ -30,4 +30,4 @@ def init_act(args: ModelArgs):
         return relu2
     
     logger.warning(f"Unknown hidden activation: {args.hidden_act}. Using SiLU.")
-    return nn.SiLU()
+    return nn.silu
