@@ -427,6 +427,8 @@ class LLM():
         Yields:
             Tuple of generated text and metadata.
         """
+        logger.debug("Generation config: " + ", ".join([f"{k}={v}" for k, v in kwargs.items() if k not in ("cache", "prompt_cache", "logit_filter", "extra_stop_tokens")]))
+
         yield from generate(self.model, self.tokenizer, *args, **kwargs)
 
     def completion(self, *args, **kwargs) -> str:
@@ -451,6 +453,8 @@ class LLM():
         Returns:
             Tuple of generated text and metadata.
         """
+        logger.debug("Completion config: " + ", ".join([f"{k}={v}" for k, v in kwargs.items() if k not in ("cache", "prompt_cache", "logit_filter", "extra_stop_tokens")]))
+
         result = ""
         for text, metadata in generate(self.model, self.tokenizer, *args, **kwargs):
             result += text

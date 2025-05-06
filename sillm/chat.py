@@ -28,6 +28,7 @@ if __name__ == "__main__":
     parser.add_argument("--template", type=str, default=None, help="Chat template (chatml, llama2, alpaca, etc.)")
     parser.add_argument("--system", type=str, default=None, help="System prompt for chat template")
     parser.add_argument("--ascii", default=False, action="store_true", help="Force output tokens to ASCII printable characters")
+    parser.add_argument("--default", default=False, action="store_true", help="Use default generation config")
     parser.add_argument("--min_reason", type=int, default=None, help="Force a minimum completion length before allowing </think> tag")
     parser.add_argument("-v", "--verbose", default=1, action="count", help="Increase output verbosity")
     args = parser.parse_args()
@@ -96,6 +97,10 @@ if __name__ == "__main__":
         "prompt_cache": prompt_cache,
         "logit_filter": logit_filter
     }
+
+    if args.default and model.args.generation_config is not None:
+        # Use default generation config
+        generate_args.update(model.args.generation_config)
 
     kv_cache_args = {
         "quantized": args.qkv is not None,
@@ -169,7 +174,6 @@ if __name__ == "__main__":
         # Add user message to conversation and get prompt string
         request = conversation.add_user(prompt)
 
-        logger.debug(f"Generating {args.max_tokens} tokens with temperature {args.temperature}")
         response = ""
         for s, metadata in model.generate(request, cache=cache, **generate_args):
             print(s, end="", flush=True)

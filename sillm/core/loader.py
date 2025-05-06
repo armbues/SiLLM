@@ -1,6 +1,7 @@
 import logging
 import pathlib
 import enum
+import json
 
 import mlx.core as mx
 
@@ -185,10 +186,20 @@ def load_model_dir(model_path: str) -> LLM:
 
     # Fix configuration
     model_args.fix_config(weights)
-    model_args.log_config()
 
     # Load tokenizer
     tokenizer = load_tokenizer(str(model_path), model_args)
+
+    # Load generation config
+    generation_config_path = model_path / "generation_config.json"
+    if generation_config_path.exists():
+        generation_config = load_generation_config(generation_config_path)
+        model_args.generation_config = generation_config
+
+        logger.info(f"Loaded generation config from {generation_config_path}")
+
+    # Log configuration
+    model_args.log_config()
 
     # Initialize model
     model = LLM(tokenizer, model_args)
@@ -298,6 +309,23 @@ def load_tokenizer(model_path: str,
     logger.info(f"Loaded tokenizer from {tokenizer_path}")
 
     return tokenizer
+
+def load_generation_config(generation_config_path: str):
+    """
+    Load generation config from file.
+    Args:
+        generation_config_path: Path to generation config file.
+    Returns:
+        Generation config.
+    """
+    generation_config = {}
+    with open(generation_config_path, "r") as f:
+        data = json.loads(f.read())
+        for key in data.keys():
+            if key in ('temperature', 'top_p', 'top_k'):
+                generation_config[key] = data[key]
+    
+    return generation_config
 
 ########
 # Based on:

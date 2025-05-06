@@ -37,6 +37,7 @@ class ModelArgs:
     eos_token_id: Union[int, list] = None
     pad_token_id: int = None
     quantization: dict = None
+    generation_config: dict = None
 
     def __repr__(self):
         return json.dumps(dataclasses.asdict(self), indent=4)
