@@ -82,9 +82,9 @@ class TransformerBlock(llama.TransformerBlock):
         self.dim = args.dim
 
         self.attention = Attention(args=args)
-        self.attention_norm = nn.LayerNorm(args.dim, eps=args.rms_norm_eps)
+        self.attention_norm = nn.LayerNorm(args.dim, eps=args.norm_eps)
         self.feed_forward = FeedForward(args)
-        self.ffn_norm = nn.LayerNorm(args.dim, eps=args.rms_norm_eps)
+        self.ffn_norm = nn.LayerNorm(args.dim, eps=args.norm_eps)
 
 class Model(llama.Model):
     """
@@ -103,7 +103,7 @@ class Model(llama.Model):
         
         self.tok_embeddings = nn.Embedding(args.vocab_size, args.dim)
         self.layers = [TransformerBlock(args=args) for _ in range(args.n_layers)]
-        self.norm = nn.LayerNorm(args.dim, eps=args.rms_norm_eps)
+        self.norm = nn.LayerNorm(args.dim, eps=args.norm_eps)
         self.output = nn.Linear(args.dim, args.vocab_size, bias=True)
 
     def preprocess_weights(self,
