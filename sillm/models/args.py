@@ -88,7 +88,7 @@ class ModelArgs:
             "mixtral": MixtralArgs,
             "phi": ModelArgs,
             "qwen2": ModelArgs,
-            "qwen3": Qwen3Args,
+            "qwen3": ModelArgs,
             "starcoder2": ModelArgs,
             "dbrx": DbrxArgs,
             "cohere": CohereArgs,
@@ -212,7 +212,7 @@ class Gemma3Args(ModelArgs):
     n_heads: int = 8
     n_kv_heads: int = 4
     vocab_size: int = 262208
-    rms_norm_eps: float = 1e-6
+    norm_eps: float = 1e-6
     sliding_window: int = 1024
     sliding_window_pattern: int = 6
     rope_local_base_freq: float = 10000.0
@@ -225,7 +225,6 @@ class PhiMoEArgs(ModelArgs):
     """
     num_local_experts: int = 16
     num_experts_per_tok: int = 2
-    rms_norm_eps: float = 1e-5
 
 @dataclasses.dataclass
 class GraniteArgs(ModelArgs):
@@ -236,9 +235,3 @@ class GraniteArgs(ModelArgs):
     residual_multiplier: float = 1.0
     attention_multiplier: float = 1.0
     logits_scaling: float = 1.0
-
-class Qwen3Args(ModelArgs):
-    """
-    Qwen 3 model arguments.
-    """
-    rms_norm_eps: float = 1e-6

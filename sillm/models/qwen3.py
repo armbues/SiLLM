@@ -7,7 +7,6 @@ from sillm.models.base import BaseModel, scaled_dot_product_attention
 from sillm.core.cache import KVCache
 from sillm.models.args import ModelArgs
 from sillm.modules.rope import init_rope
-from sillm.modules.act import init_act
 import sillm.models.llama as llama
 
 class Attention(nn.Module):
@@ -32,8 +31,8 @@ class Attention(nn.Module):
         self.wv = nn.Linear(args.dim, args.n_kv_heads * args.head_dim, bias=False)
         self.wo = nn.Linear(args.n_heads * args.head_dim, args.dim, bias=False)
 
-        self.q_norm = nn.RMSNorm(dims=args.head_dim, eps=args.rms_norm_eps)
-        self.k_norm = nn.RMSNorm(dims=args.head_dim, eps=args.rms_norm_eps)
+        self.q_norm = nn.RMSNorm(dims=args.head_dim, eps=args.norm_eps)
+        self.k_norm = nn.RMSNorm(dims=args.head_dim, eps=args.norm_eps)
 
         self.rope = init_rope(args)
         
@@ -65,32 +64,6 @@ class Attention(nn.Module):
         output = output.transpose(0, 2, 1, 3).reshape(B, L, -1)
 
         return self.wo(output)
-    
-class FeedForward(nn.Module):
-    """
-    Feed-forward module.
-    """
-    def __init__(self, args: ModelArgs):
-        """
-        Args:
-            args: Model arguments.
-        """
-        super().__init__()
-
-        self.w1 = nn.Linear(args.dim, args.hidden_dim, bias=False)
-        self.w2 = nn.Linear(args.hidden_dim, args.dim, bias=False)
-        self.w3 = nn.Linear(args.dim, args.hidden_dim, bias=False)
-
-        self.act = init_act(args)
-
-    def __call__(self, x) -> mx.array:
-        """
-        Args:
-            x: Input tensor.
-        Returns:
-            Output tensor.
-        """
-        return self.w2(self.act(self.w1(x)) * self.w3(x))
 
 class TransformerBlock(llama.TransformerBlock):
     """
@@ -108,30 +81,9 @@ class TransformerBlock(llama.TransformerBlock):
         self.dim = args.dim
         
         self.attention = Attention(args=args)
-        self.feed_forward = FeedForward(args=args)
-        self.attention_norm = nn.RMSNorm(args.dim, eps=args.rms_norm_eps)
-        self.ffn_norm = nn.RMSNorm(args.dim, eps=args.rms_norm_eps)
-
-    def forward(
-            self,
-            x: mx.array,
-            mask: Optional[mx.array] = None,
-            cache: Optional[KVCache] = None,
-            ) -> mx.array:
-        """
-        Args:
-            x: Input tensor.
-            mask: Mask tensor.
-            cache: Cache from previous forward pass.
-        Returns:
-            Output tensor and cache.
-        """
-        r = self.attention(self.attention_norm(x), mask, cache)
-        h = x + r
-        r = self.feed_forward(self.ffn_norm(h))
-        out = h + r
-
-        return out
+        self.feed_forward = llama.FeedForward(args=args)
+        self.attention_norm = nn.RMSNorm(args.dim, eps=args.norm_eps)
+        self.ffn_norm = nn.RMSNorm(args.dim, eps=args.norm_eps)
 
 ########
 # References:
