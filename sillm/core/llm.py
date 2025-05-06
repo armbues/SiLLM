@@ -428,14 +428,20 @@ class LLM():
         Generate a completion and wait for all tokens.
         Args:
             prompt: Prompt to start generation.
-            temperature: Sampling temperature.
             max_tokens: Max number of tokens to generate.
+            temperature: Sampling temperature.
+            top_k: Top K sampling.
+            top_p: Top P sampling.
+            min_p: Minimum P sampling.
+            top_nsigma: Top N sigma sampling.
             repetition_penalty: Repetition penalty.
             repetition_window: Repetition window.
             logprobs: Return logprobs.
             token_ids: Return token IDs.
             flush: Flush buffer every n tokens.
             extra_stop_tokens: Additional stop tokens.
+            prompt_cache: Prompt cache.
+            logit_filter: Logit filter.
         Returns:
             Tuple of generated text and metadata.
         """
