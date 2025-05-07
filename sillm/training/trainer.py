@@ -14,6 +14,7 @@ from mlx.utils import tree_map
 
 from sillm.core.llm import LLM
 from sillm.training.dataset import Dataset
+from sillm.reporting import WandBLogger
 
 logger = logging.getLogger("sillm")
 
@@ -102,7 +103,10 @@ class TrainableLLM(LLM):
               report_callback: callable = None,
               eval_steps: int = 100,
               eval_callback: callable = None,
-              validation_samples: int = 40
+              validation_samples: int = 40,
+              wandb: bool = False,
+              wandb_project: str = "sillm",
+              wandb_report_steps: int = 5
               ):
         """
         Train model.
@@ -118,6 +122,9 @@ class TrainableLLM(LLM):
             eval_callback: Callback after eval.
             validation_samples: Number of validation samples.
             debug: Whether to enable debug mode.
+            wandb: Whether to enable WandB logging.
+            wandb_project: WandB project name.
+            wandb_report_steps: Report every `wandb_report_steps` iterations to WandB.
         """
         # Calculate number of iterations
         if iterations == 0:
@@ -131,6 +138,24 @@ class TrainableLLM(LLM):
 
         # Get system memory
         system_memory = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
+                
+        if wandb:
+            # Initialize WandB logger
+            wandb_config = {
+                "optimizer": optimizer_type,
+                "learning_rate": learning_rate,
+                "learning_decay": learning_decay,
+                "learning_warmup": learning_warmup,
+                "batch_size": batch_size,
+                "gradient_checkpointing": gradient_checkpointing,
+                "gradient_accumulation_steps": gradient_accumulation_steps,
+                "epochs": epochs,
+                "iterations": iterations
+            }
+            wandb_logger = WandBLogger(
+                project=wandb_project,
+                config=wandb_config
+            )
 
         # Initialize scheduler
         if learning_decay > 0.0:
@@ -155,6 +180,8 @@ class TrainableLLM(LLM):
             optimizer = optim.Adafactor(learning_rate=scheduler, weight_decay=0.0)
         else:
             raise ValueError(f"Unknown optimizer type: {optimizer_type}")
+        
+        optimizer = optimizer.init(self.model.trainable_parameters())
         
         # Initialize gradient accumulation
         if gradient_accumulation_steps > 1:
@@ -253,10 +280,24 @@ class TrainableLLM(LLM):
                     else:
                         rewards = np.vstack([rewards, reward])
 
+                # Calculate loss and timings
+                train_loss = np.mean(losses)
+                stop = time.perf_counter()
+                    
+                # Log to WandB if needed
+                if wandb and (n + 1) % wandb_report_steps == 0:
+                    metrics = {
+                        "train/loss": train_loss,
+                        "train/tokens_per_sec": float(intv_tokens) / (stop - start),
+                        "train/learning_rate": optimizer.learning_rate.item()
+                    }
+                    if rewards is not None:
+                        metrics["train/reward_chosen"] = np.mean(rewards, axis=0)[0]
+                        metrics["train/reward_rejected"] = np.mean(rewards, axis=0)[1]
+                    wandb_logger.log(metrics)
+
                 # Report training loss if needed
                 if (n + 1) % report_steps == 0:
-                    train_loss = np.mean(losses)
-                    stop = time.perf_counter()
 
                     # Print training loss and timings
                     pbar_epochs.write(f"#{n + 1}:\tTraining loss    {train_loss:.3f}\t{float(intv_tokens) / (stop - start):.3f} tok/sec (learning rate: {optimizer.learning_rate.item():.3e})")
@@ -286,6 +327,12 @@ class TrainableLLM(LLM):
                     # Print validation loss and timings
                     stop = time.perf_counter()
                     val_loss = self.evaluate(dataset_validation, batch_size, validation_batches)
+                    
+                    # Log to WandB
+                    if wandb:
+                        wandb_logger.log({
+                            "val/loss": val_loss
+                        })
                     start = time.perf_counter()
                     pbar_epochs.write(f"#{n + 1}:\tValidation loss  {val_loss:.3f}\t{(start - stop):.3f} sec")
 
@@ -300,8 +347,15 @@ class TrainableLLM(LLM):
         # Evaluate test dataset
         if dataset_test is not None:
             test_batches = validation_samples // batch_size
-
-            stop = time.perf_counter()
             test_loss = self.evaluate(dataset_test, batch_size, test_batches)
+            
+            stop = time.perf_counter()
             start = time.perf_counter()
             logger.info(f"Test loss: {test_loss:.3f}\t{start - stop:.3f} sec")
+            
+            # Log to WandB
+            if wandb:
+                wandb_logger.log({
+                    "test/loss": test_loss
+                })
+                wandb_logger.finish()
