@@ -10,7 +10,7 @@ model_special_tokens = [
     "<|start_header_id|>", "<|end_header_id|>", "<|eot_id|>",       # Llama-3
     "<|eom_id|>",                                                   # Llama-3.1
     "<|end|>",                                                      # Phi-3
-    "<|im_start|>", "<|im_end|>",                                   # Yi / Qwen
+    "<|im_start|>", "<|im_end|>", "<|endoftext|>",                  # Yi / Qwen
     "<start_of_turn>", "<end_of_turn>",                             # Gemma
     "<extra_id_1>"                                                  # Mistral-NeMo-Minitron
 ]
@@ -217,6 +217,10 @@ class TransformerTokenizer(Tokenizer):
             self.bos_id = self._model.bos_token_id
         else:
             self.bos_id = args.bos_token_id
+
+        if 'add_bos_token' in self._model.init_kwargs and self._model.init_kwargs['add_bos_token'] is False:
+            self.bos_id = None
+            
         if args.eos_token_id is None:
             self.eos_id = self._model.eos_token_id
         else:
