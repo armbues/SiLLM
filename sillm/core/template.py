@@ -40,7 +40,7 @@ class Template(object):
             env.globals["raise_exception"] = exception_callback
 
         # Set special tokens map
-        self.special_tokens_map = tokenizer.special_tokens_map
+        self._special_tokens_map = tokenizer.special_tokens_map
 
         if os.path.isfile(template_name):
             with open(template_name, "r") as f:
@@ -85,7 +85,7 @@ class Template(object):
                             add_generation_prompt: bool = False,
                             tools: dict = None,
                             ):
-        return self.template.render(messages=messages, add_generation_prompt=add_generation_prompt, tools=tools, **self.special_tokens_map)
+        return self.template.render(messages=messages, add_generation_prompt=add_generation_prompt, tools=tools, **self._special_tokens_map)
     
 class AutoTemplate(Template):
     def __init__(self,
@@ -101,7 +101,7 @@ class AutoTemplate(Template):
                             add_generation_prompt: bool = False,
                             tools: dict = None,
                             ):
-        return self.tokenizer.apply_chat_template(messages, tokenize=False, tools=tools, add_generation_prompt=add_generation_prompt)
+        return self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=add_generation_prompt, tools=tools)
 
 def init_template(tokenizer,
                   args,
