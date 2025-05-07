@@ -82,13 +82,14 @@ class BaseModel(nn.Module):
             Attention mask.
         """
         L = h.shape[1]
+        dtype = h.dtype
         
         mask = None
         if L > 1:
             if cache is not None and cache[0] is not None:
-                mask = create_bool_causal_mask(L, cache[0].offset)
+                mask = create_additive_causal_mask(L, cache[0].offset, dtype=dtype)
             else:
-                mask = create_bool_causal_mask(L)
+                mask = create_additive_causal_mask(L, dtype=dtype)
 
         return mask
     
