@@ -18,7 +18,7 @@ class Attention(nn.Module):
         Args:
             args: Model arguments.
         """
-        nn.Module.__init__(self)
+        super().__init__()
         self.args = args
 
         self.n_heads: int = args.n_heads
