@@ -66,16 +66,47 @@ class Conversation(object):
 
     def add_message(self,
                     content: str,
-                    role: str
+                    role: str,
+                    add_generation_prompt: bool = False,
+                    add_generation_prefix: str = None
                     ):
-        # Add assistant message
+        """
+        Add message to the conversation.
+        Args:
+            content: Message content.
+            role: Role used for the message.
+            add_generation_prompt: Whether to add generation prompt.
+            add_generation_prefix: Prefix for generation.
+        Returns:
+            Formatted string for the message.
+        """
+        messages = []
+
+        # Add system message
+        if len(self.messages) == 0 and self.system_prompt is not None:
+            msg_system = {
+                "role": "system",
+                "content": self.system_prompt
+            }
+            messages.append(msg_system)
+            
+        # Add message
         msg = {
             "role": role,
             "content": content
         }
-        self.messages.append(msg)
+        messages.append(msg)
 
-        return self.apply_chat_template(messages=[msg])
+        self.messages += messages
+
+        text = self.apply_chat_template(messages=messages, add_generation_prompt=add_generation_prompt)
+        if add_generation_prefix is not None:
+            text += add_generation_prefix
+
+        if len(text) == 0:
+            raise ValueError("Chat template returned empty string")
+
+        return text
 
     def add_user(self,
                  content: str,
@@ -87,33 +118,11 @@ class Conversation(object):
         Args:
             content: User prompt.
             add_generation_prompt: Whether to add generation prompt.
+            add_generation_prefix: Prefix for generation.
         Returns:
             Formatted string for user message.
         """
-        messages = []
-
-        # Add system message
-        if len(self.messages) == 0 and self.system_prompt is not None:
-            msg_system = {
-                "role": "system",
-                "content": self.system_prompt
-            }
-            messages.append(msg_system)
-
-        # Add user message
-        msg = {
-            "role": "user",
-            "content": content
-        }
-        messages.append(msg)
-
-        self.messages += messages
-
-        prompt = self.apply_chat_template(messages=messages, add_generation_prompt=add_generation_prompt)
-        if add_generation_prefix is not None:
-            prompt += add_generation_prefix
-
-        return prompt
+        return self.add_message(content, "user", add_generation_prompt=add_generation_prompt, add_generation_prefix=add_generation_prefix)
     
     def add_assistant(self,
                      content: str
