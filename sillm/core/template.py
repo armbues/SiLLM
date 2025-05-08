@@ -84,8 +84,9 @@ class Template(object):
                             messages: list,
                             add_generation_prompt: bool = False,
                             tools: dict = None,
+                            **kwargs
                             ):
-        return self.template.render(messages=messages, add_generation_prompt=add_generation_prompt, tools=tools, **self._special_tokens_map)
+        return self.template.render(messages=messages, add_generation_prompt=add_generation_prompt, tools=tools, **self._special_tokens_map, **kwargs)
     
 class AutoTemplate(Template):
     def __init__(self,
@@ -100,8 +101,9 @@ class AutoTemplate(Template):
                             messages: list,
                             add_generation_prompt: bool = False,
                             tools: dict = None,
+                            **kwargs
                             ):
-        return self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=add_generation_prompt, tools=tools)
+        return self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=add_generation_prompt, tools=tools, **kwargs)
 
 def init_template(tokenizer,
                   args,

@@ -133,6 +133,10 @@ if __name__ == "__main__":
                 # Clear conversation
                 conversation.clear()
                 cache = model.init_kv_cache(**kv_cache_args)
+            elif prompt == "/think":
+                conversation.params["enable_thinking"] = True
+            elif prompt == "/no_think":
+                conversation.params["enable_thinking"] = False
             elif prompt.startswith('/save '):
                 fpath = prompt.split(' ')[-1]
                 if fpath.endswith('.json'):
@@ -157,6 +161,8 @@ if __name__ == "__main__":
                 print("/clear - Clear conversation")
                 print("/save <file.json> - Save conversation to JSON file")
                 print("/load <file.json> - Load conversation from JSON file")
+                print("/think - Enable thinking for Qwen 3 models")
+                print("/no_think - Disable thinking for Qwen 3 models")
             
             prompt = ""
             continue

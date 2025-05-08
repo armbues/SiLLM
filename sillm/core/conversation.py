@@ -12,11 +12,13 @@ class Conversation(object):
     def __init__(self,
                 template: Template,
                 system_prompt: str = None,
-                tools: list = None
+                tools: list = None,
+                params: dict = {}
                 ):
         self.template = template
         self.system_prompt = system_prompt
         self.tools = tools
+        self.params = params
 
         self.clear()
 
@@ -24,7 +26,7 @@ class Conversation(object):
                             messages: list,
                             add_generation_prompt: bool = False
                             ):
-        return self.template.apply_chat_template(messages=messages, tools=self.tools, add_generation_prompt=add_generation_prompt)
+        return self.template.apply_chat_template(messages=messages, add_generation_prompt=add_generation_prompt, tools=self.tools, **self.params)
 
     def __str__(self):
         """
@@ -129,17 +131,8 @@ class AutoConversation(Conversation):
     """
     Wrapper for tokenizers with built-in chat templates.
     """
-    def __init__(self,
-                tokenizer,
-                system_prompt: str = None):
-        self.tokenizer = tokenizer
-        self.system_prompt = system_prompt
-        self.messages = []
-
-        logger.info(f"Initialized built-in conversation template from tokenizer")
-
     def apply_chat_template(self,
                             messages: list,
                             add_generation_prompt: bool = False
                             ):
-        return self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=add_generation_prompt)
+        return self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=add_generation_prompt, tools=self.tools, **self.params)
