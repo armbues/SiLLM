@@ -39,7 +39,6 @@ class Conversation(object):
         Clear conversation.
         """
         self.messages = []
-        self.text = ""
 
     def save_json(self,
                   fpath: str
@@ -62,7 +61,6 @@ class Conversation(object):
         """
         with open(fpath, "r") as f:
             self.messages = json.load(f)
-            self.text = self.apply_chat_template(add_generation_prompt=False)
 
     def add_message(self,
                     content: str,
