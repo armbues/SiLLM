@@ -65,7 +65,7 @@ async def on_chat_start():
         Slider(id="Temperature", label="Model Temperature", initial=0.7, min=0, max=2, step=0.1),
         Slider(id="Penalty", label="Repetition Penalty", initial=1.0, min=0.1, max=3.0, step=0.1),
         Slider(id="Window", label="Repetition Window", initial=100, min=10, max=500, step=10),
-        Slider(id="Tokens", label="Max. Tokens", initial=2048, min=256, max=8192, step=256),
+        Slider(id="Tokens", label="Max. Tokens", initial=4096, min=1024, max=32768, step=1024),
         TextInput(id="Seed", label="Seed", initial="-1"),
     ]
 
