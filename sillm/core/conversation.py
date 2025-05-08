@@ -21,9 +21,10 @@ class Conversation(object):
         self.clear()
 
     def apply_chat_template(self,
+                            messages: list,
                             add_generation_prompt: bool = False
                             ):
-        return self.template.apply_chat_template(messages=self.messages, tools=self.tools, add_generation_prompt=add_generation_prompt)
+        return self.template.apply_chat_template(messages=messages, tools=self.tools, add_generation_prompt=add_generation_prompt)
 
     def __str__(self):
         """
@@ -65,32 +66,16 @@ class Conversation(object):
 
     def add_message(self,
                     content: str,
-                    role: str,
-                    add_generation_prompt: bool = True,
-                    add_generation_prefix: str = None
+                    role: str
                     ):
-        # Add system message
-        if len(self.messages) == 0 and self.system_prompt is not None:
-            msg_system = {
-                "role": "system",
-                "content": self.system_prompt
-            }
-            self.messages.append(msg_system)
-        
-        # Add message
+        # Add assistant message
         msg = {
             "role": role,
             "content": content
         }
         self.messages.append(msg)
 
-        len_text = len(self.text)
-        self.text = self.apply_chat_template(add_generation_prompt=add_generation_prompt)
-
-        if add_generation_prefix is not None:
-            self.text += add_generation_prefix
-
-        return self.text[len_text:]
+        return self.apply_chat_template(messages=[msg])
 
     def add_user(self,
                  content: str,
@@ -103,9 +88,32 @@ class Conversation(object):
             content: User prompt.
             add_generation_prompt: Whether to add generation prompt.
         Returns:
-            Formatted conversation string and formatted context.
+            Formatted string for user message.
         """
-        return self.add_message(content=content, role="user", add_generation_prompt=add_generation_prompt, add_generation_prefix=add_generation_prefix)
+        messages = []
+
+        # Add system message
+        if len(self.messages) == 0 and self.system_prompt is not None:
+            msg_system = {
+                "role": "system",
+                "content": self.system_prompt
+            }
+            messages.append(msg_system)
+
+        # Add user message
+        msg = {
+            "role": "user",
+            "content": content
+        }
+        messages.append(msg)
+
+        self.messages += messages
+
+        prompt = self.apply_chat_template(messages=messages, add_generation_prompt=add_generation_prompt)
+        if add_generation_prefix is not None:
+            prompt += add_generation_prefix
+
+        return prompt
     
     def add_assistant(self,
                      content: str
@@ -115,9 +123,9 @@ class Conversation(object):
         Args:
             content: Assistant response.
         Returns:
-            Formatted conversation string and formatted context.
+            Formatted string for assistant message.
         """
-        return self.add_message(content=content, role="assistant", add_generation_prompt=False)
+        return self.add_message(content, "assistant")
     
 class AutoConversation(Conversation):
     """
@@ -133,6 +141,7 @@ class AutoConversation(Conversation):
         logger.info(f"Initialized built-in conversation template from tokenizer")
 
     def apply_chat_template(self,
+                            messages: list,
                             add_generation_prompt: bool = False
                             ):
-        return self.tokenizer.apply_chat_template(self.messages, tokenize=False, add_generation_prompt=add_generation_prompt)
+        return self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=add_generation_prompt)
