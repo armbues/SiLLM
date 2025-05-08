@@ -24,9 +24,10 @@ class Conversation(object):
 
     def apply_chat_template(self,
                             messages: list,
-                            add_generation_prompt: bool = False
+                            add_generation_prompt: bool = False,
+                            tools: list = None
                             ):
-        return self.template.apply_chat_template(messages=messages, add_generation_prompt=add_generation_prompt, tools=self.tools, **self.params)
+        return self.template.apply_chat_template(messages=messages, add_generation_prompt=add_generation_prompt, tools=tools, **self.params)
 
     def __str__(self):
         """
@@ -81,14 +82,18 @@ class Conversation(object):
             Formatted string for the message.
         """
         messages = []
+        tools = None
 
         # Add system message
-        if len(self.messages) == 0 and self.system_prompt is not None:
-            msg_system = {
-                "role": "system",
-                "content": self.system_prompt
-            }
-            messages.append(msg_system)
+        if len(self.messages) == 0:
+            if self.system_prompt is not None:
+                msg_system = {
+                    "role": "system",
+                    "content": self.system_prompt
+                }
+                messages.append(msg_system)
+
+            tools = self.tools
             
         # Add message
         msg = {
@@ -99,7 +104,7 @@ class Conversation(object):
 
         self.messages += messages
 
-        text = self.apply_chat_template(messages=messages, add_generation_prompt=add_generation_prompt)
+        text = self.apply_chat_template(messages=messages, add_generation_prompt=add_generation_prompt, tools=tools)
         if add_generation_prefix is not None:
             text += add_generation_prefix
 
@@ -136,12 +141,34 @@ class Conversation(object):
         """
         return self.add_message(content, "assistant")
     
+    def add_tool_calls(self,
+                       contents: list,
+                       role: str = "tool",
+                       add_generation_prompt: bool = True
+                       ):
+        """
+        Add tool call results to the conversation.
+        """
+        messages = []
+
+        for content in contents:
+            msg = {
+                "role": role,
+                "content": content
+            }
+            messages.append(msg)
+
+        self.messages += messages
+        
+        return self.apply_chat_template(messages=messages, add_generation_prompt=add_generation_prompt)
+    
 class AutoConversation(Conversation):
     """
     Wrapper for tokenizers with built-in chat templates.
     """
     def apply_chat_template(self,
                             messages: list,
-                            add_generation_prompt: bool = False
+                            add_generation_prompt: bool = False,
+                            tools: list = None
                             ):
-        return self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=add_generation_prompt, tools=self.tools, **self.params)
+        return self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=add_generation_prompt, tools=tools, **self.params)
