@@ -89,6 +89,7 @@ class ModelArgs:
             "phi": ModelArgs,
             "qwen2": ModelArgs,
             "qwen3": ModelArgs,
+            "qwen3_moe": Qwen3MoEArgs,
             "starcoder2": ModelArgs,
             "dbrx": DbrxArgs,
             "cohere": CohereArgs,
@@ -235,3 +236,14 @@ class GraniteArgs(ModelArgs):
     residual_multiplier: float = 1.0
     attention_multiplier: float = 1.0
     logits_scaling: float = 1.0
+
+@dataclasses.dataclass
+class Qwen3MoEArgs(ModelArgs):
+    """
+    Qwen 3 MoE model arguments.
+    """
+    num_experts: int = 128
+    num_experts_per_tok: int = 8
+    moe_intermediate_size: int = 768
+    decoder_sparse_step: int = 1
+    norm_topk_prob: bool = True

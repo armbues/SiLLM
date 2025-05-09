@@ -51,6 +51,9 @@ def map_key(k):
         k = re.sub(r"\.block_sparse_moe\.experts\.(\d+)\.w2.", r".feed_forward.experts.\1.w2.", k)
         k = re.sub(r"\.block_sparse_moe\.experts\.(\d+)\.w3.", r".feed_forward.experts.\1.w3.", k)
 
+        # Qwen 3 MoE
+        k = re.sub(r"\.mlp\.gate\.", ".feed_forward.gate.", k)
+
         # Phi
         k = re.sub(r"\.self_attn\.dense\.", ".attention.wo.", k)
         k = re.sub(r"\.mlp\.fc1\.", ".feed_forward.w1.", k)
@@ -190,6 +193,11 @@ def map_config(config):
         "sliding_window_pattern",
         "rope_local_base_freq",
         "rope_global_base_freq",
+        "num_experts",
+        "num_experts_per_tok",
+        "moe_intermediate_size",
+        "decoder_sparse_step",
+        "norm_topk_prob",
     ]
     for key in mlx_keys:
         if key in config:
