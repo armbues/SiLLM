@@ -1,8 +1,12 @@
 import os
 import pathlib
+import re
+import json
 
 import chainlit as cl
 from chainlit.input_widget import Select, Slider, TextInput
+
+import mcp
 
 import sillm
 import sillm.utils as utils
@@ -16,51 +20,23 @@ if MODEL_DIR is None:
     raise ValueError("Please set the environment variable SILLM_MODEL_DIR to the directory containing the models.")
 MODEL_PATHS = {model_path.name: model_path for model_path in pathlib.Path(MODEL_DIR).iterdir() if model_path.is_dir() or model_path.suffix == ".gguf"}
 
-ADAPTER_DIR = os.environ.get("SILLM_ADAPTER_DIR")
-if ADAPTER_DIR is None:
-    ADAPTER_PATHS = {}
-else:
-    ADAPTER_PATHS = {adapter_path.stem: adapter_path for adapter_path in pathlib.Path(ADAPTER_DIR).iterdir() if adapter_path.suffix == ".safetensors"}
+current_model = None
+current_model_name = ""
 
-models = {}
-@cl.step(name="Loading Model")
-async def load_model(model_name: str,
-                     adapter_name: str = None
-                     ):
-    model = await cl.make_async(sillm.load)(MODEL_PATHS[model_name])
-    msg = f"Loaded model {model_name}."
-    model_id = model_name
-
-    if adapter_name is not None and adapter_name in ADAPTER_PATHS:
-        adapter_path = str(ADAPTER_PATHS[adapter_name])
-
-        model = sillm.TrainableLoRA.from_model(model)
-        lora_config = model.load_lora_config(adapter_path)
-        model.init_lora(**lora_config)
-        model.load_adapters(adapter_path)
-        model.merge_and_unload_lora()
-
-        msg = f"Loaded model {model_name} and adapters {adapter_name}."
-        model_id = f"{model_name}:{adapter_name}"
-
-    models[model_id] = model
-
-    return msg
+@cl.cache
+def load_model(model_name: str):
+    return sillm.load(MODEL_PATHS[model_name]), model_name
 
 @cl.on_chat_start
 async def on_chat_start():
     model_names = list(MODEL_PATHS.keys())
     model_names.sort()
 
-    adapter_names = ["[none]"] + list(ADAPTER_PATHS.keys())
-    adapter_names.sort()
-
     templates = ["[default]"] + [template.removesuffix(".jinja") for template in sillm.Template.list_templates()]
     templates.sort()
 
     settings = [
         Select(id="Model", label="Model", values=model_names, initial_index=0),
-        Select(id="Adapter", label="Adapter", values=adapter_names, initial_index=0),
         Select(id="Template", label="Chat Template", values=templates, initial_index=0),
         Slider(id="Temperature", label="Model Temperature", initial=0.7, min=0, max=2, step=0.1),
         Slider(id="Penalty", label="Repetition Penalty", initial=1.0, min=0.1, max=3.0, step=0.1),
@@ -74,6 +50,7 @@ async def on_chat_start():
     generate_args = {
         "temperature": 0.7,
         "max_tokens": 2048,
+        "flush": 5
     }
     cl.user_session.set("generate_args", generate_args)
 
@@ -81,9 +58,15 @@ async def on_chat_start():
 
 @cl.on_settings_update
 async def on_settings_update(settings):
-    cl.user_session.set("model_name", settings["Model"])
-    cl.user_session.set("template_name", settings["Template"])
+    model_name = cl.user_session.get("model_name")
+    if model_name != settings["Model"]:
+        cl.user_session.set("model_name", settings["Model"])
 
+        # TODO implement evaluate on model change
+        cl.user_session.set("conversation", None)
+        cl.user_session.set("cache", None)
+
+    cl.user_session.set("template_name", settings["Template"])
     generate_args = {
         "temperature": settings["Temperature"],
         "max_tokens": settings["Tokens"],
@@ -93,26 +76,39 @@ async def on_settings_update(settings):
         generate_args["repetition_window"] = settings["Window"]
     cl.user_session.set("generate_args", generate_args)
 
-    if "Adapter" in settings:
-        cl.user_session.set("adapter_name", settings["Adapter"])
-
     seed = int(settings["Seed"])
     if seed >= 0:
         utils.seed(seed)
 
 @cl.on_message
 async def on_message(message: cl.Message):
+    global current_model
+    global current_model_name
+
     # Initialize model
     model_name = cl.user_session.get("model_name")
-    adapter_name = cl.user_session.get("adapter_name")
-    model_id = model_name
-    if adapter_name != "[none]":
-        model_id = f"{model_name}:{adapter_name}"
+    
+    # Check if no model is selected
     if model_name is None:
-        raise ValueError("Please select a model.")    
-    if model_id not in models:
-        await load_model(model_name, adapter_name)
-    model = models[model_id]
+        await cl.context.emitter.send_toast("Please select a model.", type="error")
+        return
+    
+    # Load model if not already loaded
+    if current_model_name == model_name:
+        model = current_model
+    else:
+        step = cl.Step(name="Loading model", parent_id=cl.context.current_step.id)
+        await step.send()
+        
+        current_model, current_model_name = load_model(model_name)
+        model = current_model
+
+        step.output = f"Model {model_name} loaded"
+        await step.update()
+
+    # Fetch MCP tools
+    mcp_tools = cl.user_session.get("mcp_tools", {})
+    tools = [tool for connection_tools in mcp_tools.values() for tool in connection_tools]
 
     # Initialize conversation & templates
     conversation = cl.user_session.get("conversation")
@@ -122,8 +118,10 @@ async def on_message(message: cl.Message):
             template_name = None
 
         template = sillm.init_template(model.tokenizer, model.args, template_name)
-        conversation = sillm.Conversation(template)
+        conversation = sillm.Conversation(template, tools=tools)
         cl.user_session.set("conversation", conversation)
+    else:
+        conversation.tools = tools
 
     # Initialize cache
     cache = cl.user_session.get("cache")
@@ -139,13 +137,110 @@ async def on_message(message: cl.Message):
 
     logger.debug(f"Generating {generate_args['max_tokens']} tokens with temperature {generate_args['temperature']}")
 
-    # Generate response
-    msg = cl.Message(author=model_id, content="")
-    response = ""
-    for s, _ in model.generate(request, cache=cache, **generate_args):
-        await msg.stream_token(s)
-        response += s
-    await msg.send()
+    while request is not None:
+        msg = cl.Message(author=model_name, content="")
+        step = None
+        mode = "response"
+        
+        # Generate response
+        response = ""
+        for s, _ in model.generate(request, cache=cache, **generate_args):
+            response += s
 
-    # Add assistant message to conversation
-    conversation.add_assistant(response)
+            tag_re = re.compile(r'(</?think>|</?tool_call>)')
+            parts = tag_re.split(s)
+
+            new_response = ""
+            new_think = ""
+
+            for part in parts:
+                if tag_re.fullmatch(part):
+                    if part == "<think>":
+                        mode = "thinking"
+                    elif part == "</think>":
+                        mode = "response"
+                    elif part == "<tool_call>":
+                        mode = "tool_call"
+                    elif part == "</tool_call>":
+                        mode = "response"
+                else:
+                    if mode == "response":
+                        new_response += part
+                    elif mode == "thinking":
+                        new_think += part
+
+            if new_response.strip():
+                await msg.stream_token(new_response)
+            if new_think.strip():
+                if step is None:
+                    step = cl.Step(name="Reasoning", parent_id=msg.parent_id)
+                await step.stream_token(new_think)
+
+        if msg.content != "":
+            await msg.send()
+        if step is not None:
+            await step.send()
+
+        # Add response to conversation
+        conversation.add_assistant(response)
+
+        # Handle tool calls
+        request = None
+        if '<tool_call>' in response and '</tool_call>' in response:
+            tool_calls = re.findall(r'<tool_call>(.*?)</tool_call>', response, re.DOTALL)
+
+            results = []
+            for tool_call in tool_calls:
+                tool_call = json.loads(tool_call)
+                conversation.add_message(tool_call, role="tool")
+
+                result = await call_tool(tool_call["name"], tool_call["arguments"])
+                results.append(result)
+            
+            request = conversation.add_tool_calls(results)
+
+@cl.on_mcp_connect
+async def on_mcp_connect(connection, session: mcp.ClientSession):
+    result = await session.list_tools()
+
+    tools = [t.model_dump() for t in result.tools]
+
+    mcp_tools = cl.user_session.get("mcp_tools", {})
+    mcp_tools[connection.name] = tools
+    cl.user_session.set("mcp_tools", mcp_tools)
+
+@cl.step(type="tool", name="Tool Call")
+async def call_tool(name, arguments):
+    mcp_tools = cl.user_session.get("mcp_tools", {})
+    mcp_name = None
+    for connection_name, tools in mcp_tools.items():
+        for tool in tools:
+            if tool["name"] == name:
+                mcp_name = connection_name
+                break
+
+    # Handle missing tool
+    if mcp_name is None:
+        return f"Error: tool {name} not found."
+    
+    mcp_session, _ = cl.context.session.mcp_sessions.get(mcp_name)
+    
+    tool_response = await mcp_session.call_tool(name, arguments)
+    if tool_response.isError is True:
+        result = "Error:\n"
+    else:
+        result = ""
+
+    for content in tool_response.content:
+        if content.type == "text":
+            result += content.text
+
+    try:
+        json.loads(result)
+    except:
+        pass
+    finally:
+        cl.context.current_step.language = "json"
+        await cl.context.current_step.update()
+
+    return result
