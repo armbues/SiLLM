@@ -4,7 +4,7 @@ import re
 import json
 
 import chainlit as cl
-from chainlit.input_widget import Select, Slider, TextInput
+from chainlit.input_widget import Select, Slider, TextInput, Switch
 
 import mcp
 
@@ -38,10 +38,14 @@ async def on_chat_start():
     settings = [
         Select(id="Model", label="Model", values=model_names, initial_index=0),
         Select(id="Template", label="Chat Template", values=templates, initial_index=0),
-        Slider(id="Temperature", label="Model Temperature", initial=0.7, min=0, max=2, step=0.1),
-        Slider(id="Penalty", label="Repetition Penalty", initial=1.0, min=0.1, max=3.0, step=0.1),
-        Slider(id="Window", label="Repetition Window", initial=100, min=10, max=500, step=10),
         Slider(id="Tokens", label="Max. Tokens", initial=4096, min=1024, max=32768, step=1024),
+        Switch(id="Defaults", label="Default Generation Settings (generation_config.json)", initial=False),
+        Slider(id="Temperature", label="Model Temperature", initial=0.7, min=0, max=2, step=0.1),
+        Slider(id="TopK", label="Top-K", initial=0, min=0, max=100, step=1),
+        Slider(id="TopP", label="Top-P", initial=1.0, min=0.1, max=1.0, step=0.01),
+        Slider(id="MinP", label="Min-P", initial=0.0, min=0.0, max=1.0, step=0.01),
+        Slider(id="Penalty", label="Repetition Penalty", initial=1.0, min=0.1, max=3.0, step=0.1),
+        Slider(id="Window", label="Repetition Window", initial=50, min=10, max=200, step=10),
         TextInput(id="Seed", label="Seed", initial="-1"),
     ]
 
@@ -67,10 +71,18 @@ async def on_settings_update(settings):
         cl.user_session.set("cache", None)
 
     cl.user_session.set("template_name", settings["Template"])
+    cl.user_session.set("defaults", settings["Defaults"])
+
     generate_args = {
         "temperature": settings["Temperature"],
-        "max_tokens": settings["Tokens"],
+        "max_tokens": settings["Tokens"]
     }
+    if settings["TopK"] > 0:
+        generate_args["top_k"] = settings["TopK"]
+    if settings["TopP"] < 1.0:
+        generate_args["top_p"] = settings["TopP"]
+    if settings["MinP"] > 0.0:
+        generate_args["min_p"] = settings["MinP"]
     if settings["Penalty"] != 1.0:
         generate_args["repetition_penalty"] = settings["Penalty"]
         generate_args["repetition_window"] = settings["Window"]
@@ -97,14 +109,12 @@ async def on_message(message: cl.Message):
     if current_model_name == model_name:
         model = current_model
     else:
-        step = cl.Step(name="Loading model", parent_id=cl.context.current_step.id)
-        await step.send()
-        
+        await cl.context.emitter.send_toast(f"Loading model {model_name}", type="info")
+
         current_model, current_model_name = load_model(model_name)
         model = current_model
 
-        step.output = f"Model {model_name} loaded"
-        await step.update()
+        await cl.context.emitter.send_toast(f"Finished loading {model_name}", type="success")
 
     # Fetch MCP tools
     mcp_tools = cl.user_session.get("mcp_tools", {})
@@ -134,6 +144,11 @@ async def on_message(message: cl.Message):
     
     # Get model generation arguments
     generate_args = cl.user_session.get("generate_args")
+
+    if cl.user_session.get("defaults"):
+        # Use default generation config
+        if model.args.generation_config is not None:
+            generate_args.update(model.args.generation_config)
 
     logger.debug(f"Generating {generate_args['max_tokens']} tokens with temperature {generate_args['temperature']}")
 
