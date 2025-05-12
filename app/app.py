@@ -120,6 +120,16 @@ async def on_message(message: cl.Message):
     mcp_tools = cl.user_session.get("mcp_tools", {})
     tools = [tool for connection_tools in mcp_tools.values() for tool in connection_tools]
 
+    system_prompt = None
+    if message.command is not None:
+        command = message.command
+
+        if command.endswith(" System Prompt"):
+            connection_name = command[:command.index(" System Prompt")]
+            mcp_system_prompts = cl.user_session.get("mcp_system_prompts", {})
+            if connection_name in mcp_system_prompts:
+                system_prompt = mcp_system_prompts[connection_name]
+
     # Initialize conversation & templates
     conversation = cl.user_session.get("conversation")
     if conversation is None:
@@ -128,7 +138,7 @@ async def on_message(message: cl.Message):
             template_name = None
 
         template = sillm.init_template(model.tokenizer, model.args, template_name)
-        conversation = sillm.Conversation(template, tools=tools)
+        conversation = sillm.Conversation(template, system_prompt=system_prompt, tools=tools)
         cl.user_session.set("conversation", conversation)
     else:
         conversation.tools = tools
@@ -217,21 +227,37 @@ async def on_message(message: cl.Message):
 @cl.on_mcp_connect
 async def on_mcp_connect(connection, session: mcp.ClientSession):
     # Fetch tools from MCP connection
-    result = await session.list_tools()
-
-    tools = [t.model_dump() for t in result.tools]
-
     mcp_tools = cl.user_session.get("mcp_tools", {})
-    mcp_tools[connection.name] = tools
+    result = await session.list_tools()
+    mcp_tools[connection.name] = [t.model_dump() for t in result.tools]
     cl.user_session.set("mcp_tools", mcp_tools)
+    await update_commands()
+
+    mcp_system_prompts = cl.user_session.get("mcp_system_prompts", {})
+    result = await session.list_resources()
+    for resource in result.resources:
+        if str(resource.uri) == "resource://system_prompt":
+            resource = await session.read_resource(resource.uri)
+            if len(resource.contents) > 0:
+                mcp_system_prompts[connection.name] = resource.contents[0].text
+    cl.user_session.set("mcp_system_prompts", mcp_system_prompts)
+
+    await update_commands()
 
 @cl.on_mcp_disconnect
 async def on_mcp_disconnect(name: str, session: mcp.ClientSession):
-    # Clean up tools after MCP disconnection
+    # Clean up tools after MCP disconnect
     mcp_tools = cl.user_session.get("mcp_tools", {})
     if name in mcp_tools:
         del mcp_tools[name]
         cl.user_session.set("mcp_tools", mcp_tools)
+
+    mcp_system_prompts = cl.user_session.get("mcp_system_prompts", {})
+    if name in mcp_system_prompts:
+        del mcp_system_prompts[name]
+        cl.user_session.set("mcp_system_prompts", mcp_system_prompts)
+
+    await update_commands()
 
 @cl.step(type="tool", name="Tool Call")
 async def call_tool(name, arguments):
@@ -268,3 +294,17 @@ async def call_tool(name, arguments):
         await cl.context.current_step.update()
 
     return result
+
+async def update_commands():
+    commands = []
+
+    mcp_system_prompts = cl.user_session.get("mcp_system_prompts", {})
+    for connection_name in mcp_system_prompts.keys():
+        command = {
+            "id": f"{connection_name} System Prompt",
+            "icon": "scroll-text"
+        }
+        commands.append(command)
+
+    if len(commands) > 0:
+        await cl.context.emitter.set_commands(commands)
