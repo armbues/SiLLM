@@ -216,6 +216,7 @@ async def on_message(message: cl.Message):
 
 @cl.on_mcp_connect
 async def on_mcp_connect(connection, session: mcp.ClientSession):
+    # Fetch tools from MCP connection
     result = await session.list_tools()
 
     tools = [t.model_dump() for t in result.tools]
@@ -223,6 +224,14 @@ async def on_mcp_connect(connection, session: mcp.ClientSession):
     mcp_tools = cl.user_session.get("mcp_tools", {})
     mcp_tools[connection.name] = tools
     cl.user_session.set("mcp_tools", mcp_tools)
+
+@cl.on_mcp_disconnect
+async def on_mcp_disconnect(name: str, session: mcp.ClientSession):
+    # Clean up tools after MCP disconnection
+    mcp_tools = cl.user_session.get("mcp_tools", {})
+    if name in mcp_tools:
+        del mcp_tools[name]
+        cl.user_session.set("mcp_tools", mcp_tools)
 
 @cl.step(type="tool", name="Tool Call")
 async def call_tool(name, arguments):
