@@ -58,6 +58,15 @@ async def on_chat_start():
     }
     cl.user_session.set("generate_args", generate_args)
 
+    commands = [
+        {
+            "id": "system",
+            "icon": "scroll-text",
+            "description": "Set system prompt",
+        }
+    ]
+    await cl.context.emitter.set_commands(commands)
+
     cl.user_session.set("conversation", None)
 
 @cl.on_settings_update
@@ -96,6 +105,16 @@ async def on_settings_update(settings):
 async def on_message(message: cl.Message):
     global current_model
     global current_model_name
+    
+    # Execute commands
+    if message.command is not None:
+        command = message.command
+
+        if command == "system":
+            cl.user_session.set("system_prompt", message.content)
+            await cl.context.emitter.send_toast(f"System prompt defined.", type="info")
+            
+            return
 
     # Initialize model
     model_name = cl.user_session.get("model_name")
@@ -120,18 +139,9 @@ async def on_message(message: cl.Message):
     mcp_tools = cl.user_session.get("mcp_tools", {})
     tools = [tool for connection_tools in mcp_tools.values() for tool in connection_tools]
 
-    system_prompt = None
-    if message.command is not None:
-        command = message.command
-
-        if command.endswith(" System Prompt"):
-            connection_name = command[:command.index(" System Prompt")]
-            mcp_system_prompts = cl.user_session.get("mcp_system_prompts", {})
-            if connection_name in mcp_system_prompts:
-                system_prompt = mcp_system_prompts[connection_name]
-
     # Initialize conversation & templates
     conversation = cl.user_session.get("conversation")
+    system_prompt = cl.user_session.get("system_prompt")
     if conversation is None:
         template_name = cl.user_session.get("template_name")
         if template_name == "[default]":
@@ -231,18 +241,6 @@ async def on_mcp_connect(connection, session: mcp.ClientSession):
     result = await session.list_tools()
     mcp_tools[connection.name] = [t.model_dump() for t in result.tools]
     cl.user_session.set("mcp_tools", mcp_tools)
-    await update_commands()
-
-    mcp_system_prompts = cl.user_session.get("mcp_system_prompts", {})
-    result = await session.list_resources()
-    for resource in result.resources:
-        if str(resource.uri) == "resource://system_prompt":
-            resource = await session.read_resource(resource.uri)
-            if len(resource.contents) > 0:
-                mcp_system_prompts[connection.name] = resource.contents[0].text
-    cl.user_session.set("mcp_system_prompts", mcp_system_prompts)
-
-    await update_commands()
 
 @cl.on_mcp_disconnect
 async def on_mcp_disconnect(name: str, session: mcp.ClientSession):
@@ -251,13 +249,6 @@ async def on_mcp_disconnect(name: str, session: mcp.ClientSession):
     if name in mcp_tools:
         del mcp_tools[name]
         cl.user_session.set("mcp_tools", mcp_tools)
-
-    mcp_system_prompts = cl.user_session.get("mcp_system_prompts", {})
-    if name in mcp_system_prompts:
-        del mcp_system_prompts[name]
-        cl.user_session.set("mcp_system_prompts", mcp_system_prompts)
-
-    await update_commands()
 
 @cl.step(type="tool", name="Tool Call")
 async def call_tool(name, arguments):
