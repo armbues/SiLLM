@@ -42,6 +42,7 @@ class Conversation(object):
         Clear conversation.
         """
         self.messages = []
+        self.text = ""
 
     def save_json(self,
                   fpath: str
@@ -68,8 +69,7 @@ class Conversation(object):
     def add_message(self,
                     content: str,
                     role: str,
-                    add_generation_prompt: bool = False,
-                    add_generation_prefix: str = None
+                    add_generation_prompt: bool = False
                     ):
         """
         Add message to the conversation.
@@ -101,12 +101,15 @@ class Conversation(object):
             "content": content
         }
         messages.append(msg)
-
         self.messages += messages
 
-        text = self.apply_chat_template(messages=messages, add_generation_prompt=add_generation_prompt, tools=tools)
-        if add_generation_prefix is not None:
-            text += add_generation_prefix
+        if role == "user":
+            text = self.apply_chat_template(messages=messages, add_generation_prompt=add_generation_prompt, tools=tools)
+        else:
+            text = self.apply_chat_template(messages=self.messages, add_generation_prompt=False, tools=tools)
+            text = text[len(self.text):]
+
+        self.text = self.apply_chat_template(messages=self.messages, add_generation_prompt=add_generation_prompt, tools=tools)
 
         if len(text) == 0:
             raise ValueError("Chat template returned empty string")
@@ -115,8 +118,7 @@ class Conversation(object):
 
     def add_user(self,
                  content: str,
-                 add_generation_prompt: bool = True,
-                 add_generation_prefix: str = None
+                 add_generation_prompt: bool = True
                  ):
         """
         Add user message to the conversation.
@@ -127,7 +129,7 @@ class Conversation(object):
         Returns:
             Formatted string for user message.
         """
-        return self.add_message(content, "user", add_generation_prompt=add_generation_prompt, add_generation_prefix=add_generation_prefix)
+        return self.add_message(content, "user", add_generation_prompt=add_generation_prompt)
     
     def add_assistant(self,
                      content: str
@@ -149,18 +151,20 @@ class Conversation(object):
         """
         Add tool call results to the conversation.
         """
-        messages = []
-
         for content in contents:
             msg = {
                 "role": role,
                 "content": content
             }
-            messages.append(msg)
+            self.messages.append(msg)
 
-        self.messages += messages
+        text = self.apply_chat_template(messages=self.messages, add_generation_prompt=add_generation_prompt)
+        text = text[len(self.text):]
+
+        if len(text) == 0:
+            raise ValueError("Chat template returned empty string")
         
-        return self.apply_chat_template(messages=messages, add_generation_prompt=add_generation_prompt)
+        return text
     
 class AutoConversation(Conversation):
     """
