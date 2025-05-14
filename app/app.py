@@ -171,8 +171,6 @@ async def on_message(message: cl.Message):
         if model.args.generation_config is not None:
             generate_args.update(model.args.generation_config)
 
-    logger.debug(f"Generating {generate_args['max_tokens']} tokens with temperature {generate_args['temperature']}")
-
     while request is not None:
         msg = cl.Message(author=model_name, content="")
         step = None
