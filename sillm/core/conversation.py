@@ -111,9 +111,6 @@ class Conversation(object):
 
         self.text = self.apply_chat_template(messages=self.messages, add_generation_prompt=add_generation_prompt, tools=tools)
 
-        if len(text) == 0:
-            raise ValueError("Chat template returned empty string")
-
         return text
 
     def add_user(self,
