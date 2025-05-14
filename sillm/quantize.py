@@ -1,5 +1,6 @@
 import argparse
 import pathlib
+import shutil
 
 import sillm.utils as utils
 
@@ -40,6 +41,11 @@ if __name__ == "__main__":
     config_path = output_path / "config.json"
     model_args.save_config(config_path)
     logger.debug(f"Saved model config to {config_path}")
+
+    generation_config_path = input_path / "generation_config.json"
+    if generation_config_path.exists():
+        shutil.copy(generation_config_path, output_path / "generation_config.json")
+        logger.debug(f"Copied generation config to {output_path}")
 
     tokenizer = None
     tokenizer_path = None
