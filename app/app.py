@@ -165,7 +165,8 @@ async def on_message(message: cl.Message):
     # Get model generation arguments
     generate_args = cl.user_session.get("generate_args")
 
-    if cl.user_session.get("defaults"):
+    generation_defaults = cl.user_session.get("defaults")
+    if generation_defaults is True:
         # Use default generation config
         if model.args.generation_config is not None:
             generate_args.update(model.args.generation_config)
