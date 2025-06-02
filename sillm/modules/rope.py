@@ -41,7 +41,7 @@ def init_rope(args: ModelArgs):
                                        short_mscale=args.rope_scaling.get("short_mscale", None),
                                        long_mscale=args.rope_scaling.get("long_mscale", None)
                                        )
-    elif args.rope_scaling["type"] == "yarn":
+    elif rope_type == "yarn":
         raise NotImplementedError("Yarn RoPE is not implemented")
     else:
         raise NotImplementedError(f"Unknown scaling type {rope_scale}")
