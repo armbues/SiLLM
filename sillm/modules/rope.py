@@ -44,7 +44,7 @@ def init_rope(args: ModelArgs):
     elif rope_type == "yarn":
         raise NotImplementedError("Yarn RoPE is not implemented")
     else:
-        raise NotImplementedError(f"Unknown scaling type {rope_scale}")
+        raise NotImplementedError(f"Unknown scaling type {rope_type}")
 
 ########
 # Based on mlx-examples:
