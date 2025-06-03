@@ -3,8 +3,6 @@ import math
 import mlx.core as mx
 import mlx.nn as nn
 
-from .act import init_act
-
 ########
 # Based on mlx-examples:
 # https://github.com/ml-explore/mlx-examples/blob/f530f56df2738a54982c4541189a8c8d7cd94c44/llms/mlx_lm/models/switch_layers.py#L9
