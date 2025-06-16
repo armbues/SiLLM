@@ -36,13 +36,9 @@ def init_rope(args: ModelArgs):
                                        max_position_embeddings=args.max_position_embeddings,
                                        original_max_position_embeddings=args.original_max_position_embeddings,
                                        base=args.rope_theta,
-                                       short_factor=args.rope_scaling["short_factor"],
-                                       long_factor=args.rope_scaling["long_factor"],
-                                       short_mscale=args.rope_scaling.get("short_mscale", None),
-                                       long_mscale=args.rope_scaling.get("long_mscale", None)
-                                       )
+                                       rope_scaling=args.rope_scaling)
     elif rope_type == "yarn":
-        raise NotImplementedError("Yarn RoPE is not implemented")
+        raise NotImplementedError("Yarn RoPE is not implemented yet.")
     else:
         raise NotImplementedError(f"Unknown scaling type {rope_type}")
 
@@ -122,19 +118,20 @@ class SuScaledRotaryEmbedding(nn.Module):
                  max_position_embeddings: int = 131072,
                  original_max_position_embeddings: int = 4096,
                  base: float = 10000,
-                 short_factor: Union[List[float], float] = 1.0,
-                 long_factor: Union[List[float], float] = 1.0,
-                 short_mscale: float = None,
-                 long_mscale: float = None,
+                 rope_scaling: dict = None,
                  ):
         super().__init__()
 
-        self.head_dim = head_dim
-        self.original_max_position_embeddings = original_max_position_embeddings
+        short_factor = rope_scaling.get("short_factor", 1.0)
+        long_factor = rope_scaling.get("long_factor", 1.0)
+        short_mscale = rope_scaling.get("short_mscale", None)
+        long_mscale = rope_scaling.get("long_mscale", None)
 
+        self.head_dim = head_dim
+        
         freqs = base ** (mx.arange(0, head_dim, 2, dtype=mx.float32) / head_dim)
         self._freqs = mx.array(long_factor, dtype=mx.float32) * freqs
-        self.scale = long_mscale or math.sqrt(1 + math.log(max_position_embeddings / self.original_max_position_embeddings) / math.log(self.original_max_position_embeddings))
+        self.scale = long_mscale or math.sqrt(1 + math.log(max_position_embeddings / original_max_position_embeddings) / math.log(self.original_max_position_embeddings))
 
     def __call__(self, x, offset: int = 0):
         x[..., : self.head_dim] = self.scale * x[..., : self.head_dim]
